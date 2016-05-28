@@ -5,7 +5,7 @@ pub struct Context<'a> {
 
 impl<'a> Context<'a> {
     pub fn describe<F>(&mut self, _name: &'a str, mut body: F)
-        where F : 'a + FnMut(&mut Context) -> () {
+        where F : 'a + FnMut(&mut Context<'a>) -> () {
         body(self)
     }
 
@@ -103,5 +103,30 @@ mod tests {
         }
 
         assert_eq!(2, ran_counter.load(Ordering::Relaxed))
+    }
+
+    #[test]
+    fn runner_effectively_run_two_tests_in_nested_describe() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let ran_counter = &mut AtomicUsize::new(0);
+
+        {
+            let mut runner = describe("A root", |ctx| {
+                ctx.describe("first describe", |ctx| {
+                    ctx.it("first run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); });
+                });
+                ctx.describe("second describe", |ctx| {
+                    ctx.it("second run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); });
+                });
+                ctx.describe("third describe", |ctx| {
+                    ctx.describe("fourth describe", |ctx| {
+                        ctx.it("third run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); });
+                    })
+                })
+            });
+            let _ = runner.run();
+        }
+
+        assert_eq!(3, ran_counter.load(Ordering::Relaxed))
     }
 }
