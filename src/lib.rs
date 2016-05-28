@@ -1,30 +1,34 @@
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct Context;
+pub struct Context<'a> {
+    pub test: Option<Box<Fn() -> () + 'a>>
+}
 
-impl Context {
-    pub fn describe<F>(&self, _name: &str, _body: F)
-        where F: Fn(&Context) -> () {
+impl<'a> Context<'a> {
+    pub fn describe<F>(&mut self, _name: &str, _body: F)
+        where F: Fn(&mut Context) -> () {
 
     }
 
-    pub fn it<F>(&self, _name: &str, _body: F)
-        where F : Fn() -> () {
+    pub fn it<F>(&mut self, _name: &str, body: F)
+        where F : 'a + Fn() -> () {
 
+        self.test = Some(Box::new(body))
     }
 }
 
 
 pub fn describe<F>(_block_name: &str, _body: F) -> Runner
-    where F : Fn(&Context) -> () {
+    where F : Fn(&mut Context) -> () {
 
-    Runner {}
+    let c = Context { test: None };
+    Runner { describe: c }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct Runner;
+pub struct Runner<'a> {
+    describe: Context<'a>
+}
 
-impl Runner {
+impl<'a> Runner<'a> {
     pub fn run(&self) -> Result<(), ()> {
         Ok(())
     }
