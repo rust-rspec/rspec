@@ -1,6 +1,6 @@
 
 pub struct Context<'a> {
-    pub test: Option<Box<FnMut() -> () + 'a>>
+    pub tests: Vec<Box<FnMut() -> () + 'a>>
 }
 
 impl<'a> Context<'a> {
@@ -12,7 +12,7 @@ impl<'a> Context<'a> {
     pub fn it<F>(&mut self, _name: &'a str, mut body: F)
         where F : 'a + FnMut() -> () {
 
-        self.test = Some(Box::new(body))
+        self.tests.push(Box::new(body))
     }
 }
 
@@ -20,7 +20,7 @@ impl<'a> Context<'a> {
 pub fn describe<'a, 'b, F>(_block_name: &'b str, mut body: F) -> Runner<'a>
     where F : 'a + FnOnce(&mut Context<'a>) -> () {
 
-    let mut c = Context { test: None };
+    let mut c = Context { tests: vec!() };
     body(&mut c);
     Runner { describe: c }
 }
@@ -31,7 +31,8 @@ pub struct Runner<'a> {
 
 impl<'a> Runner<'a> {
     pub fn run(&mut self) -> Result<(), ()> {
-        if let Some(ref mut test_function) = self.describe.test {
+
+        for test_function in self.describe.tests.iter_mut() {
             test_function()
         }
         Ok(())
@@ -73,7 +74,7 @@ mod tests {
     }
 
     #[test]
-    fn runner_efectively_run_tests() {
+    fn runner_effectively_run_tests() {
         let ran = &mut false;
 
         {
@@ -86,5 +87,21 @@ mod tests {
         }
 
         assert_eq!(true, *ran)
+    }
+
+    #[test]
+    fn runner_effectively_run_two_tests() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let ran_counter = &mut AtomicUsize::new(0);
+
+        {
+            let mut runner = describe("A root", |ctx| {
+                ctx.it("first run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); });
+                ctx.it("second run", || { ran_counter.fetch_add(1, Ordering::Relaxed); });
+            });
+            let _ = runner.run();
+        }
+
+        assert_eq!(2, ran_counter.load(Ordering::Relaxed))
     }
 }
