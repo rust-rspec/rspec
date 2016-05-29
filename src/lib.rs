@@ -38,9 +38,13 @@ pub struct Runner<'a> {
 impl<'a> Runner<'a> {
 
     pub fn run(&mut self) -> Result<(), ()> {
+        use std::panic::{catch_unwind, AssertUnwindSafe};
 
         for test_function in self.describe.tests.iter_mut() {
-            let res = test_function();
+            let res = match catch_unwind(AssertUnwindSafe(|| test_function())) {
+                Ok(res) => res,
+                Err(err) => Err(())
+            };
 
             self.result = match self.result {
                 None => Some(res),
@@ -188,6 +192,34 @@ mod tests {
         runner.run().unwrap();
 
         expect!(runner.result()).to(be_err());
+    }
+
+    #[test]
+    fn runner_results_is_ok_if_all_tests_are_ok() {
+        let mut runner = describe("A root", |ctx| {
+            ctx.it("ok 1", || { Ok(()) });
+            ctx.it("ok 2", || { Ok(()) });
+            ctx.it("ok 3", || { Ok(()) });
+            ctx.it("ok 4", || { Ok(()) });
+        });
+        runner.run().unwrap();
+
+        expect!(runner.result()).to(be_ok());
+    }
+
+    #[test]
+    fn tests_can_contains_asserts_that_panic() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let counter = &mut AtomicUsize::new(0);
+
+        let mut runner = describe("A root", |ctx| {
+            ctx.it("assert_eq fail", || { assert_eq!(true, false); Ok(()) });
+            ctx.it("this should also be runned", || { counter.fetch_add(1, Ordering::Relaxed); Ok(()) })
+        });
+        runner.run().unwrap();
+
+        expect!(runner.result()).to(be_err());
+        expect!(counter.load(Ordering::Relaxed)).to(be_equal_to(1));
     }
 
     /*
