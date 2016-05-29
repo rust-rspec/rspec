@@ -5,7 +5,8 @@ pub use expectest::prelude::*;
 pub type TestResult = Result<(), ()>;
 
 pub struct Context<'a> {
-    pub tests: Vec<Box<FnMut() -> TestResult + 'a>>
+    tests: Vec<Box<FnMut() -> TestResult + 'a>>,
+    before_each: Vec<Box<FnMut() -> () + 'a>>
 }
 
 impl<'a> Context<'a> {
@@ -19,13 +20,19 @@ impl<'a> Context<'a> {
 
         self.tests.push(Box::new(body))
     }
+
+    pub fn before<F>(&mut self, body: F)
+        where F : 'a + FnMut() -> () {
+
+        self.before_each.push(Box::new(body))
+    }
 }
 
 
 pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
     where F : 'a + FnOnce(&mut Context<'a>) -> () {
 
-    let mut c = Context { tests: vec!() };
+    let mut c = Context { tests: vec!(), before_each: vec!() };
     body(&mut c);
     Runner { describe: c, report: None }
 }
@@ -50,8 +57,18 @@ impl<'a> Runner<'a> {
         let mut report = TestReport::default();
         let mut result = Ok(());
 
-        for test_function in self.describe.tests.iter_mut() {
-            let res = match catch_unwind(AssertUnwindSafe(|| test_function())) {
+        let ref mut describe = self.describe;
+        let ref mut before_functions = describe.before_each;
+        for test_function in describe.tests.iter_mut() {
+
+            let res = catch_unwind(AssertUnwindSafe(|| {
+                for before_function in before_functions.iter_mut() {
+                    before_function()
+                }
+                test_function()
+            }));
+
+            let res = match res {
                 Ok(res) => res,
                 _ => Err(())
             };
@@ -311,6 +328,27 @@ mod tests {
         }
     }
 
+    mod before {
+        pub use super::*;
+
+        #[test]
+        fn can_be_called_inside_describe() {
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let ran_counter = &mut AtomicUsize::new(0);
+
+            {
+                let mut runner = describe("a root", |ctx| {
+                    ctx.before(|| { ran_counter.fetch_add(1, Ordering::Relaxed); });
+                    ctx.it("first", || { Ok(()) });
+                    ctx.it("second", || { Ok(()) });
+                    ctx.it("third", || { Ok(()) });
+                });
+                runner.run().unwrap();
+            }
+
+            expect!(ran_counter.load(Ordering::Relaxed)).to(be_equal_to(3));
+        }
+    }
 
     /*
      * Test list:
@@ -323,5 +361,4 @@ mod tests {
      * - check that we can use after in a describe
      * - check that after/before are run in all child contextes
      */
-
 }
