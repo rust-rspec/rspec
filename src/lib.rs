@@ -6,7 +6,8 @@ pub type TestResult = Result<(), ()>;
 
 pub struct Context<'a> {
     tests: Vec<Box<FnMut() -> TestResult + 'a>>,
-    before_each: Vec<Box<FnMut() -> () + 'a>>
+    before_each: Vec<Box<FnMut() -> () + 'a>>,
+    after_each: Vec<Box<FnMut() -> () + 'a>>,
 }
 
 impl<'a> Context<'a> {
@@ -26,13 +27,19 @@ impl<'a> Context<'a> {
 
         self.before_each.push(Box::new(body))
     }
+
+    pub fn after<F>(&mut self, body: F)
+        where F : 'a + FnMut() -> () {
+
+        self.after_each.push(Box::new(body))
+    }
 }
 
 
 pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
     where F : 'a + FnOnce(&mut Context<'a>) -> () {
 
-    let mut c = Context { tests: vec!(), before_each: vec!() };
+    let mut c = Context { tests: vec!(), before_each: vec!(), after_each: vec!() };
     body(&mut c);
     Runner { describe: c, report: None }
 }
@@ -59,13 +66,14 @@ impl<'a> Runner<'a> {
 
         let ref mut describe = self.describe;
         let ref mut before_functions = describe.before_each;
+        let ref mut after_functions = describe.after_each;
         for test_function in describe.tests.iter_mut() {
 
             let test_res = catch_unwind(AssertUnwindSafe(|| {
-                for before_function in before_functions.iter_mut() {
-                    before_function()
-                }
-                test_function()
+                for before_function in before_functions.iter_mut() { before_function() }
+                let res = test_function();
+                for after_function in after_functions.iter_mut() { after_function() }
+                res
             }));
             // if test panicked, it means that it failed
             let test_res = test_res.unwrap_or(Err(()));
@@ -342,6 +350,55 @@ mod tests {
         }
     }
 
+    mod after {
+        pub use super::*;
+
+        #[test]
+        fn can_be_called_inside_describe() {
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let ran_counter = &mut AtomicUsize::new(0);
+
+            {
+                let mut runner = describe("a root", |ctx| {
+                    ctx.after(|| { ran_counter.fetch_add(1, Ordering::Relaxed); });
+                    ctx.it("first", || { Ok(()) });
+                    ctx.it("second", || { Ok(()) });
+                    ctx.it("third", || { Ok(()) });
+                });
+                runner.run().unwrap();
+            }
+
+            expect!(ran_counter.load(Ordering::Relaxed)).to(be_equal_to(3));
+        }
+
+        #[test]
+        fn it_is_not_like_before() {
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let ran_counter = &mut AtomicUsize::new(0);
+
+            let report = {
+                let mut runner = describe("a root", |ctx| {
+                    ctx.after(|| { ran_counter.fetch_add(1, Ordering::SeqCst); });
+                    ctx.it("first", || {
+                        if 0 == ran_counter.load(Ordering::SeqCst) { Ok(()) } else { Err(()) }
+                    });
+                    ctx.it("second", || {
+                        if 1 == ran_counter.load(Ordering::SeqCst) { Ok(()) } else { Err(()) }
+                    });
+                    ctx.it("third", || {
+                        if 2 == ran_counter.load(Ordering::SeqCst) { Ok(()) } else { Err(()) }
+                    });
+                });
+                runner.run().unwrap();
+                runner.result()
+            };
+
+            expect!(report).to(be_ok());
+        }
+    }
+
+
+
     /*
      * Test list:
      * x check that tests can call `assert_eq!`
@@ -349,8 +406,8 @@ mod tests {
      * x runner can count the tests
      * x runner can count the success and failures
      * - check that runner displays the tests names and their results
-     * - check that we can use before in a describe
-     * - check that we can use after in a describe
+     * x check that we can use before in a describe
+     * x check that we can use after in a describe
      * - check that after/before are run in all child contextes
      * - beforeAll
      * - afterAll
