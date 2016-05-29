@@ -129,4 +129,17 @@ mod tests {
 
         assert_eq!(3, ran_counter.load(Ordering::Relaxed))
     }
+
+    /*
+     * Test list:
+     * - check that tests can call `assert_eq!`
+     * - check that tests can return Err or Ok
+     * - runner can count the tests
+     * - runner can count the success and failures
+     * - check that runner displays the tests names and their results
+     * - check that we can use before in a describe
+     * - check that we can use after in a describe
+     * - check that after/before are run in all child contextes
+     */
+
 }
