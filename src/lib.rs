@@ -35,9 +35,11 @@ pub struct Runner<'a> {
     report: Option<Result<TestReport, TestReport>>
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub struct TestReport {
-    total_tests: u32
+    total_tests: u32,
+    success_count: u32,
+    error_count: u32
 }
 
 impl<'a> Runner<'a> {
@@ -45,7 +47,7 @@ impl<'a> Runner<'a> {
     pub fn run(&mut self) -> Result<(), ()> {
         use std::panic::{catch_unwind, AssertUnwindSafe};
 
-        let mut report = TestReport { total_tests: 0 };
+        let mut report = TestReport::default();
         let mut result = Ok(());
 
         for test_function in self.describe.tests.iter_mut() {
@@ -55,8 +57,8 @@ impl<'a> Runner<'a> {
             };
 
             result = match result {
-                Ok(()) => res,
-                old @ _ => old
+                Ok(()) => { report.success_count += 1; res },
+                old @ _ => { report.error_count += 1; old }
             };
 
             report.total_tests += 1;
@@ -72,7 +74,7 @@ impl<'a> Runner<'a> {
     }
 
     pub fn result(&self) -> Result<TestReport, TestReport> {
-        self.report.unwrap_or(Ok(TestReport { total_tests: 0 }))
+        self.report.unwrap_or(Ok(TestReport::default()))
     }
 }
 
@@ -267,8 +269,44 @@ mod tests {
                     ctx.it("third", || { Ok(()) });
                 });
                 runner.run().unwrap();
+                let result = runner.result();
 
-                expect!(runner.result()).to(be_ok().value(TestReport { total_tests: 3 }));
+                expect!(result).to(be_ok());
+                if let Ok(report) = result {
+                    expect!(report.total_tests).to(be_equal_to(3));
+                }
+            }
+
+            #[test]
+            fn can_count_succes() {
+                let mut runner = describe("a root", |ctx| {
+                    ctx.it("first", || { Ok(()) });
+                    ctx.it("second", || { Ok(()) });
+                    ctx.it("third", || { Ok(()) });
+                });
+                runner.run().unwrap();
+                let result = runner.result();
+
+                expect!(result).to(be_ok());
+                if let Ok(report) = result {
+                    expect!(report.success_count).to(be_equal_to(3));
+                }
+            }
+
+            #[test]
+            fn can_count_errors() {
+                let mut runner = describe("a root", |ctx| {
+                    ctx.it("first", || { Err(()) });
+                    ctx.it("second", || { Err(()) });
+                    ctx.it("third", || { Ok(()) });
+                });
+                runner.run().unwrap();
+                let result = runner.result();
+
+                expect!(result).to(be_err());
+                if let Err(report) = result {
+                    expect!(report.error_count).to(be_equal_to(2));
+                }
             }
         }
     }
@@ -279,7 +317,7 @@ mod tests {
      * x check that tests can call `assert_eq!`
      * x check that tests can return Err or Ok
      * x runner can count the tests
-     * - runner can count the success and failures
+     * x runner can count the success and failures
      * - check that runner displays the tests names and their results
      * - check that we can use before in a describe
      * - check that we can use after in a describe
