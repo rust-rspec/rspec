@@ -61,32 +61,24 @@ impl<'a> Runner<'a> {
         let ref mut before_functions = describe.before_each;
         for test_function in describe.tests.iter_mut() {
 
-            let res = catch_unwind(AssertUnwindSafe(|| {
+            let test_res = catch_unwind(AssertUnwindSafe(|| {
                 for before_function in before_functions.iter_mut() {
                     before_function()
                 }
                 test_function()
             }));
-
-            let res = match res {
-                Ok(res) => res,
-                _ => Err(())
-            };
+            // if test panicked, it means that it failed
+            let test_res = test_res.unwrap_or(Err(()));
 
             result = match result {
-                Ok(()) => { report.success_count += 1; res },
+                Ok(()) => { report.success_count += 1; test_res },
                 old @ _ => { report.error_count += 1; old }
             };
 
             report.total_tests += 1;
         }
 
-        if let Ok(_) = result {
-            self.report = Some(Ok(report))
-        } else {
-            self.report = Some(Err(report))
-        }
-
+        self.report = Some(result.and(Ok(report)).or(Err(report)));
         Ok(())
     }
 
@@ -360,5 +352,8 @@ mod tests {
      * - check that we can use before in a describe
      * - check that we can use after in a describe
      * - check that after/before are run in all child contextes
+     * - beforeAll
+     * - afterAll
+     * - bench ?
      */
 }
