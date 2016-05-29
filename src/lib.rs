@@ -1,6 +1,11 @@
+#[macro_use(expect)]
+extern crate expectest;
+pub use expectest::prelude::*;
+
+pub type TestResult = Result<(), ()>;
 
 pub struct Context<'a> {
-    pub tests: Vec<Box<FnMut() -> () + 'a>>
+    pub tests: Vec<Box<FnMut() -> TestResult + 'a>>
 }
 
 impl<'a> Context<'a> {
@@ -9,33 +14,45 @@ impl<'a> Context<'a> {
         body(self)
     }
 
-    pub fn it<F>(&mut self, _name: &'a str, mut body: F)
-        where F : 'a + FnMut() -> () {
+    pub fn it<F>(&mut self, _name: &'a str, body: F)
+        where F : 'a + FnMut() -> TestResult {
 
         self.tests.push(Box::new(body))
     }
 }
 
 
-pub fn describe<'a, 'b, F>(_block_name: &'b str, mut body: F) -> Runner<'a>
+pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
     where F : 'a + FnOnce(&mut Context<'a>) -> () {
 
     let mut c = Context { tests: vec!() };
     body(&mut c);
-    Runner { describe: c }
+    Runner { describe: c, result: None }
 }
 
 pub struct Runner<'a> {
-    describe: Context<'a>
+    describe: Context<'a>,
+    result: Option<TestResult>
 }
 
 impl<'a> Runner<'a> {
+
     pub fn run(&mut self) -> Result<(), ()> {
 
         for test_function in self.describe.tests.iter_mut() {
-            test_function()
+            let res = test_function();
+
+            self.result = match self.result {
+                None => Some(res),
+                Some(Ok(())) => Some(res),
+                old @ _ => old
+            }
         }
         Ok(())
+    }
+
+    pub fn result(&self) -> Result<(), ()> {
+        self.result.unwrap_or(Ok(()))
     }
 }
 
@@ -59,7 +76,7 @@ mod tests {
     #[test]
     fn it_can_call_it_inside_describe_body() {
         describe("A root", |ctx| {
-            ctx.it("is a test", || {})
+            ctx.it("is a test", || { Ok(()) })
         });
     }
 
@@ -67,7 +84,8 @@ mod tests {
     fn it_create_a_runner_that_can_be_runned() {
         let mut runner = describe("A root", |ctx| {
             ctx.it("is expected to run", || {
-                assert_eq!(true, true)
+                assert_eq!(true, true);
+                Ok(())
             })
         });
         assert_eq!(Ok(()), runner.run())
@@ -80,7 +98,8 @@ mod tests {
         {
             let mut runner = describe("A root", |ctx| {
                 ctx.it("is expected to run", || {
-                    *ran = true
+                    *ran = true;
+                    Ok(())
                 })
             });
             assert_eq!(Ok(()), runner.run());
@@ -96,10 +115,10 @@ mod tests {
 
         {
             let mut runner = describe("A root", |ctx| {
-                ctx.it("first run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); });
-                ctx.it("second run", || { ran_counter.fetch_add(1, Ordering::Relaxed); });
+                ctx.it("first run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); Ok(()) });
+                ctx.it("second run", || { ran_counter.fetch_add(1, Ordering::Relaxed); Ok(()) });
             });
-            let _ = runner.run();
+            let _ = runner.run().unwrap();
         }
 
         assert_eq!(2, ran_counter.load(Ordering::Relaxed))
@@ -113,21 +132,62 @@ mod tests {
         {
             let mut runner = describe("A root", |ctx| {
                 ctx.describe("first describe", |ctx| {
-                    ctx.it("first run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); });
+                    ctx.it("first run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); Ok(() )});
                 });
                 ctx.describe("second describe", |ctx| {
-                    ctx.it("second run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); });
+                    ctx.it("second run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); Ok(()) });
                 });
                 ctx.describe("third describe", |ctx| {
                     ctx.describe("fourth describe", |ctx| {
-                        ctx.it("third run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); });
+                        ctx.it("third run",  || { ran_counter.fetch_add(1, Ordering::Relaxed);  Ok(()) });
                     })
                 })
             });
-            let _ = runner.run();
+            let _ = runner.run().unwrap();
         }
 
         assert_eq!(3, ran_counter.load(Ordering::Relaxed))
+    }
+
+    #[test]
+    fn tests_can_fail_with_an_error_result() {
+        let mut runner = describe("A root", |ctx| {
+            ctx.it("should fail", || {
+                Err(())
+            })
+        });
+        runner.run().unwrap();
+
+        expect!(runner.result()).to(be_err());
+    }
+
+    #[test]
+    fn runner_result_should_be_ok_if_tests_are_ok() {
+        let mut runner = describe("A root", |ctx| {
+            ctx.it("should be ok", || { Ok(()) })
+        });
+        runner.run().unwrap();
+
+        expect!(runner.result()).to(be_ok());
+    }
+
+    #[test]
+    fn runner_results_is_ok_if_no_tests_have_been_runned() {
+        let mut runner = describe("A root", |_ctx| {});
+        runner.run().unwrap();
+
+        expect!(runner.result()).to(be_ok());
+    }
+
+    #[test]
+    fn runner_results_is_err_if_one_test_is_err() {
+        let mut runner = describe("A root", |ctx| {
+            ctx.it("an err", || { Err(()) });
+            ctx.it("an ok", || { Ok(()) });
+        });
+        runner.run().unwrap();
+
+        expect!(runner.result()).to(be_err());
     }
 
     /*
