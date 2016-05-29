@@ -27,12 +27,17 @@ pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
 
     let mut c = Context { tests: vec!() };
     body(&mut c);
-    Runner { describe: c, result: None }
+    Runner { describe: c, report: None }
 }
 
 pub struct Runner<'a> {
     describe: Context<'a>,
-    result: Option<TestResult>
+    report: Option<Result<TestReport, TestReport>>
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct TestReport {
+    total_tests: u32
 }
 
 impl<'a> Runner<'a> {
@@ -40,23 +45,34 @@ impl<'a> Runner<'a> {
     pub fn run(&mut self) -> Result<(), ()> {
         use std::panic::{catch_unwind, AssertUnwindSafe};
 
+        let mut report = TestReport { total_tests: 0 };
+        let mut result = Ok(());
+
         for test_function in self.describe.tests.iter_mut() {
             let res = match catch_unwind(AssertUnwindSafe(|| test_function())) {
                 Ok(res) => res,
                 _ => Err(())
             };
 
-            self.result = match self.result {
-                None => Some(res),
-                Some(Ok(())) => Some(res),
+            result = match result {
+                Ok(()) => res,
                 old @ _ => old
-            }
+            };
+
+            report.total_tests += 1;
         }
+
+        if let Ok(_) = result {
+            self.report = Some(Ok(report))
+        } else {
+            self.report = Some(Err(report))
+        }
+
         Ok(())
     }
 
-    pub fn result(&self) -> Result<(), ()> {
-        self.result.unwrap_or(Ok(()))
+    pub fn result(&self) -> Result<TestReport, TestReport> {
+        self.report.unwrap_or(Ok(TestReport { total_tests: 0 }))
     }
 }
 
@@ -100,7 +116,7 @@ mod tests {
                     Ok(())
                 })
             });
-            assert_eq!(Ok(()), runner.run())
+            expect!(runner.run()).to(be_ok());
         }
 
         #[test]
@@ -114,7 +130,7 @@ mod tests {
                         Ok(())
                     })
                 });
-                assert_eq!(Ok(()), runner.run());
+                runner.run().unwrap()
             }
 
             assert_eq!(true, *ran)
@@ -228,6 +244,18 @@ mod tests {
 
             expect!(runner.result()).to(be_err());
             expect!(counter.load(Ordering::Relaxed)).to(be_equal_to(1));
+        }
+
+        #[test]
+        fn can_count_the_tests() {
+            let mut runner = describe("a root", |ctx| {
+                ctx.it("first", || { Ok(()) });
+                ctx.it("second", || { Ok(()) });
+                ctx.it("third", || { Ok(()) });
+            });
+            runner.run().unwrap();
+
+            expect!(runner.result()).to(be_ok().value(TestReport { total_tests: 3 }));
         }
     }
 
