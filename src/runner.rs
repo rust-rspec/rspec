@@ -20,6 +20,11 @@ pub struct TestReport {
 
 impl<'a> Runner<'a> {
 
+/*    fn run_and_recurse(before, after, context) {
+    
+    
+    }*/
+
     pub fn run(&mut self) -> Result<(), ()> {
         use std::panic::{catch_unwind, AssertUnwindSafe};
 

@@ -1,33 +1,41 @@
 use runner::*;
 
-pub type TestResult = Result<(), ()>;
+pub type BeforeFunction<'a> = FnMut() -> () + 'a + Send + Sync;
+pub type AfterFunction<'a>  = BeforeFunction<'a>;
+pub type TestFunction<'a>   = FnMut() -> TestResult + 'a + Send + Sync;
+pub type TestResult         = Result<(), ()>;
 
+#[derive(Default)]
 pub struct Context<'a> {
-    pub tests: Vec<Box<FnMut() -> TestResult + 'a>>,
-    pub before_each: Vec<Box<FnMut() -> () + 'a>>,
-    pub after_each: Vec<Box<FnMut() -> () + 'a>>,
+    pub tests: Vec<Box<TestFunction<'a>>>,
+    pub before_each: Vec<Box<BeforeFunction<'a>>>,
+    pub after_each: Vec<Box<AfterFunction<'a>>>,
+    pub child_contexts: Vec<Context<'a>>,
 }
 
 impl<'a> Context<'a> {
     pub fn describe<F>(&mut self, _name: &'a str, mut body: F)
-        where F : 'a + FnMut(&mut Context<'a>) -> () {
-        body(self)
+        where F : 'a + Send + Sync + FnMut(&mut Context<'a>) -> () {
+
+        let mut child = Context::default();
+        body(&mut child);
+        self.child_contexts.push(child)
     }
 
     pub fn it<F>(&mut self, _name: &'a str, body: F)
-        where F : 'a + FnMut() -> TestResult {
+        where F : 'a + Send + Sync + FnMut() -> TestResult {
 
         self.tests.push(Box::new(body))
     }
 
     pub fn before<F>(&mut self, body: F)
-        where F : 'a + FnMut() -> () {
+        where F : 'a + Send + Sync + FnMut() -> () {
 
         self.before_each.push(Box::new(body))
     }
 
     pub fn after<F>(&mut self, body: F)
-        where F : 'a + FnMut() -> () {
+        where F : 'a + Send + Sync + FnMut() -> () {
 
         self.after_each.push(Box::new(body))
     }
@@ -36,7 +44,7 @@ impl<'a> Context<'a> {
 pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
     where F : 'a + FnOnce(&mut Context<'a>) -> () {
 
-    let mut c = Context { tests: vec!(), before_each: vec!(), after_each: vec!() };
+    let mut c = Context::default();
     body(&mut c);
     Runner::new(c)
 }
@@ -115,6 +123,20 @@ mod tests {
             }
 
             expect!(ran_counter.load(Ordering::Relaxed)).to(be_equal_to(3));
+        }
+
+        #[test]
+        fn it_is_only_applied_to_childs_describe() {
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let ran_counter = &mut AtomicUsize::new(0);
+
+            rdescribe("root", |ctx| {
+                ctx.it("shouldn't see the before hook", || (0 == ran_counter.load(Ordering::SeqCst)).to_res());
+                ctx.describe("a sub-root", |ctx| {
+                    ctx.before(|| { ran_counter.fetch_add(1, Ordering::SeqCst); });
+                    ctx.it("should see the before hook", || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
+                })
+            })
         }
     }
 
