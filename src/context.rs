@@ -56,6 +56,16 @@ mod tests {
     pub use super::*;
     pub use expectest::prelude::*;
 
+    pub trait ToRes { fn to_res(self) -> Result<(), ()>; }
+    impl ToRes for bool {
+        fn to_res(self) -> Result<(), ()> {
+            match self {
+                true => Ok(()),
+                false => Err(())
+            }
+        }
+    }
+
     mod describe {
         pub use super::*;
 
@@ -137,15 +147,9 @@ mod tests {
             let report = {
                 let mut runner = describe("a root", |ctx| {
                     ctx.after(|| { ran_counter.fetch_add(1, Ordering::SeqCst); });
-                    ctx.it("first", || {
-                        if 0 == ran_counter.load(Ordering::SeqCst) { Ok(()) } else { Err(()) }
-                    });
-                    ctx.it("second", || {
-                        if 1 == ran_counter.load(Ordering::SeqCst) { Ok(()) } else { Err(()) }
-                    });
-                    ctx.it("third", || {
-                        if 2 == ran_counter.load(Ordering::SeqCst) { Ok(()) } else { Err(()) }
-                    });
+                    ctx.it("first", || (0 == ran_counter.load(Ordering::SeqCst)).to_res());
+                    ctx.it("second", || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
+                    ctx.it("third", || (2 == ran_counter.load(Ordering::SeqCst)).to_res());
                 });
                 runner.run().unwrap();
                 runner.result()
@@ -158,16 +162,6 @@ mod tests {
     mod rdescribe {
         pub use super::*;
 
-        trait ToRes { fn to_res(self) -> Result<(), ()>; }
-        impl ToRes for bool {
-            fn to_res(self) -> Result<(), ()> {
-                match self {
-                    true => Ok(()),
-                    false => Err(())
-                }
-            }
-        }
-
         #[test]
         fn it_implicitely_allocate_and_run_a_runner() {
             use std::sync::atomic::{AtomicUsize, Ordering};
@@ -175,13 +169,14 @@ mod tests {
 
             rdescribe("allocates a runner", |ctx| {
                 ctx.before(|| { ran_counter.fetch_add(1, Ordering::SeqCst); });
-                ctx.it("should be runned (1)", || { (1 == ran_counter.load(Ordering::SeqCst)).to_res() });
-                ctx.it("should be runned (2)", || { (2 == ran_counter.load(Ordering::SeqCst)).to_res() });
-                ctx.it("should be runned (3)", || { (3 == ran_counter.load(Ordering::SeqCst)).to_res() });
+                ctx.it("should be runned (1)", || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
+                ctx.it("should be runned (2)", || (2 == ran_counter.load(Ordering::SeqCst)).to_res());
+                ctx.it("should be runned (3)", || (3 == ran_counter.load(Ordering::SeqCst)).to_res());
             })
         }
 
         #[test]
+        #[should_panic]
         fn it_fails_when_run_fails() {
             rdescribe("a failed root", |ctx| {
                 ctx.it("a ok test", || Ok(()));
@@ -189,7 +184,6 @@ mod tests {
                 ctx.it("a ok test", || Ok(()));
             })
         }
-
     }
 }
 
