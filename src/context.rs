@@ -41,6 +41,15 @@ pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
     Runner::new(c)
 }
 
+pub fn rdescribe<'a, 'b, F>(block_name: &'b str, body: F) -> ()
+    where F : 'a + FnOnce(&mut Context<'a>) -> () {
+
+    let mut runner = describe(block_name, body);
+    runner.run().expect("run should be ok");
+    let result = runner.result();
+    assert!(result.is_ok(), "Tests ran with one mor more failures: {:?}", result)
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -144,6 +153,43 @@ mod tests {
 
             expect!(report).to(be_ok());
         }
+    }
+
+    mod rdescribe {
+        pub use super::*;
+
+        trait ToRes { fn to_res(self) -> Result<(), ()>; }
+        impl ToRes for bool {
+            fn to_res(self) -> Result<(), ()> {
+                match self {
+                    true => Ok(()),
+                    false => Err(())
+                }
+            }
+        }
+
+        #[test]
+        fn it_implicitely_allocate_and_run_a_runner() {
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let ran_counter = &mut AtomicUsize::new(0);
+
+            rdescribe("allocates a runner", |ctx| {
+                ctx.before(|| { ran_counter.fetch_add(1, Ordering::SeqCst); });
+                ctx.it("should be runned (1)", || { (1 == ran_counter.load(Ordering::SeqCst)).to_res() });
+                ctx.it("should be runned (2)", || { (2 == ran_counter.load(Ordering::SeqCst)).to_res() });
+                ctx.it("should be runned (3)", || { (3 == ran_counter.load(Ordering::SeqCst)).to_res() });
+            })
+        }
+
+        #[test]
+        fn it_fails_when_run_fails() {
+            rdescribe("a failed root", |ctx| {
+                ctx.it("a ok test", || Ok(()));
+                ctx.it("a failed test", || Err(()));
+                ctx.it("a ok test", || Ok(()));
+            })
+        }
+
     }
 }
 
