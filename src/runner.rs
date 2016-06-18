@@ -20,25 +20,20 @@ pub struct TestReport {
 
 impl<'a> Runner<'a> {
 
-/*    fn run_and_recurse(before, after, context) {
-    
-    
-    }*/
-
-    pub fn run(&mut self) -> Result<(), ()> {
+    fn run_and_recurse(report: &mut TestReport, child_ctx: &mut Context) -> Result<(), ()> {
         use std::panic::{catch_unwind, AssertUnwindSafe};
 
-        let mut report = TestReport::default();
         let mut result = Ok(());
+        let ref mut before_functions = child_ctx.before_each;
+        let ref mut after_functions = child_ctx.after_each;
 
-        let ref mut describe = self.describe;
-        let ref mut before_functions = describe.before_each;
-        let ref mut after_functions = describe.after_each;
-        for test_function in describe.tests.iter_mut() {
-
+        for test_function in child_ctx.tests.iter_mut() {
             let test_res = catch_unwind(AssertUnwindSafe(|| {
                 for before_function in before_functions.iter_mut() { before_function() }
-                let res = test_function();
+                let res = match test_function {
+                    &mut Testable::Test(ref mut test_function) => test_function(),
+                    &mut Testable::Describe(ref mut desc) => Runner::run_and_recurse(report, desc)
+                };
                 for after_function in after_functions.iter_mut() { after_function() }
                 res
             }));
@@ -52,6 +47,13 @@ impl<'a> Runner<'a> {
 
             report.total_tests += 1;
         }
+
+        result
+    }
+
+    pub fn run(&mut self) -> Result<(), ()> {
+        let mut report = TestReport::default();
+        let result = Runner::run_and_recurse(&mut report, &mut self.describe);
 
         self.report = Some(result.and(Ok(report)).or(Err(report)));
         Ok(())

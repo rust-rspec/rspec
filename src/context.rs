@@ -5,12 +5,16 @@ pub type AfterFunction<'a>  = BeforeFunction<'a>;
 pub type TestFunction<'a>   = FnMut() -> TestResult + 'a + Send + Sync;
 pub type TestResult         = Result<(), ()>;
 
+pub enum Testable<'a>  {
+    Test(Box<TestFunction<'a>>),
+    Describe(Context<'a>)
+}
+
 #[derive(Default)]
 pub struct Context<'a> {
-    pub tests: Vec<Box<TestFunction<'a>>>,
+    pub tests: Vec<Testable<'a>>,
     pub before_each: Vec<Box<BeforeFunction<'a>>>,
     pub after_each: Vec<Box<AfterFunction<'a>>>,
-    pub child_contexts: Vec<Context<'a>>,
 }
 
 impl<'a> Context<'a> {
@@ -19,13 +23,13 @@ impl<'a> Context<'a> {
 
         let mut child = Context::default();
         body(&mut child);
-        self.child_contexts.push(child)
+        self.tests.push(Testable::Describe(child))
     }
 
     pub fn it<F>(&mut self, _name: &'a str, body: F)
         where F : 'a + Send + Sync + FnMut() -> TestResult {
 
-        self.tests.push(Box::new(body))
+        self.tests.push(Testable::Test(Box::new(body)))
     }
 
     pub fn before<F>(&mut self, body: F)
@@ -136,6 +140,7 @@ mod tests {
                     ctx.before(|| { ran_counter.fetch_add(1, Ordering::SeqCst); });
                     ctx.it("should see the before hook", || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
                 })
+            
             })
         }
     }
