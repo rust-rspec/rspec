@@ -4,6 +4,10 @@ use runner;
 pub enum Event {
     StartRunner,
     FinishedRunner(runner::RunnerResult),
+    // {Start,End}Describe
+    // {Start,End}Test
+    // {Start,End}Before
+    // {Start,End}After
 }
 
 pub trait EventHandler {

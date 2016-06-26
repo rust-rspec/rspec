@@ -19,12 +19,15 @@ mod tests {
      * x check that tests can return Err or Ok
      * x runner can count the tests
      * x runner can count the success and failures
-     * - check that runner displays the tests names and their results
      * x check that we can use before in a describe
      * x check that we can use after in a describe
-     * - check that after/before are run in all child contextes
+     * x check that after/before are run in all child contextes
+     * [] runner broadcasts run events
+     * - progress formatter is an event handler
+     * - pluggable formatters via formatter trait
+     * - stats time events is an event handler
      * - beforeAll
      * - afterAll
-     * - bench ?
+     * - bench ? --> see what's the protocol
      */
 }

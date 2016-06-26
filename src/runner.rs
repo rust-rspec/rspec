@@ -225,6 +225,30 @@ mod tests {
                     assert!(false, "FinishedRunner event not sent at last")
                 }
             }
+
+            #[test]
+            fn finished_runner_event_has_correct_test_report() {
+                let mut handler = StubEventHandler::default();
+                {
+                    let mut runner = describe("one good test", |ctx| {
+                        ctx.it("is a good test", || Ok(()))
+                    });
+                    runner.add_event_handler(&mut handler);
+
+                    runner.run().unwrap();
+                }
+
+                if let Some(&FinishedRunner(Ok(report))) = handler.events.last() {
+                    let expected_report = TestReport {
+                        total_tests: 1,
+                        success_count: 1,
+                        error_count: 0,
+                    };
+                    assert_eq!(expected_report, report)
+                } else {
+                    assert!(false, "FinishedRunner send bad TestReport")
+                }
+            }
         }
     }
 
