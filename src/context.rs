@@ -53,6 +53,7 @@ pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
     Runner::new(c)
 }
 
+// TODO: need refactoring
 pub fn rdescribe<'a, 'b, F>(block_name: &'b str, body: F) -> ()
     where F : 'a + FnOnce(&mut Context<'a>) -> () {
 

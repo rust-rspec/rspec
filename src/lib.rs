@@ -1,8 +1,10 @@
+#![allow(dead_code)]
 
 #[macro_use(expect)]
 extern crate expectest;
 pub use expectest::prelude::*;
 
+mod events;
 mod context;
 mod runner;
 

@@ -1,13 +1,18 @@
 use context::*;
+use events;
+use events::Event;
+
+pub type RunnerResult = Result<TestReport, TestReport>;
 
 pub struct Runner<'a> {
     describe: Context<'a>,
-    report: Option<Result<TestReport, TestReport>>
+    handlers: Vec<&'a mut events::EventHandler>,
+    report: Option<RunnerResult>
 }
 
 impl<'a> Runner<'a> {
     pub fn new<'b>(context: Context<'b>) -> Runner<'b> {
-        Runner { describe: context, report: None }
+        Runner { describe: context, handlers: vec!(), report: None }
     }
 }
 
@@ -52,15 +57,29 @@ impl<'a> Runner<'a> {
     }
 
     pub fn run(&mut self) -> Result<(), ()> {
+        self.broadcast(Event::StartRunner);
+
         let mut report = TestReport::default();
         let result = Runner::run_and_recurse(&mut report, &mut self.describe);
+        let result = result.and(Ok(report)).or(Err(report));
 
-        self.report = Some(result.and(Ok(report)).or(Err(report)));
+        self.report = Some(result);
+        self.broadcast(Event::FinishedRunner(result));
         Ok(())
     }
 
-    pub fn result(&self) -> Result<TestReport, TestReport> {
+    pub fn result(&self) -> RunnerResult {
         self.report.unwrap_or(Ok(TestReport::default()))
+    }
+
+    pub fn add_event_handler<H: events::EventHandler>(&mut self, handler: &'a mut H) {
+        self.handlers.push(handler)
+    }
+
+    fn broadcast(&mut self, event: events::Event) {
+        for h in self.handlers.iter_mut() {
+            h.trigger(event)
+        }
     }
 }
 
@@ -147,6 +166,65 @@ mod tests {
             }
 
             assert_eq!(3, ran_counter.load(Ordering::Relaxed))
+        }
+
+        mod events {
+            pub use super::*;
+            pub use events::*;
+            pub use events::Event::*;
+
+            #[derive(Default)]
+            struct StubEventHandler  {
+                pub events: Vec<Event>,
+            }
+
+            impl EventHandler for StubEventHandler {
+                fn trigger(&mut self, event: Event) {
+                    self.events.push(event)
+                }
+            }
+
+            #[test]
+            fn start_runner_event_is_sent() {
+                let mut handler = StubEventHandler::default();
+                {
+                    let mut runner = describe("empty but should run anyway", |_| {});
+                    runner.add_event_handler(&mut handler);
+
+                    runner.run().unwrap();
+                }
+
+                assert_eq!(Some(&StartRunner), handler.events.get(0))
+            }
+
+            #[test]
+            fn no_event_when_no_run() {
+                let mut handler = StubEventHandler::default();
+
+                {
+                    let mut runner = describe("empty but should run anyway", |_| {});
+                    runner.add_event_handler(&mut handler);
+                }
+
+                assert_eq!(None, handler.events.get(0))
+            }
+
+            #[test]
+            fn finished_runner_event_is_last_event_sent() {
+                let mut handler = StubEventHandler::default();
+                {
+                    let mut runner = describe("empty but should run anyway", |_| {});
+                    runner.add_event_handler(&mut handler);
+
+                    runner.run().unwrap();
+                }
+
+                if let Some(&FinishedRunner(_)) = handler.events.last() {
+                    assert!(true);
+                } else {
+                    assert!(false, "FinishedRunner event not sent at last")
+                }
+            }
         }
     }
 
