@@ -141,7 +141,6 @@ mod tests {
                     ctx.before(|| { ran_counter.fetch_add(1, Ordering::SeqCst); });
                     ctx.it("should see the before hook", || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
                 })
-            
             })
         }
     }

@@ -25,28 +25,49 @@ pub struct TestReport {
 
 impl<'a> Runner<'a> {
 
-    fn run_and_recurse(report: &mut TestReport, child_ctx: &mut Context) -> Result<(), ()> {
+    fn run_test<'inner, 'outer, It>(test_fun: &mut Box<TestFunction<'outer>>,
+                                    befores: It,
+                                    afters: &'inner mut Vec<Box<AfterFunction<'outer>>>
+                                    ) -> Result<(), ()>
+        where It: Iterator<Item = &'inner mut Box<BeforeFunction<'outer>>>,
+              'outer : 'inner {
+
         use std::panic::{catch_unwind, AssertUnwindSafe};
 
-        let mut result = Ok(());
-        let ref mut before_functions = child_ctx.before_each;
-        let ref mut after_functions = child_ctx.after_each;
+        catch_unwind(AssertUnwindSafe(|| {
+            for ref mut before_function in befores.into_iter() { before_function() }
+            let res = test_fun();
+            for after_function in afters.iter_mut() { after_function() }
+            res
+        })).unwrap_or(Err(()))
+    }
 
-        for test_function in child_ctx.tests.iter_mut() {
-            let test_res = catch_unwind(AssertUnwindSafe(|| {
-                for before_function in before_functions.iter_mut() { before_function() }
-                let res = match test_function {
-                    &mut Testable::Test(ref mut test_function) => test_function(),
-                    &mut Testable::Describe(ref mut desc) => Runner::run_and_recurse(report, desc)
-                };
-                for after_function in after_functions.iter_mut() { after_function() }
-                res
-            }));
-            // if test panicked, it means that it failed
-            let test_res = test_res.unwrap_or(Err(()));
+    fn run_and_recurse<'inner, 'outer, It>(
+                                   report:    &'inner mut TestReport,
+                                   child_ctx: &'inner mut Context<'outer>,
+                                   befores:   It
+                               )
+                              -> Result<(), ()>
+                              where It : Iterator<Item = &'inner mut Box<BeforeFunction<'outer>>>,
+                                    'outer : 'inner {
+
+        let mut result = Ok(());
+        let ref mut tests = child_ctx.tests;
+
+        for test_function in tests.iter_mut() {
+
+            let res = match test_function {
+                &mut Testable::Test(ref mut test_function) => Runner::run_test(test_function, befores, &mut child_ctx.after_each),
+                &mut Testable::Describe(ref mut desc) => Runner::run_and_recurse(
+                    report,
+                    desc,
+                    //vec!().iter_mut()
+                    befores.chain(child_ctx.before_each.iter_mut())
+                )
+            };
 
             result = match result {
-                Ok(()) => { report.success_count += 1; test_res },
+                Ok(()) => { report.success_count += 1; res },
                 old @ _ => { report.error_count += 1; old }
             };
 
@@ -56,11 +77,11 @@ impl<'a> Runner<'a> {
         result
     }
 
-    pub fn run(&mut self) -> Result<(), ()> {
+    pub fn run<'b>(&'b mut self) -> Result<(), ()> where 'a : 'b {
         self.broadcast(Event::StartRunner);
 
         let mut report = TestReport::default();
-        let result = Runner::run_and_recurse(&mut report, &mut self.describe);
+        let result = Runner::run_and_recurse(&mut report, &mut self.describe, vec!().iter_mut());
         let result = result.and(Ok(report)).or(Err(report));
 
         self.report = Some(result);
@@ -166,6 +187,38 @@ mod tests {
             }
 
             assert_eq!(3, ran_counter.load(Ordering::Relaxed))
+        }
+
+        #[test]
+        fn it_runs_befores_correct_number_of_time() {
+            use std::sync::atomic::AtomicUsize;
+            use std::sync::atomic::Ordering::SeqCst;
+            let ran_counter = &mut AtomicUsize::new(0);
+
+            rdescribe("a lot of before incoming (implicitely)", |ctx| {
+                ctx.before(|| { ran_counter.fetch_add(1, SeqCst); });
+
+                ctx.it("== 1", || { assert_eq!(1, ran_counter.load(SeqCst)); Ok(()) });
+                ctx.it("== 2", || { assert_eq!(2, ran_counter.load(SeqCst)); Ok(()) });
+
+                ctx.describe("flat with depth 1", |ctx| {
+                    ctx.it("== 6", || { assert_eq!(6, ran_counter.load(SeqCst)); Ok(()) });
+                    ctx.it("== 7", || { assert_eq!(7, ran_counter.load(SeqCst)); Ok(()) });
+                    ctx.it("== 8", || { assert_eq!(8, ran_counter.load(SeqCst)); Ok(()) });
+                    ctx.it("== 9", || { assert_eq!(9, ran_counter.load(SeqCst)); Ok(()) });
+                });
+
+                ctx.describe("depth 1", |ctx| {
+                    ctx.it("== 3", || { assert_eq!(3, ran_counter.load(SeqCst)); Ok(()) });
+                    ctx.describe("depth 2", |ctx| {
+                        ctx.it("== 4", || { assert_eq!(4, ran_counter.load(SeqCst)); Ok(()) });
+                        ctx.describe("depth 3", |ctx| {
+                            ctx.it("== 5", || { assert_eq!(4, ran_counter.load(SeqCst)); Ok(()) });
+                        });
+                    });
+                });
+
+            });
         }
 
         mod events {
