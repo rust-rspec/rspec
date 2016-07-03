@@ -25,44 +25,53 @@ pub struct TestReport {
 
 impl<'a> Runner<'a> {
 
-    fn run_test<'inner, 'outer, It>(test_fun: &mut Box<TestFunction<'outer>>,
-                                    befores: It,
-                                    afters: &'inner mut Vec<Box<AfterFunction<'outer>>>
+    fn run_test<'inner1, 'inner2, 'outer, It1, It2>(test_fun: &mut Box<TestFunction<'outer>>,
+                                    befores: &It1,
+                                    afters:  &It2,
                                     ) -> Result<(), ()>
-        where It: Iterator<Item = &'inner mut Box<BeforeFunction<'outer>>>,
-              'outer : 'inner {
+        where It1: Iterator<Item = &'inner1 mut Box<BeforeFunction<'outer>>>,
+              It2: Iterator<Item = &'inner2 mut Box<AfterFunction<'outer>>>,
+              'outer : 'inner1,
+              'outer : 'inner2 {
 
         use std::panic::{catch_unwind, AssertUnwindSafe};
 
         catch_unwind(AssertUnwindSafe(|| {
             for ref mut before_function in befores.into_iter() { before_function() }
             let res = test_fun();
-            for after_function in afters.iter_mut() { after_function() }
+            for ref mut after_function in afters.into_iter() { after_function() }
             res
         })).unwrap_or(Err(()))
     }
 
-    fn run_and_recurse<'inner, 'outer, It>(
-                                   report:    &'inner mut TestReport,
-                                   child_ctx: &'inner mut Context<'outer>,
-                                   befores:   It
+    fn run_and_recurse<'inner1, 'inner2, 'inner3, 'inner4, 'outer, It1, It2>(
+                                   report:    &'inner1 mut TestReport,
+                                   child_ctx: &'inner2 mut Context<'outer>,
+                                   befores:   &'inner3 It1,
+                                   afters:    &'inner4 It2
                                )
                               -> Result<(), ()>
-                              where It : Iterator<Item = &'inner mut Box<BeforeFunction<'outer>>>,
-                                    'outer : 'inner {
+                              where It1 : Iterator<Item = &'inner2 mut Box<BeforeFunction<'outer>>>,
+                                    It2 : Iterator<Item = &'inner3 mut Box<AfterFunction<'outer>>>,
+                                    'outer : 'inner1,
+                                    'outer : 'inner2,
+                                    'outer : 'inner3,
+                                    'outer : 'inner4 {
 
         let mut result = Ok(());
         let ref mut tests = child_ctx.tests;
+        let befores = befores.chain(child_ctx.before_each.iter_mut());
+        let afters  = child_ctx.after_each.iter_mut().chain(afters.into_iter());
 
         for test_function in tests.iter_mut() {
 
             let res = match test_function {
-                &mut Testable::Test(ref mut test_function) => Runner::run_test(test_function, befores, &mut child_ctx.after_each),
+                &mut Testable::Test(ref mut test_function) => Runner::run_test(test_function, &befores, &afters),
                 &mut Testable::Describe(ref mut desc) => Runner::run_and_recurse(
                     report,
                     desc,
-                    //vec!().iter_mut()
-                    befores.chain(child_ctx.before_each.iter_mut())
+                    &befores,
+                    &afters,
                 )
             };
 
@@ -81,7 +90,9 @@ impl<'a> Runner<'a> {
         self.broadcast(Event::StartRunner);
 
         let mut report = TestReport::default();
-        let result = Runner::run_and_recurse(&mut report, &mut self.describe, vec!().iter_mut());
+        let befores_empty = vec!().iter_mut();
+        let afters_empty  = vec!().iter_mut();
+        let result = Runner::run_and_recurse(&mut report, &mut self.describe, &befores_empty, &afters_empty);
         let result = result.and(Ok(report)).or(Err(report));
 
         self.report = Some(result);
