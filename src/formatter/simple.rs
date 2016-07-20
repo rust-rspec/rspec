@@ -123,7 +123,11 @@ mod tests {
             one_error: (success: 0, errors: 1) =>
               "test result: FAILED. 1 examples; 0 passed; 1 failed;\n",
             multiple_errors: (success: 0, errors: 37) =>
-              "test result: FAILED. 37 examples; 0 passed; 37 failed;\n"
+              "test result: FAILED. 37 examples; 0 passed; 37 failed;\n",
+            one_of_each: (success: 1, errors: 1) =>
+              "test result: FAILED. 2 examples; 1 passed; 1 failed;\n",
+            multiple_of_each: (success: 12, errors: 21) =>
+              "test result: FAILED. 33 examples; 12 passed; 21 failed;\n"
         }
     }
 }
