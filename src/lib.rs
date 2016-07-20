@@ -23,12 +23,22 @@ mod tests {
      * x check that we can use before in a describe
      * x check that we can use after in a describe
      * x check that after/before are run in all child contextes
-     * [] runner broadcasts run events
-     * - progress formatter is an event handler
-     * - pluggable formatters via formatter trait
+     * x runner broadcasts run events
+     * x progress formatter is an event handler
+     * x pluggable formatters via formatter trait
      * - stats time events is an event handler
-     * - beforeAll
-     * - afterAll
+     * - detect slow tests via treshold
+     * - time the total running time
+     * - failure-only via a tmp file
+     * - filter tests
+     * - coloration
+     * - seed for deterministic randomization
+     * - fail-fast fail at the first failed test
+     * x beforeAll
+     * x afterAll
+     * - beforeEach ?
+     * - afterEach ?
+     * - use Any to return anything that can be Ok-ed or () or None or panic-ed
      * - bench ? --> see what's the protocol
      */
 }

@@ -5,6 +5,7 @@ pub enum Event {
     StartRunner,
     FinishedRunner(runner::RunnerResult),
     // {Start,End}Describe
+    StartTest,
     // {Start,End}Test
     // {Start,End}Before
     // {Start,End}After

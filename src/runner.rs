@@ -249,6 +249,21 @@ mod tests {
                     assert!(false, "FinishedRunner send bad TestReport")
                 }
             }
+
+            #[test]
+            fn start_test_is_broadcasted() {
+                let mut handler = StubEventHandler::default();
+
+                {
+                    let mut runner = describe("root", |ctx| {
+                        ctx.it("should run with an event", || { Ok(()) });
+                    });
+                    runner.add_event_handler(&mut handler);
+                    runner.run().unwrap();
+                }
+
+                assert_eq!(Some(&StartTest), handler.events.get(1))
+            }
         }
     }
 

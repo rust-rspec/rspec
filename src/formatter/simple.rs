@@ -34,7 +34,8 @@ impl<'a, T : io::Write> EventHandler for Simple<'a, T> {
         // FIXME: do something with the io::Error ?
         let _ = match event {
             Event::StartRunner => writeln!(self.buf, "Running tests..."),
-            Event::FinishedRunner(result) => self.write_summary(result)
+            Event::FinishedRunner(result) => self.write_summary(result),
+            _ => Ok(())
         };
     }
 }
