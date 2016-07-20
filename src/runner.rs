@@ -25,25 +25,28 @@ pub struct TestReport {
 
 impl<'a> Runner<'a> {
 
-    fn run_and_recurse(report: &mut TestReport, child_ctx: &mut Context) -> Result<(), ()> {
+    fn run_test(test_function: &mut TestFunction) -> TestResult {
         use std::panic::{catch_unwind, AssertUnwindSafe};
+        let res = catch_unwind(AssertUnwindSafe(|| test_function()));
+        // if test panicked, it means that it failed
+        res.unwrap_or(Err(()))
+    }
 
+    fn run_and_recurse(report: &mut TestReport, child_ctx: &mut Context) -> TestResult {
         let mut result = Ok(());
         let ref mut before_functions = child_ctx.before_each;
         let ref mut after_functions = child_ctx.after_each;
 
         for test_function in child_ctx.tests.iter_mut() {
-            let test_res = catch_unwind(AssertUnwindSafe(|| {
+            let test_res = {
                 for before_function in before_functions.iter_mut() { before_function() }
                 let res = match test_function {
-                    &mut Testable::Test(ref mut test_function) => test_function(),
+                    &mut Testable::Test(ref mut test_function) => Runner::run_test(test_function),
                     &mut Testable::Describe(ref mut desc) => Runner::run_and_recurse(report, desc)
                 };
                 for after_function in after_functions.iter_mut() { after_function() }
                 res
-            }));
-            // if test panicked, it means that it failed
-            let test_res = test_res.unwrap_or(Err(()));
+            };
 
             result = match result {
                 Ok(()) => { report.success_count += 1; test_res },
