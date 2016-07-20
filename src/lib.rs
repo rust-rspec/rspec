@@ -7,6 +7,7 @@ pub use expectest::prelude::*;
 mod events;
 mod context;
 mod runner;
+mod formatter;
 
 #[cfg(test)]
 mod tests {
