@@ -1,5 +1,6 @@
 use events::{Event, EventHandler};
 use formatter::formatter::Formatter;
+use runner;
 use std::io;
 
 pub struct Simple<'a, Io: io::Write + 'a> {
@@ -10,17 +11,30 @@ impl<'a, T : io::Write> Simple<'a, T> {
     fn new<'b>(buf: &'b mut T) -> Simple<'b, T> {
         Simple { buf: buf }
     }
+
+    fn write_summary(&mut self, result: runner::RunnerResult) -> Result<(), io::Error> {
+        let (res, report) = match result {
+            Ok(report) => ("ok", report),
+            Err(report) => ("FAILED", report)
+        };
+
+        writeln!(
+            self.buf,
+            "test result: {}. {} examples; {} passed; {} failed;",
+            res,
+            report.total_tests,
+            report.success_count,
+            report.error_count
+        )
+    }
 }
 
 impl<'a, T : io::Write> EventHandler for Simple<'a, T> {
     fn trigger(&mut self, event: Event) {
+        // FIXME: do something with the io::Error ?
         let _ = match event {
             Event::StartRunner => writeln!(self.buf, "Running tests..."),
-            Event::FinishedRunner(result) => writeln!(
-                self.buf,
-                "test result: ok. {0} examples; {0} passed; 0 failed;",
-                result.unwrap().total_tests
-            )
+            Event::FinishedRunner(result) => self.write_summary(result)
         };
     }
 }
@@ -79,28 +93,37 @@ mod tests {
             }
         }
 
-        #[test]
-        fn one_test() {
-            let mut v = vec!();
-            {
-                let mut s = Simple::new(&mut v);
-                s.trigger(Event::FinishedRunner(make_report(1, 0)))
-            }
+        macro_rules! test_and_compare_output {
+            ($(
+                $test_name:ident : (success: $succ:expr, errors: $err:expr) => $msg:expr
+            ),+) => {
 
-            assert_eq!("test result: ok. 1 examples; 1 passed; 0 failed;\n",
-                       str::from_utf8(&v).unwrap())
+                $(
+                    #[test]
+                    fn $test_name() {
+                        let mut v = vec!();
+                        {
+                            let mut s = Simple::new(&mut v);
+                            s.trigger(Event::FinishedRunner(make_report($succ, $err)))
+                        }
+
+                        assert_eq!($msg, str::from_utf8(&v).unwrap())
+                    }
+                )+
+            }
         }
 
-        #[test]
-        fn multiple_ok() {
-            let mut v = vec!();
-            {
-                let mut s = Simple::new(&mut v);
-                s.trigger(Event::FinishedRunner(make_report(42, 0)))
-            }
-
-            assert_eq!("test result: ok. 42 examples; 42 passed; 0 failed;\n",
-                       str::from_utf8(&v).unwrap())
+        test_and_compare_output! {
+            no_test_is_ok: (success: 0, errors: 0) =>
+                "test result: ok. 0 examples; 0 passed; 0 failed;\n",
+            one_test: (success: 1, errors: 0) =>
+                "test result: ok. 1 examples; 1 passed; 0 failed;\n",
+            multiple_ok: (success: 42, errors: 0) =>
+                "test result: ok. 42 examples; 42 passed; 0 failed;\n",
+            one_error: (success: 0, errors: 1) =>
+              "test result: FAILED. 1 examples; 0 passed; 1 failed;\n",
+            multiple_errors: (success: 0, errors: 37) =>
+              "test result: FAILED. 37 examples; 0 passed; 37 failed;\n"
         }
     }
 }
