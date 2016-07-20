@@ -18,9 +18,9 @@ impl<'a> Runner<'a> {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub struct TestReport {
-    total_tests: u32,
-    success_count: u32,
-    error_count: u32
+    pub total_tests: u32,
+    pub success_count: u32,
+    pub error_count: u32
 }
 
 impl<'a> Runner<'a> {
