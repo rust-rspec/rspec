@@ -4,17 +4,32 @@ use events::Event;
 
 pub type RunnerResult = Result<TestReport, TestReport>;
 
+/// Handlers is a separate struct which only holds the registered handlers.
+/// This is useful to Runner so that its recursive call doesn't have to keep a refernce to `self`
+#[derive(Default)]
+struct Handlers<'a> {
+    handlers: Vec<&'a mut events::EventHandler>,
+}
+
+impl<'a> Handlers<'a> {
+    fn broadcast(&mut self, event: &events::Event) {
+        for h in &mut self.handlers {
+            h.trigger(event)
+        }
+    }
+}
+
 pub struct Runner<'a> {
     describe: Context<'a>,
-    handlers: Vec<&'a mut events::EventHandler>,
     report: Option<RunnerResult>,
+    handlers: Handlers<'a>,
 }
 
 impl<'a> Runner<'a> {
     pub fn new(context: Context<'a>) -> Runner<'a> {
         Runner {
             describe: context,
-            handlers: vec![],
+            handlers: Handlers::default(),
             report: None,
         }
     }
@@ -36,7 +51,10 @@ impl<'a> Runner<'a> {
         res.unwrap_or(Err(()))
     }
 
-    fn run_and_recurse(report: &mut TestReport, child_ctx: &mut Context) -> TestResult {
+    fn run_and_recurse(report: &mut TestReport,
+                       child_ctx: &mut Context,
+                       handlers: &mut Handlers)
+                       -> TestResult {
         let mut result = Ok(());
         let before_functions = &mut child_ctx.before_each;
         let after_functions = &mut child_ctx.after_each;
@@ -47,8 +65,13 @@ impl<'a> Runner<'a> {
                     before_function()
                 }
                 let res = match *test_function {
-                    Testable::Test(ref mut test_function) => Runner::run_test(test_function),
-                    Testable::Describe(ref mut desc) => Runner::run_and_recurse(report, desc),
+                    Testable::Test(ref name, ref mut test_function) => {
+                        handlers.broadcast(&Event::StartTest(name.clone()));
+                        Runner::run_test(test_function)
+                    }
+                    Testable::Describe(ref mut desc) => {
+                        Runner::run_and_recurse(report, desc, handlers)
+                    }
                 };
                 for after_function in after_functions.iter_mut() {
                     after_function()
@@ -74,14 +97,14 @@ impl<'a> Runner<'a> {
     }
 
     pub fn run(&mut self) -> Result<(), ()> {
-        self.broadcast(Event::StartRunner);
+        self.handlers.broadcast(&Event::StartRunner);
 
         let mut report = TestReport::default();
-        let result = Runner::run_and_recurse(&mut report, &mut self.describe);
+        let result = Runner::run_and_recurse(&mut report, &mut self.describe, &mut self.handlers);
         let result = result.and(Ok(report)).or_else(|_| Err(report));
 
         self.report = Some(result);
-        self.broadcast(Event::FinishedRunner(result));
+        self.handlers.broadcast(&Event::FinishedRunner(result));
         Ok(())
     }
 
@@ -90,13 +113,7 @@ impl<'a> Runner<'a> {
     }
 
     pub fn add_event_handler<H: events::EventHandler>(&mut self, handler: &'a mut H) {
-        self.handlers.push(handler)
-    }
-
-    fn broadcast(&mut self, event: events::Event) {
-        for h in &mut self.handlers {
-            h.trigger(event)
-        }
+        self.handlers.handlers.push(handler)
     }
 }
 
@@ -205,8 +222,8 @@ mod tests {
             }
 
             impl EventHandler for StubEventHandler {
-                fn trigger(&mut self, event: Event) {
-                    self.events.push(event)
+                fn trigger(&mut self, event: &Event) {
+                    self.events.push(event.clone())
                 }
             }
 
@@ -287,7 +304,8 @@ mod tests {
                     runner.run().unwrap();
                 }
 
-                assert_eq!(Some(&StartTest), handler.events.get(1))
+                assert_eq!(Some(&StartTest(String::from("should run with an event"))),
+                           handler.events.get(1))
             }
         }
     }

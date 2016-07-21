@@ -6,7 +6,9 @@ pub type TestFunction<'a> = FnMut() -> TestResult + 'a + Send + Sync;
 pub type TestResult = Result<(), ()>;
 
 pub enum Testable<'a> {
-    Test(Box<TestFunction<'a>>),
+    /// Name and Test body
+    Test(String, Box<TestFunction<'a>>),
+    /// Describe body
     Describe(Context<'a>),
 }
 
@@ -27,11 +29,11 @@ impl<'a> Context<'a> {
         self.tests.push(Testable::Describe(child))
     }
 
-    pub fn it<F>(&mut self, _name: &'a str, body: F)
+    pub fn it<F>(&mut self, name: &'a str, body: F)
         where F: 'a + Send + Sync + FnMut() -> TestResult
     {
 
-        self.tests.push(Testable::Test(Box::new(body)))
+        self.tests.push(Testable::Test(String::from(name), Box::new(body)))
     }
 
     pub fn before<F>(&mut self, body: F)

@@ -28,9 +28,9 @@ impl<'a, T: io::Write> Simple<'a, T> {
 }
 
 impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
-    fn trigger(&mut self, event: Event) {
+    fn trigger(&mut self, event: &Event) {
         // FIXME: do something with the io::Error ?
-        let _ = match event {
+        let _ = match *event {
             Event::StartRunner => writeln!(self.buf, "Running tests..."),
             Event::FinishedRunner(result) => self.write_summary(result),
             _ => Ok(()),
@@ -43,6 +43,8 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 mod tests {
     pub use super::*;
     pub use formatter::formatter::Formatter;
+    pub use events::{Event, EventHandler};
+    pub use std::str;
 
     #[test]
     fn it_can_be_instanciated() {
@@ -57,15 +59,13 @@ mod tests {
     #[cfg(test)]
     mod event_start_runner {
         pub use super::*;
-        use events::{Event, EventHandler};
-        use std::str;
 
         #[test]
         fn it_display_that_tests_started() {
             let mut v = vec![];
             {
                 let mut s = Simple::new(&mut v);
-                s.trigger(Event::StartRunner);
+                s.trigger(&Event::StartRunner);
             }
 
             assert_eq!("Running tests...\n", str::from_utf8(&v).unwrap());
@@ -75,9 +75,7 @@ mod tests {
     #[cfg(test)]
     mod event_finished_runner {
         pub use super::*;
-        use events::{Event, EventHandler};
         use runner::TestReport;
-        use std::str;
 
         fn make_report(succes: u32, errors: u32) -> Result<TestReport, TestReport> {
             let mut report = TestReport::default();
@@ -103,7 +101,7 @@ mod tests {
                         let mut v = vec!();
                         {
                             let mut s = Simple::new(&mut v);
-                            s.trigger(Event::FinishedRunner(make_report($succ, $err)))
+                            s.trigger(&Event::FinishedRunner(make_report($succ, $err)))
                         }
 
                         assert_eq!($msg, str::from_utf8(&v).unwrap())
