@@ -5,11 +5,13 @@ use std::io;
 
 pub struct Simple<'a, Io: io::Write + 'a> {
     buf: &'a mut Io,
+    pub name_stack: Vec<String>,
+    pub failures: Vec<String>,
 }
 
 impl<'a, T: io::Write> Simple<'a, T> {
     pub fn new(buf: &mut T) -> Simple<T> {
-        Simple { buf: buf }
+        Simple { buf: buf, name_stack: vec!(), failures: vec!() }
     }
 
     fn write_summary(&mut self, result: runner::RunnerResult) -> Result<(), io::Error> {
@@ -32,7 +34,13 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
         // FIXME: do something with the io::Error ?
         let _ = match *event {
             Event::StartRunner => writeln!(self.buf, "Running tests:\n"),
+            Event::StartTest(ref name) => { self.name_stack.push(name.clone()); Ok(()) },
             Event::EndTest(result) => {
+                if !self.name_stack.is_empty() {
+                    let failure_name = self.name_stack.join(" | ");
+                    self.failures.push(failure_name);
+                    self.name_stack.pop();
+                }
                 let chr = if result.is_ok() {
                     "."
                 } else {
@@ -41,7 +49,9 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
                 write!(self.buf, "{}", chr)
             }
             Event::FinishedRunner(result) => self.write_summary(result),
-            _ => Ok(()),
+            Event::StartDescribe(ref name) => { self.name_stack.push(name.clone()); Ok(()) },
+            Event::EndDescribe => { self.name_stack.pop(); Ok(()) },
+            //_ => Ok(()),
         };
     }
 }
@@ -52,6 +62,7 @@ mod tests {
     pub use super::*;
     pub use formatter::formatter::Formatter;
     pub use events::{Event, EventHandler};
+    pub use std::io;
     pub use std::str;
 
     #[test]
@@ -159,5 +170,102 @@ mod tests {
 
             assert_eq!("F", str::from_utf8(&v).unwrap());
         }
+    }
+
+    mod event_start_end_describe {
+        pub use super::*;
+
+        #[test]
+        fn start_describe_event_push_the_name_stack() {
+            let mut sink = &mut io::sink();
+            let mut s = Simple::new(&mut sink);
+
+            s.trigger(&Event::StartDescribe(String::from("Hey !")));
+            assert_eq!(vec!(String::from("Hey !")), s.name_stack);
+
+            s.trigger(&Event::StartDescribe(String::from("Ho !")));
+            assert_eq!(vec!(String::from("Hey !"), String::from("Ho !")), s.name_stack)
+        }
+
+        #[test]
+        fn end_describe_event_pop_the_name_stack() {
+            let mut sink = &mut io::sink();
+            let mut s = Simple::new(&mut sink);
+
+            s.trigger(&Event::StartDescribe(String::from("Hey !")));
+            s.trigger(&Event::StartDescribe(String::from("Ho !")));
+
+            s.trigger(&Event::EndDescribe);
+            assert_eq!(vec!(String::from("Hey !")), s.name_stack);
+
+            s.trigger(&Event::EndDescribe);
+            assert_eq!(0, s.name_stack.len());
+        }
+    }
+
+    mod failures_pretty_printing {
+        use super::*;
+
+        #[test]
+        fn it_register_failures() {
+            let mut sink = &mut io::sink();
+            let mut s = Simple::new(&mut sink);
+            s.trigger(&Event::StartTest("hola".into()));
+            s.trigger(&Event::EndTest(Err(())));
+            assert_eq!(1, s.failures.len());
+        }
+
+        #[test]
+        fn it_keep_track_of_the_failure_name() {
+            let mut sink = &mut io::sink();
+            let mut s = Simple::new(&mut sink);
+            s.trigger(&Event::StartTest("hola".into()));
+            s.trigger(&Event::EndTest(Err(())));
+            assert_eq!(Some(&"hola".into()), s.failures.get(0));
+        }
+
+        #[test]
+        fn it_has_a_nice_diplay_for_describes() {
+            let mut sink = &mut io::sink();
+            let mut s = Simple::new(&mut sink);
+            s.trigger(&Event::StartDescribe("hola".into()));
+            s.trigger(&Event::StartTest("holé".into()));
+            s.trigger(&Event::EndTest(Err(())));
+            assert_eq!(Some(&"hola | holé".into()), s.failures.get(0));
+
+            s.trigger(&Event::StartDescribe("ohééé".into()));
+            s.trigger(&Event::StartTest("holé".into()));
+            s.trigger(&Event::EndTest(Err(())));
+            assert_eq!(Some(&"hola | ohééé | holé".into()), s.failures.get(1));
+        }
+
+        #[test]
+        fn it_works_with_multiple_describes() {
+            let mut sink = &mut io::sink();
+            let mut s = Simple::new(&mut sink);
+            s.trigger(&Event::StartDescribe("hola".into()));
+            s.trigger(&Event::StartTest("holé".into()));
+            s.trigger(&Event::EndTest(Err(())));
+
+            s.trigger(&Event::EndDescribe);
+            s.trigger(&Event::StartDescribe("ok".into()));
+            s.trigger(&Event::StartTest("cacao".into()));
+            s.trigger(&Event::EndTest(Err(())));
+            assert_eq!(Some(&"ok | cacao".into()), s.failures.get(1));
+        }
+
+        // test the correct formating of one failure
+        //#[test]
+        //fn format_all_failures() {
+        //    let mut buf = vec!();
+        //    {
+        //        let mut s = Simple::new(&mut buf);
+        //        s.trigger(&Event::StartDescribe("hola".into()));
+        //        s.trigger(&Event::StartTest("holé".into()));
+        //        s.trigger(&Event::EndTest(Err(())));
+        //    }
+
+        //    let expect = ""
+        //}
     }
 }
