@@ -76,8 +76,11 @@ impl<'a> Runner<'a> {
                     Testable::Test(ref name, ref mut test_function) => {
                         Runner::run_test(name, test_function, handlers)
                     }
-                    Testable::Describe(ref mut desc) => {
-                        Runner::run_and_recurse(report, desc, handlers)
+                    Testable::Describe(ref name, ref mut desc) => {
+                        handlers.broadcast(&Event::StartDescribe(name.clone()));
+                        let res = Runner::run_and_recurse(report, desc, handlers);
+                        handlers.broadcast(&Event::EndDescribe);
+                        res
                     }
                 };
                 for after_function in after_functions.iter_mut() {
@@ -328,6 +331,37 @@ mod tests {
                 }
 
                 assert_eq!(Some(&EndTest(Ok(()))), handler.events.get(2));
+            }
+
+            #[test]
+            fn start_describe_is_broadcasted() {
+                let mut handler = StubEventHandler::default();
+
+                {
+                    let mut runner = describe("root, no hook", |ctx| {
+                        ctx.describe("this has a hook", |_| {});
+                    });
+                    runner.add_event_handler(&mut handler);
+                    runner.run().unwrap();
+                }
+
+                assert_eq!(Some(&StartDescribe(String::from("this has a hook"))),
+                           handler.events.get(1));
+            }
+
+            #[test]
+            fn end_describe_is_broadcasted() {
+                let mut handler = StubEventHandler::default();
+
+                {
+                    let mut runner = describe("root, no hook", |ctx| {
+                        ctx.describe("this has a hook", |_| {});
+                    });
+                    runner.add_event_handler(&mut handler);
+                    runner.run().unwrap();
+                }
+
+                assert_eq!(Some(&EndDescribe), handler.events.get(2));
             }
         }
     }

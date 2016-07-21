@@ -5,7 +5,8 @@ use runner;
 pub enum Event {
     StartRunner,
     FinishedRunner(runner::RunnerResult),
-    // {Start,End}Describe
+    StartDescribe(String),
+    EndDescribe,
     StartTest(String),
     EndTest(context::TestResult), /* {Start,End}Before
                                    * {Start,End}After */
