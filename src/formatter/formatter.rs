@@ -1,4 +1,3 @@
 use events::EventHandler;
 
-pub trait Formatter : EventHandler {
-}
+pub trait Formatter: EventHandler {}

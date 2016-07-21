@@ -7,12 +7,16 @@ pub type RunnerResult = Result<TestReport, TestReport>;
 pub struct Runner<'a> {
     describe: Context<'a>,
     handlers: Vec<&'a mut events::EventHandler>,
-    report: Option<RunnerResult>
+    report: Option<RunnerResult>,
 }
 
 impl<'a> Runner<'a> {
     pub fn new(context: Context<'a>) -> Runner<'a> {
-        Runner { describe: context, handlers: vec!(), report: None }
+        Runner {
+            describe: context,
+            handlers: vec![],
+            report: None,
+        }
     }
 }
 
@@ -20,12 +24,11 @@ impl<'a> Runner<'a> {
 pub struct TestReport {
     pub total_tests: u32,
     pub success_count: u32,
-    pub error_count: u32
+    pub error_count: u32,
 }
 
 impl<'a> Runner<'a> {
-
-     #[cfg_attr(feature="clippy", allow(redundant_closure))]
+    #[cfg_attr(feature="clippy", allow(redundant_closure))]
     fn run_test(test_function: &mut Box<TestFunction>) -> TestResult {
         use std::panic::{catch_unwind, AssertUnwindSafe};
         let res = catch_unwind(AssertUnwindSafe(|| test_function()));
@@ -40,18 +43,28 @@ impl<'a> Runner<'a> {
 
         for test_function in &mut child_ctx.tests {
             let test_res = {
-                for before_function in before_functions.iter_mut() { before_function() }
+                for before_function in before_functions.iter_mut() {
+                    before_function()
+                }
                 let res = match *test_function {
                     Testable::Test(ref mut test_function) => Runner::run_test(test_function),
-                    Testable::Describe(ref mut desc) => Runner::run_and_recurse(report, desc)
+                    Testable::Describe(ref mut desc) => Runner::run_and_recurse(report, desc),
                 };
-                for after_function in after_functions.iter_mut() { after_function() }
+                for after_function in after_functions.iter_mut() {
+                    after_function()
+                }
                 res
             };
 
             result = match result {
-                Ok(()) => { report.success_count += 1; test_res },
-                old => { report.error_count += 1; old }
+                Ok(()) => {
+                    report.success_count += 1;
+                    test_res
+                }
+                old => {
+                    report.error_count += 1;
+                    old
+                }
             };
 
             report.total_tests += 1;
@@ -132,8 +145,14 @@ mod tests {
 
             {
                 let mut runner = describe("A root", |ctx| {
-                    ctx.it("first run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); Ok(()) });
-                    ctx.it("second run", || { ran_counter.fetch_add(1, Ordering::Relaxed); Ok(()) });
+                    ctx.it("first run", || {
+                        ran_counter.fetch_add(1, Ordering::Relaxed);
+                        Ok(())
+                    });
+                    ctx.it("second run", || {
+                        ran_counter.fetch_add(1, Ordering::Relaxed);
+                        Ok(())
+                    });
                 });
                 runner.run().unwrap();
             }
@@ -149,19 +168,22 @@ mod tests {
             {
                 let mut runner = describe("A root", |ctx| {
                     ctx.describe("first describe", |ctx| {
-                        ctx.it("first run",  || {
-                            ran_counter.fetch_add(1, Ordering::Relaxed); Ok(())
+                        ctx.it("first run", || {
+                            ran_counter.fetch_add(1, Ordering::Relaxed);
+                            Ok(())
                         });
                     });
                     ctx.describe("second describe", |ctx| {
-                        ctx.it("second run",  || {
-                            ran_counter.fetch_add(1, Ordering::Relaxed); Ok(())
+                        ctx.it("second run", || {
+                            ran_counter.fetch_add(1, Ordering::Relaxed);
+                            Ok(())
                         });
                     });
                     ctx.describe("third describe", |ctx| {
                         ctx.describe("fourth describe", |ctx| {
-                            ctx.it("third run",  || {
-                                ran_counter.fetch_add(1, Ordering::Relaxed); Ok(())
+                            ctx.it("third run", || {
+                                ran_counter.fetch_add(1, Ordering::Relaxed);
+                                Ok(())
                             });
                         })
                     })
@@ -178,7 +200,7 @@ mod tests {
             pub use events::Event::*;
 
             #[derive(Default)]
-            struct StubEventHandler  {
+            struct StubEventHandler {
                 pub events: Vec<Event>,
             }
 
@@ -234,9 +256,8 @@ mod tests {
             fn finished_runner_event_has_correct_test_report() {
                 let mut handler = StubEventHandler::default();
                 {
-                    let mut runner = describe("one good test", |ctx| {
-                        ctx.it("is a good test", || Ok(()))
-                    });
+                    let mut runner = describe("one good test",
+                                              |ctx| ctx.it("is a good test", || Ok(())));
                     runner.add_event_handler(&mut handler);
 
                     runner.run().unwrap();
@@ -260,7 +281,7 @@ mod tests {
 
                 {
                     let mut runner = describe("root", |ctx| {
-                        ctx.it("should run with an event", || { Ok(()) });
+                        ctx.it("should run with an event", || Ok(()));
                     });
                     runner.add_event_handler(&mut handler);
                     runner.run().unwrap();
@@ -276,11 +297,7 @@ mod tests {
 
         #[test]
         fn tests_can_fail_with_an_error_result() {
-            let mut runner = describe("A root", |ctx| {
-                ctx.it("should fail", || {
-                    Err(())
-                })
-            });
+            let mut runner = describe("A root", |ctx| ctx.it("should fail", || Err(())));
             runner.run().unwrap();
 
             expect!(runner.result()).to(be_err());
@@ -288,9 +305,7 @@ mod tests {
 
         #[test]
         fn should_be_ok_if_tests_are_ok() {
-            let mut runner = describe("A root", |ctx| {
-                ctx.it("should be ok", || { Ok(()) })
-            });
+            let mut runner = describe("A root", |ctx| ctx.it("should be ok", || Ok(())));
             runner.run().unwrap();
 
             expect!(runner.result()).to(be_ok());
@@ -307,8 +322,8 @@ mod tests {
         #[test]
         fn is_err_if_one_test_is_err() {
             let mut runner = describe("A root", |ctx| {
-                ctx.it("an err", || { Err(()) });
-                ctx.it("an ok", || { Ok(()) });
+                ctx.it("an err", || Err(()));
+                ctx.it("an ok", || Ok(()));
             });
             runner.run().unwrap();
 
@@ -318,10 +333,10 @@ mod tests {
         #[test]
         fn is_ok_if_all_tests_are_ok() {
             let mut runner = describe("A root", |ctx| {
-                ctx.it("ok 1", || { Ok(()) });
-                ctx.it("ok 2", || { Ok(()) });
-                ctx.it("ok 3", || { Ok(()) });
-                ctx.it("ok 4", || { Ok(()) });
+                ctx.it("ok 1", || Ok(()));
+                ctx.it("ok 2", || Ok(()));
+                ctx.it("ok 3", || Ok(()));
+                ctx.it("ok 4", || Ok(()));
             });
             runner.run().unwrap();
 
@@ -334,8 +349,14 @@ mod tests {
             let counter = &mut AtomicUsize::new(0);
 
             let mut runner = describe("A root", |ctx| {
-                ctx.it("assert_eq fail", || { assert_eq!(true, false); Ok(()) });
-                ctx.it("this should also be runned", || { counter.fetch_add(1, Ordering::Relaxed); Ok(()) })
+                ctx.it("assert_eq fail", || {
+                    assert_eq!(true, false);
+                    Ok(())
+                });
+                ctx.it("this should also be runned", || {
+                    counter.fetch_add(1, Ordering::Relaxed);
+                    Ok(())
+                })
             });
             runner.run().unwrap();
 
@@ -346,9 +367,9 @@ mod tests {
         #[test]
         fn can_count_the_tests() {
             let mut runner = describe("a root", |ctx| {
-                ctx.it("first", || { Ok(()) });
-                ctx.it("second", || { Ok(()) });
-                ctx.it("third", || { Ok(()) });
+                ctx.it("first", || Ok(()));
+                ctx.it("second", || Ok(()));
+                ctx.it("third", || Ok(()));
             });
             runner.run().unwrap();
             let result = runner.result();
@@ -362,9 +383,9 @@ mod tests {
         #[test]
         fn can_count_succes() {
             let mut runner = describe("a root", |ctx| {
-                ctx.it("first", || { Ok(()) });
-                ctx.it("second", || { Ok(()) });
-                ctx.it("third", || { Ok(()) });
+                ctx.it("first", || Ok(()));
+                ctx.it("second", || Ok(()));
+                ctx.it("third", || Ok(()));
             });
             runner.run().unwrap();
             let result = runner.result();
@@ -378,9 +399,9 @@ mod tests {
         #[test]
         fn can_count_errors() {
             let mut runner = describe("a root", |ctx| {
-                ctx.it("first", || { Err(()) });
-                ctx.it("second", || { Err(()) });
-                ctx.it("third", || { Ok(()) });
+                ctx.it("first", || Err(()));
+                ctx.it("second", || Err(()));
+                ctx.it("third", || Ok(()));
             });
             runner.run().unwrap();
             let result = runner.result();

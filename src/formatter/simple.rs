@@ -4,10 +4,10 @@ use runner;
 use std::io;
 
 pub struct Simple<'a, Io: io::Write + 'a> {
-    buf: &'a mut Io
+    buf: &'a mut Io,
 }
 
-impl<'a, T : io::Write> Simple<'a, T> {
+impl<'a, T: io::Write> Simple<'a, T> {
     fn new(buf: &mut T) -> Simple<T> {
         Simple { buf: buf }
     }
@@ -15,31 +15,29 @@ impl<'a, T : io::Write> Simple<'a, T> {
     fn write_summary(&mut self, result: runner::RunnerResult) -> Result<(), io::Error> {
         let (res, report) = match result {
             Ok(report) => ("ok", report),
-            Err(report) => ("FAILED", report)
+            Err(report) => ("FAILED", report),
         };
 
-        writeln!(
-            self.buf,
-            "test result: {}. {} examples; {} passed; {} failed;",
-            res,
-            report.total_tests,
-            report.success_count,
-            report.error_count
-        )
+        writeln!(self.buf,
+                 "test result: {}. {} examples; {} passed; {} failed;",
+                 res,
+                 report.total_tests,
+                 report.success_count,
+                 report.error_count)
     }
 }
 
-impl<'a, T : io::Write> EventHandler for Simple<'a, T> {
+impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
     fn trigger(&mut self, event: Event) {
         // FIXME: do something with the io::Error ?
         let _ = match event {
             Event::StartRunner => writeln!(self.buf, "Running tests..."),
             Event::FinishedRunner(result) => self.write_summary(result),
-            _ => Ok(())
+            _ => Ok(()),
         };
     }
 }
-impl<'a, T : io::Write> Formatter for Simple<'a, T> {}
+impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 
 #[cfg(test)]
 mod tests {
@@ -48,12 +46,12 @@ mod tests {
 
     #[test]
     fn it_can_be_instanciated() {
-        Simple::new(&mut vec!(1u8));
+        Simple::new(&mut vec![1u8]);
     }
 
     #[test]
     fn it_impl_formatter_trait() {
-        let _ : &Formatter = &Simple::new(&mut vec!(1u8)) as &Formatter;
+        let _: &Formatter = &Simple::new(&mut vec![1u8]) as &Formatter;
     }
 
     #[cfg(test)]
@@ -64,7 +62,7 @@ mod tests {
 
         #[test]
         fn it_display_that_tests_started() {
-            let mut v = vec!();
+            let mut v = vec![];
             {
                 let mut s = Simple::new(&mut v);
                 s.trigger(Event::StartRunner);
