@@ -72,10 +72,7 @@ mod tests {
     pub trait ToRes { fn to_res(self) -> Result<(), ()>; }
     impl ToRes for bool {
         fn to_res(self) -> Result<(), ()> {
-            match self {
-                true => Ok(()),
-                false => Err(())
-            }
+            if self { Ok(()) } else { Err(()) }
         }
     }
 

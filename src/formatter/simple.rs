@@ -8,7 +8,7 @@ pub struct Simple<'a, Io: io::Write + 'a> {
 }
 
 impl<'a, T : io::Write> Simple<'a, T> {
-    fn new<'b>(buf: &'b mut T) -> Simple<'b, T> {
+    fn new(buf: &mut T) -> Simple<T> {
         Simple { buf: buf }
     }
 

@@ -11,7 +11,7 @@ pub struct Runner<'a> {
 }
 
 impl<'a> Runner<'a> {
-    pub fn new<'b>(context: Context<'b>) -> Runner<'b> {
+    pub fn new(context: Context<'a>) -> Runner<'a> {
         Runner { describe: context, handlers: vec!(), report: None }
     }
 }
@@ -25,7 +25,8 @@ pub struct TestReport {
 
 impl<'a> Runner<'a> {
 
-    fn run_test(test_function: &mut TestFunction) -> TestResult {
+     #[cfg_attr(feature="clippy", allow(redundant_closure))]
+    fn run_test(test_function: &mut Box<TestFunction>) -> TestResult {
         use std::panic::{catch_unwind, AssertUnwindSafe};
         let res = catch_unwind(AssertUnwindSafe(|| test_function()));
         // if test panicked, it means that it failed
@@ -34,15 +35,15 @@ impl<'a> Runner<'a> {
 
     fn run_and_recurse(report: &mut TestReport, child_ctx: &mut Context) -> TestResult {
         let mut result = Ok(());
-        let ref mut before_functions = child_ctx.before_each;
-        let ref mut after_functions = child_ctx.after_each;
+        let before_functions = &mut child_ctx.before_each;
+        let after_functions = &mut child_ctx.after_each;
 
-        for test_function in child_ctx.tests.iter_mut() {
+        for test_function in &mut child_ctx.tests {
             let test_res = {
                 for before_function in before_functions.iter_mut() { before_function() }
-                let res = match test_function {
-                    &mut Testable::Test(ref mut test_function) => Runner::run_test(test_function),
-                    &mut Testable::Describe(ref mut desc) => Runner::run_and_recurse(report, desc)
+                let res = match *test_function {
+                    Testable::Test(ref mut test_function) => Runner::run_test(test_function),
+                    Testable::Describe(ref mut desc) => Runner::run_and_recurse(report, desc)
                 };
                 for after_function in after_functions.iter_mut() { after_function() }
                 res
@@ -50,7 +51,7 @@ impl<'a> Runner<'a> {
 
             result = match result {
                 Ok(()) => { report.success_count += 1; test_res },
-                old @ _ => { report.error_count += 1; old }
+                old => { report.error_count += 1; old }
             };
 
             report.total_tests += 1;
@@ -64,7 +65,7 @@ impl<'a> Runner<'a> {
 
         let mut report = TestReport::default();
         let result = Runner::run_and_recurse(&mut report, &mut self.describe);
-        let result = result.and(Ok(report)).or(Err(report));
+        let result = result.and(Ok(report)).or_else(|_| Err(report));
 
         self.report = Some(result);
         self.broadcast(Event::FinishedRunner(result));
@@ -72,7 +73,7 @@ impl<'a> Runner<'a> {
     }
 
     pub fn result(&self) -> RunnerResult {
-        self.report.unwrap_or(Ok(TestReport::default()))
+        self.report.unwrap_or_else(|| Ok(TestReport::default()))
     }
 
     pub fn add_event_handler<H: events::EventHandler>(&mut self, handler: &'a mut H) {
@@ -80,7 +81,7 @@ impl<'a> Runner<'a> {
     }
 
     fn broadcast(&mut self, event: events::Event) {
-        for h in self.handlers.iter_mut() {
+        for h in &mut self.handlers {
             h.trigger(event)
         }
     }
@@ -134,7 +135,7 @@ mod tests {
                     ctx.it("first run",  || { ran_counter.fetch_add(1, Ordering::Relaxed); Ok(()) });
                     ctx.it("second run", || { ran_counter.fetch_add(1, Ordering::Relaxed); Ok(()) });
                 });
-                let _ = runner.run().unwrap();
+                runner.run().unwrap();
             }
 
             assert_eq!(2, ran_counter.load(Ordering::Relaxed))
@@ -165,7 +166,7 @@ mod tests {
                         })
                     })
                 });
-                let _ = runner.run().unwrap();
+                runner.run().unwrap();
             }
 
             assert_eq!(3, ran_counter.load(Ordering::Relaxed))
