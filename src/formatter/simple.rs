@@ -19,7 +19,7 @@ impl<'a, T: io::Write> Simple<'a, T> {
         };
 
         writeln!(self.buf,
-                 "test result: {}. {} examples; {} passed; {} failed;",
+                 "\n\ntest result: {}. {} examples; {} passed; {} failed;",
                  res,
                  report.total_tests,
                  report.success_count,
@@ -60,7 +60,6 @@ mod tests {
         let _: &Formatter = &Simple::new(&mut vec![1u8]) as &Formatter;
     }
 
-    #[cfg(test)]
     mod event_start_runner {
         pub use super::*;
 
@@ -76,7 +75,6 @@ mod tests {
         }
     }
 
-    #[cfg(test)]
     mod event_finished_runner {
         pub use super::*;
         use runner::TestReport;
@@ -116,19 +114,19 @@ mod tests {
 
         test_and_compare_output! {
             no_test_is_ok: (success: 0, errors: 0) =>
-                "test result: ok. 0 examples; 0 passed; 0 failed;\n",
+                "\n\ntest result: ok. 0 examples; 0 passed; 0 failed;\n",
             one_test: (success: 1, errors: 0) =>
-                "test result: ok. 1 examples; 1 passed; 0 failed;\n",
+                "\n\ntest result: ok. 1 examples; 1 passed; 0 failed;\n",
             multiple_ok: (success: 42, errors: 0) =>
-                "test result: ok. 42 examples; 42 passed; 0 failed;\n",
+                "\n\ntest result: ok. 42 examples; 42 passed; 0 failed;\n",
             one_error: (success: 0, errors: 1) =>
-              "test result: FAILED. 1 examples; 0 passed; 1 failed;\n",
+              "\n\ntest result: FAILED. 1 examples; 0 passed; 1 failed;\n",
             multiple_errors: (success: 0, errors: 37) =>
-              "test result: FAILED. 37 examples; 0 passed; 37 failed;\n",
+              "\n\ntest result: FAILED. 37 examples; 0 passed; 37 failed;\n",
             one_of_each: (success: 1, errors: 1) =>
-              "test result: FAILED. 2 examples; 1 passed; 1 failed;\n",
+              "\n\ntest result: FAILED. 2 examples; 1 passed; 1 failed;\n",
             multiple_of_each: (success: 12, errors: 21) =>
-              "test result: FAILED. 33 examples; 12 passed; 21 failed;\n"
+              "\n\ntest result: FAILED. 33 examples; 12 passed; 21 failed;\n"
         }
     }
 
