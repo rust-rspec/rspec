@@ -8,7 +8,7 @@ pub struct Simple<'a, Io: io::Write + 'a> {
 }
 
 impl<'a, T: io::Write> Simple<'a, T> {
-    fn new(buf: &mut T) -> Simple<T> {
+    pub fn new(buf: &mut T) -> Simple<T> {
         Simple { buf: buf }
     }
 
@@ -31,11 +31,15 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
     fn trigger(&mut self, event: &Event) {
         // FIXME: do something with the io::Error ?
         let _ = match *event {
-            Event::StartRunner => writeln!(self.buf, "Running tests..."),
+            Event::StartRunner => writeln!(self.buf, "Running tests:\n"),
             Event::EndTest(result) => {
-                let chr = if result.is_ok() { "." } else { "F" };
+                let chr = if result.is_ok() {
+                    "."
+                } else {
+                    "F"
+                };
                 write!(self.buf, "{}", chr)
-            },
+            }
             Event::FinishedRunner(result) => self.write_summary(result),
             _ => Ok(()),
         };
@@ -71,7 +75,7 @@ mod tests {
                 s.trigger(&Event::StartRunner);
             }
 
-            assert_eq!("Running tests...\n", str::from_utf8(&v).unwrap());
+            assert_eq!("Running tests:\n\n", str::from_utf8(&v).unwrap());
         }
     }
 

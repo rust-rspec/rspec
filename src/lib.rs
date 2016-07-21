@@ -7,10 +7,10 @@
 extern crate expectest;
 pub use expectest::prelude::*;
 
-mod events;
-mod context;
-mod runner;
-mod formatter;
+pub mod events;
+pub mod context;
+pub mod runner;
+pub mod formatter;
 
 #[cfg(test)]
 mod tests {
