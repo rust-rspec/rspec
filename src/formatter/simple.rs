@@ -32,6 +32,10 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
         // FIXME: do something with the io::Error ?
         let _ = match *event {
             Event::StartRunner => writeln!(self.buf, "Running tests..."),
+            Event::EndTest(result) => {
+                let chr = if result.is_ok() { "." } else { "F" };
+                write!(self.buf, "{}", chr)
+            },
             Event::FinishedRunner(result) => self.write_summary(result),
             _ => Ok(()),
         };
@@ -125,6 +129,33 @@ mod tests {
               "test result: FAILED. 2 examples; 1 passed; 1 failed;\n",
             multiple_of_each: (success: 12, errors: 21) =>
               "test result: FAILED. 33 examples; 12 passed; 21 failed;\n"
+        }
+    }
+
+    mod event_end_test {
+        pub use super::*;
+
+        #[test]
+        fn it_displays_a_dot_when_success() {
+            let mut v = vec![];
+            {
+                let mut s = Simple::new(&mut v);
+                s.trigger(&Event::EndTest(Ok(())));
+            }
+
+            assert_eq!(".", str::from_utf8(&v).unwrap());
+        }
+
+        #[test]
+        #[allow(non_snake_case)]
+        fn it_displays_a_F_when_error() {
+            let mut v = vec![];
+            {
+                let mut s = Simple::new(&mut v);
+                s.trigger(&Event::EndTest(Err(())));
+            }
+
+            assert_eq!("F", str::from_utf8(&v).unwrap());
         }
     }
 }
