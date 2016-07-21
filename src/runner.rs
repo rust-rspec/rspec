@@ -44,11 +44,19 @@ pub struct TestReport {
 
 impl<'a> Runner<'a> {
     #[cfg_attr(feature="clippy", allow(redundant_closure))]
-    fn run_test(test_function: &mut Box<TestFunction>) -> TestResult {
+    fn run_test(test_name: &String,
+                test_function: &mut Box<TestFunction>,
+                handlers: &mut Handlers)
+                -> TestResult {
+
         use std::panic::{catch_unwind, AssertUnwindSafe};
+
+        handlers.broadcast(&Event::StartTest(test_name.clone()));
         let res = catch_unwind(AssertUnwindSafe(|| test_function()));
         // if test panicked, it means that it failed
-        res.unwrap_or(Err(()))
+        let res = res.unwrap_or(Err(()));
+        handlers.broadcast(&Event::EndTest(res.clone()));
+        res
     }
 
     fn run_and_recurse(report: &mut TestReport,
@@ -66,8 +74,7 @@ impl<'a> Runner<'a> {
                 }
                 let res = match *test_function {
                     Testable::Test(ref name, ref mut test_function) => {
-                        handlers.broadcast(&Event::StartTest(name.clone()));
-                        Runner::run_test(test_function)
+                        Runner::run_test(name, test_function, handlers)
                     }
                     Testable::Describe(ref mut desc) => {
                         Runner::run_and_recurse(report, desc, handlers)
@@ -306,6 +313,21 @@ mod tests {
 
                 assert_eq!(Some(&StartTest(String::from("should run with an event"))),
                            handler.events.get(1))
+            }
+
+            #[test]
+            fn end_test_is_broadcasted() {
+                let mut handler = StubEventHandler::default();
+
+                {
+                    let mut runner = describe("root", |ctx| {
+                        ctx.it("should run with an event", || Ok(()));
+                    });
+                    runner.add_event_handler(&mut handler);
+                    runner.run().unwrap();
+                }
+
+                assert_eq!(Some(&EndTest(Ok(()))), handler.events.get(2));
             }
         }
     }
