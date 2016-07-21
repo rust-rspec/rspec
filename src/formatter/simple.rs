@@ -38,6 +38,7 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
         // FIXME: do something with the io::Error ?
         let _ = match *event {
             Event::StartRunner => writeln!(self.buf, "Running tests:\n"),
+            Event::StartDescribe(ref name) |
             Event::StartTest(ref name) => {
                 self.name_stack.push(name.clone());
                 Ok(())
@@ -56,10 +57,6 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
                 write!(self.buf, "{}", chr)
             }
             Event::FinishedRunner(result) => self.write_summary(result),
-            Event::StartDescribe(ref name) => {
-                self.name_stack.push(name.clone());
-                Ok(())
-            }
             Event::EndDescribe => {
                 self.name_stack.pop();
                 Ok(())

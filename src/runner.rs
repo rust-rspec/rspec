@@ -44,18 +44,18 @@ pub struct TestReport {
 
 impl<'a> Runner<'a> {
     #[cfg_attr(feature="clippy", allow(redundant_closure))]
-    fn run_test(test_name: &String,
+    fn run_test(test_name: &str,
                 test_function: &mut Box<TestFunction>,
                 handlers: &mut Handlers)
                 -> TestResult {
 
         use std::panic::{catch_unwind, AssertUnwindSafe};
 
-        handlers.broadcast(&Event::StartTest(test_name.clone()));
+        handlers.broadcast(&Event::StartTest(String::from(test_name)));
         let res = catch_unwind(AssertUnwindSafe(|| test_function()));
         // if test panicked, it means that it failed
         let res = res.unwrap_or(Err(()));
-        handlers.broadcast(&Event::EndTest(res.clone()));
+        handlers.broadcast(&Event::EndTest(res));
         res
     }
 
