@@ -11,7 +11,11 @@ pub struct Simple<'a, Io: io::Write + 'a> {
 
 impl<'a, T: io::Write> Simple<'a, T> {
     pub fn new(buf: &mut T) -> Simple<T> {
-        Simple { buf: buf, name_stack: vec!(), failures: vec!() }
+        Simple {
+            buf: buf,
+            name_stack: vec![],
+            failures: vec![],
+        }
     }
 
     fn write_summary(&mut self, result: runner::RunnerResult) -> Result<(), io::Error> {
@@ -34,7 +38,10 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
         // FIXME: do something with the io::Error ?
         let _ = match *event {
             Event::StartRunner => writeln!(self.buf, "Running tests:\n"),
-            Event::StartTest(ref name) => { self.name_stack.push(name.clone()); Ok(()) },
+            Event::StartTest(ref name) => {
+                self.name_stack.push(name.clone());
+                Ok(())
+            }
             Event::EndTest(result) => {
                 if !self.name_stack.is_empty() {
                     let failure_name = self.name_stack.join(" | ");
@@ -49,9 +56,15 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
                 write!(self.buf, "{}", chr)
             }
             Event::FinishedRunner(result) => self.write_summary(result),
-            Event::StartDescribe(ref name) => { self.name_stack.push(name.clone()); Ok(()) },
-            Event::EndDescribe => { self.name_stack.pop(); Ok(()) },
-            //_ => Ok(()),
+            Event::StartDescribe(ref name) => {
+                self.name_stack.push(name.clone());
+                Ok(())
+            }
+            Event::EndDescribe => {
+                self.name_stack.pop();
+                Ok(())
+            }
+            // _ => Ok(()),
         };
     }
 }
@@ -181,10 +194,11 @@ mod tests {
             let mut s = Simple::new(&mut sink);
 
             s.trigger(&Event::StartDescribe(String::from("Hey !")));
-            assert_eq!(vec!(String::from("Hey !")), s.name_stack);
+            assert_eq!(vec![String::from("Hey !")], s.name_stack);
 
             s.trigger(&Event::StartDescribe(String::from("Ho !")));
-            assert_eq!(vec!(String::from("Hey !"), String::from("Ho !")), s.name_stack)
+            assert_eq!(vec![String::from("Hey !"), String::from("Ho !")],
+                       s.name_stack)
         }
 
         #[test]
@@ -196,7 +210,7 @@ mod tests {
             s.trigger(&Event::StartDescribe(String::from("Ho !")));
 
             s.trigger(&Event::EndDescribe);
-            assert_eq!(vec!(String::from("Hey !")), s.name_stack);
+            assert_eq!(vec![String::from("Hey !")], s.name_stack);
 
             s.trigger(&Event::EndDescribe);
             assert_eq!(0, s.name_stack.len());
@@ -255,8 +269,8 @@ mod tests {
         }
 
         // test the correct formating of one failure
-        //#[test]
-        //fn format_all_failures() {
+        // #[test]
+        // fn format_all_failures() {
         //    let mut buf = vec!();
         //    {
         //        let mut s = Simple::new(&mut buf);
@@ -266,6 +280,6 @@ mod tests {
         //    }
 
         //    let expect = ""
-        //}
+        // }
     }
 }
