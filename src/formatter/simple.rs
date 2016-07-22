@@ -58,11 +58,12 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
                 Ok(())
             }
             Event::EndTest(result) => {
-                if !self.name_stack.is_empty() {
+                if result.is_err() && !self.name_stack.is_empty() {
                     let failure_name = self.name_stack.join(" | ");
                     self.failures.push(failure_name);
-                    self.name_stack.pop();
                 }
+                self.name_stack.pop();
+
                 let chr = if result.is_ok() {
                     "."
                 } else {
@@ -71,8 +72,12 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
                 write!(self.buf, "{}", chr)
             }
             Event::FinishedRunner(result) => {
-                let res = self.write_summary(result);
-                writeln!(self.buf, "{}", res)
+                let failures_sum = self.failures_summary();
+                let summary = self.write_summary(result);
+                writeln!(self.buf,
+                         "\n\nFailed examples:\n{}{}",
+                         failures_sum,
+                         summary)
             }
             Event::EndDescribe => {
                 self.name_stack.pop();
@@ -283,10 +288,35 @@ mod tests {
         }
 
         #[test]
+        fn it_doesnt_includes_success() {
+            let mut sink = &mut io::sink();
+            let mut s = Simple::new(&mut sink);
+            s.trigger(&Event::StartDescribe("hola".into()));
+            s.trigger(&Event::StartTest("holé".into()));
+            s.trigger(&Event::EndTest(Ok(())));
+
+            assert_eq!(None, s.failures.get(0));
+        }
+
+        #[test]
+        fn is_doesnt_keep_tests_in_name_stack() {
+            let mut sink = &mut io::sink();
+            let mut s = Simple::new(&mut sink);
+            s.trigger(&Event::StartDescribe("hola".into()));
+            s.trigger(&Event::StartTest("holé".into()));
+            s.trigger(&Event::EndTest(Ok(())));
+            s.trigger(&Event::StartTest("holé".into()));
+            s.trigger(&Event::EndTest(Err(())));
+
+            // not "hola | holé | holé"
+            assert_eq!(Some(&"hola | holé".into()), s.failures.get(0));
+        }
+
+        #[test]
         fn format_all_failures_one_error() {
-            let mut buf = vec![];
+            let mut sink = &mut io::sink();
             let res = {
-                let mut s = Simple::new(&mut buf);
+                let mut s = Simple::new(&mut sink);
                 s.trigger(&Event::StartDescribe("hola".into()));
                 s.trigger(&Event::StartTest("holé".into()));
                 s.trigger(&Event::EndTest(Err(())));
@@ -298,9 +328,9 @@ mod tests {
 
         #[test]
         fn format_all_failures() {
-            let mut buf = vec![];
+            let mut sink = &mut io::sink();
             let res = {
-                let mut s = Simple::new(&mut buf);
+                let mut s = Simple::new(&mut sink);
                 s.trigger(&Event::StartDescribe("hola".into()));
                 s.trigger(&Event::StartTest("holé".into()));
                 s.trigger(&Event::EndTest(Err(())));
@@ -312,7 +342,7 @@ mod tests {
             assert_eq!("  1) hola | holé\n  2) hola | hola\n", res);
 
             let res = {
-                let mut s = Simple::new(&mut buf);
+                let mut s = Simple::new(&mut sink);
                 s.trigger(&Event::StartDescribe("hola".into()));
                 s.trigger(&Event::StartTest("holé".into()));
                 s.trigger(&Event::EndTest(Err(())));
