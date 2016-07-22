@@ -1,11 +1,17 @@
 [package]
 name = "rspec"
+description = "Write Rspec-like tests with stable rust"
 version = "0.1.0"
-authors = ["Thomas Wickham <twickham@octo.com>"]
+authors = ["Thomas Wickham <mackwic@gmail.com>"]
+license = "MPL-2.0"
+homepage = "https://mackwic.github.io/rspec"
+repository = "https://github.com/mackwic/colored"
+readme = "README.md"
+keywords = ["rspec", "test", "harness", "bdd"]
 
 [dependencies]
 expectest = "0.5.1"
-clippy = {version = "*", optional = true}
+clippy = {version = "0.0", optional = true}
 
 [features]
 default = []
