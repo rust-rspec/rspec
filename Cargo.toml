@@ -5,3 +5,7 @@ authors = ["Thomas Wickham <twickham@octo.com>"]
 
 [dependencies]
 expectest = "0.5.1"
+clippy = {version = "*", optional = true}
+
+[features]
+default = []

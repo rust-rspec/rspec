@@ -1,13 +1,15 @@
 use runner::*;
 
 pub type BeforeFunction<'a> = FnMut() -> () + 'a + Send + Sync;
-pub type AfterFunction<'a>  = BeforeFunction<'a>;
-pub type TestFunction<'a>   = FnMut() -> TestResult + 'a + Send + Sync;
-pub type TestResult         = Result<(), ()>;
+pub type AfterFunction<'a> = BeforeFunction<'a>;
+pub type TestFunction<'a> = FnMut() -> TestResult + 'a + Send + Sync;
+pub type TestResult = Result<(), ()>;
 
-pub enum Testable<'a>  {
-    Test(Box<TestFunction<'a>>),
-    Describe(Context<'a>)
+pub enum Testable<'a> {
+    /// Name and Test body
+    Test(String, Box<TestFunction<'a>>),
+    /// Name and Describe body
+    Describe(String, Context<'a>),
 }
 
 #[derive(Default)]
@@ -18,48 +20,57 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn describe<F>(&mut self, _name: &'a str, mut body: F)
-        where F : 'a + Send + Sync + FnMut(&mut Context<'a>) -> () {
+    pub fn describe<F>(&mut self, name: &'a str, mut body: F)
+        where F: 'a + Send + Sync + FnMut(&mut Context<'a>) -> ()
+    {
 
         let mut child = Context::default();
         body(&mut child);
-        self.tests.push(Testable::Describe(child))
+        self.tests.push(Testable::Describe(String::from(name), child))
     }
 
-    pub fn it<F>(&mut self, _name: &'a str, body: F)
-        where F : 'a + Send + Sync + FnMut() -> TestResult {
+    pub fn it<F>(&mut self, name: &'a str, body: F)
+        where F: 'a + Send + Sync + FnMut() -> TestResult
+    {
 
-        self.tests.push(Testable::Test(Box::new(body)))
+        self.tests.push(Testable::Test(String::from(name), Box::new(body)))
     }
 
     pub fn before<F>(&mut self, body: F)
-        where F : 'a + Send + Sync + FnMut() -> () {
+        where F: 'a + Send + Sync + FnMut() -> ()
+    {
 
         self.before_each.push(Box::new(body))
     }
 
     pub fn after<F>(&mut self, body: F)
-        where F : 'a + Send + Sync + FnMut() -> () {
+        where F: 'a + Send + Sync + FnMut() -> ()
+    {
 
         self.after_each.push(Box::new(body))
     }
 }
 
 pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
-    where F : 'a + FnOnce(&mut Context<'a>) -> () {
+    where F: 'a + FnOnce(&mut Context<'a>) -> ()
+{
 
     let mut c = Context::default();
     body(&mut c);
     Runner::new(c)
 }
 
+// TODO: need refactoring
 pub fn rdescribe<'a, 'b, F>(block_name: &'b str, body: F) -> ()
-    where F : 'a + FnOnce(&mut Context<'a>) -> () {
+    where F: 'a + FnOnce(&mut Context<'a>) -> ()
+{
 
     let mut runner = describe(block_name, body);
     runner.run().expect("run should be ok");
     let result = runner.result();
-    assert!(result.is_ok(), "Tests ran with one mor more failures: {:?}", result)
+    assert!(result.is_ok(),
+            "Tests ran with one mor more failures: {:?}",
+            result)
 }
 
 
@@ -68,12 +79,15 @@ mod tests {
     pub use super::*;
     pub use expectest::prelude::*;
 
-    pub trait ToRes { fn to_res(self) -> Result<(), ()>; }
+    pub trait ToRes {
+        fn to_res(self) -> Result<(), ()>;
+    }
     impl ToRes for bool {
         fn to_res(self) -> Result<(), ()> {
-            match self {
-                true => Ok(()),
-                false => Err(())
+            if self {
+                Ok(())
+            } else {
+                Err(())
             }
         }
     }
@@ -83,29 +97,25 @@ mod tests {
 
         #[test]
         fn it_has_a_root_describe_function() {
-            describe("A Test", |_ctx|{});
+            describe("A Test", |_ctx| {});
         }
 
         #[test]
         fn it_can_call_describe_inside_describe_body() {
-            describe("A Root", |ctx| {
-                ctx.describe("nested describe", |_ctx| {})
-            });
+            describe("A Root", |ctx| ctx.describe("nested describe", |_ctx| {}));
         }
 
         #[test]
         fn it_can_call_it_inside_describe_body() {
-            describe("A root", |ctx| {
-                ctx.it("is a test", || { Ok(()) })
-            });
+            describe("A root", |ctx| ctx.it("is a test", || Ok(())));
         }
 
-        /*#[test]
-        fn it_can_implicitely_returns_ok() {
-            describe("a root", |ctx| {
-                ctx.it("is ok", || {})
-            })
-        }*/
+        // #[test]
+        // fn it_can_implicitely_returns_ok() {
+        // describe("a root", |ctx| {
+        // ctx.it("is ok", || {})
+        // })
+        // }
     }
 
     mod before {
@@ -118,10 +128,12 @@ mod tests {
 
             {
                 let mut runner = describe("a root", |ctx| {
-                    ctx.before(|| { ran_counter.fetch_add(1, Ordering::Relaxed); });
-                    ctx.it("first", || { Ok(()) });
-                    ctx.it("second", || { Ok(()) });
-                    ctx.it("third", || { Ok(()) });
+                    ctx.before(|| {
+                        ran_counter.fetch_add(1, Ordering::Relaxed);
+                    });
+                    ctx.it("first", || Ok(()));
+                    ctx.it("second", || Ok(()));
+                    ctx.it("third", || Ok(()));
                 });
                 runner.run().unwrap();
             }
@@ -135,12 +147,16 @@ mod tests {
             let ran_counter = &mut AtomicUsize::new(0);
 
             rdescribe("root", |ctx| {
-                ctx.it("shouldn't see the before hook", || (0 == ran_counter.load(Ordering::SeqCst)).to_res());
+                ctx.it("shouldn't see the before hook",
+                       || (0 == ran_counter.load(Ordering::SeqCst)).to_res());
                 ctx.describe("a sub-root", |ctx| {
-                    ctx.before(|| { ran_counter.fetch_add(1, Ordering::SeqCst); });
-                    ctx.it("should see the before hook", || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
+                    ctx.before(|| {
+                        ran_counter.fetch_add(1, Ordering::SeqCst);
+                    });
+                    ctx.it("should see the before hook",
+                           || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
                 })
-            
+
             })
         }
     }
@@ -155,10 +171,12 @@ mod tests {
 
             {
                 let mut runner = describe("a root", |ctx| {
-                    ctx.after(|| { ran_counter.fetch_add(1, Ordering::Relaxed); });
-                    ctx.it("first", || { Ok(()) });
-                    ctx.it("second", || { Ok(()) });
-                    ctx.it("third", || { Ok(()) });
+                    ctx.after(|| {
+                        ran_counter.fetch_add(1, Ordering::Relaxed);
+                    });
+                    ctx.it("first", || Ok(()));
+                    ctx.it("second", || Ok(()));
+                    ctx.it("third", || Ok(()));
                 });
                 runner.run().unwrap();
             }
@@ -173,10 +191,15 @@ mod tests {
 
             let report = {
                 let mut runner = describe("a root", |ctx| {
-                    ctx.after(|| { ran_counter.fetch_add(1, Ordering::SeqCst); });
-                    ctx.it("first", || (0 == ran_counter.load(Ordering::SeqCst)).to_res());
-                    ctx.it("second", || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
-                    ctx.it("third", || (2 == ran_counter.load(Ordering::SeqCst)).to_res());
+                    ctx.after(|| {
+                        ran_counter.fetch_add(1, Ordering::SeqCst);
+                    });
+                    ctx.it("first",
+                           || (0 == ran_counter.load(Ordering::SeqCst)).to_res());
+                    ctx.it("second",
+                           || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
+                    ctx.it("third",
+                           || (2 == ran_counter.load(Ordering::SeqCst)).to_res());
                 });
                 runner.run().unwrap();
                 runner.result()
@@ -195,10 +218,15 @@ mod tests {
             let ran_counter = &mut AtomicUsize::new(0);
 
             rdescribe("allocates a runner", |ctx| {
-                ctx.before(|| { ran_counter.fetch_add(1, Ordering::SeqCst); });
-                ctx.it("should be runned (1)", || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
-                ctx.it("should be runned (2)", || (2 == ran_counter.load(Ordering::SeqCst)).to_res());
-                ctx.it("should be runned (3)", || (3 == ran_counter.load(Ordering::SeqCst)).to_res());
+                ctx.before(|| {
+                    ran_counter.fetch_add(1, Ordering::SeqCst);
+                });
+                ctx.it("should be runned (1)",
+                       || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
+                ctx.it("should be runned (2)",
+                       || (2 == ran_counter.load(Ordering::SeqCst)).to_res());
+                ctx.it("should be runned (3)",
+                       || (3 == ran_counter.load(Ordering::SeqCst)).to_res());
             })
         }
 
@@ -213,4 +241,3 @@ mod tests {
         }
     }
 }
-
