@@ -1,3 +1,30 @@
+//!
+//! The Context module holds all the functionality for the test declaration, that is: `describe`,
+//! `before`, `after`, `it` and their variants.
+//!
+//! Running these tests and doing asserts is not the job of the Context.
+//!
+//! # Examples
+//! ```
+//! use rspec::context::*;
+//!
+//! // `rdescribe` instanciate a runner and run it transparently
+//! rdescribe("Context", |ctx| {
+//!     describe("Context::describe", |ctx| {
+//!         ctx.it("can be nested", || Ok(()));
+//!         ctx.it("use a `ctx` object", || Ok(()))
+//!     });
+//!
+//!     describe("Context::it", |ctx| {
+//!         ctx.it("uses a Result returns", || Ok(()));
+//!         ctx.it("can also use asserts", || {
+//!             assert_eq!(42, 12 + 30);
+//!             Ok(()) // don't forget the result type
+//!         })
+//!     });
+//! });
+//!
+
 use runner::*;
 
 pub type BeforeFunction<'a> = FnMut() -> () + 'a + Send + Sync;

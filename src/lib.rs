@@ -1,3 +1,5 @@
+#![doc(html_root_url = "https://mackwic.github.io/rspec")]
+
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 
