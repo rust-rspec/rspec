@@ -5,7 +5,7 @@ version = "0.1.0"
 authors = ["Thomas Wickham <mackwic@gmail.com>"]
 license = "MPL-2.0"
 homepage = "https://mackwic.github.io/rspec"
-repository = "https://github.com/mackwic/colored"
+repository = "https://github.com/mackwic/rspec"
 readme = "README.md"
 keywords = ["rspec", "test", "harness", "bdd"]
 
