@@ -18,6 +18,20 @@ impl<'a, T: io::Write> Simple<'a, T> {
         }
     }
 
+    fn failures_summary(&self) -> String {
+        let res = String::with_capacity(100);
+        let mut idx = 0;
+        self.failures.iter()
+                     .map(|fail| {
+                         idx += 1;
+                         format!("  {}) {}\n", idx, fail)
+                     })
+                     .fold(res, |mut acc, elt| {
+                        acc.push_str(&elt);
+                        acc
+                     })
+    }
+
     fn write_summary(&mut self, result: runner::RunnerResult) -> Result<(), io::Error> {
         let (res, report) = match result {
             Ok(report) => ("ok", report),
@@ -266,17 +280,48 @@ mod tests {
         }
 
         // test the correct formating of one failure
-        // #[test]
-        // fn format_all_failures() {
-        //    let mut buf = vec!();
-        //    {
-        //        let mut s = Simple::new(&mut buf);
-        //        s.trigger(&Event::StartDescribe("hola".into()));
-        //        s.trigger(&Event::StartTest("holé".into()));
-        //        s.trigger(&Event::EndTest(Err(())));
-        //    }
+        #[test]
+        fn format_all_failures_one_error() {
+            let mut buf = vec!();
+            let res = {
+                let mut s = Simple::new(&mut buf);
+                s.trigger(&Event::StartDescribe("hola".into()));
+                s.trigger(&Event::StartTest("holé".into()));
+                s.trigger(&Event::EndTest(Err(())));
+                s.failures_summary()
+            };
 
-        //    let expect = ""
-        // }
+            assert_eq!("  1) hola | holé\n", res);
+        }
+        #[test]
+        fn format_all_failures() {
+            let mut buf = vec!();
+            let res = {
+                let mut s = Simple::new(&mut buf);
+                s.trigger(&Event::StartDescribe("hola".into()));
+                s.trigger(&Event::StartTest("holé".into()));
+                s.trigger(&Event::EndTest(Err(())));
+                s.trigger(&Event::StartTest("hola".into()));
+                s.trigger(&Event::EndTest(Err(())));
+                s.failures_summary()
+            };
+
+            assert_eq!("  1) hola | holé\n  2) hola | hola\n", res);
+
+            let res = {
+                let mut s = Simple::new(&mut buf);
+                s.trigger(&Event::StartDescribe("hola".into()));
+                s.trigger(&Event::StartTest("holé".into()));
+                s.trigger(&Event::EndTest(Err(())));
+                s.trigger(&Event::EndDescribe);
+                s.trigger(&Event::StartDescribe("second".into()));
+                s.trigger(&Event::StartDescribe("third".into()));
+                s.trigger(&Event::StartTest("hola".into()));
+                s.trigger(&Event::EndTest(Err(())));
+                s.failures_summary()
+            };
+
+            assert_eq!("  1) hola | holé\n  2) second | third | hola\n", res);
+        }
     }
 }
