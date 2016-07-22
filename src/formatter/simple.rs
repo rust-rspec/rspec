@@ -21,29 +21,29 @@ impl<'a, T: io::Write> Simple<'a, T> {
     fn failures_summary(&self) -> String {
         let res = String::with_capacity(100);
         let mut idx = 0;
-        self.failures.iter()
-                     .map(|fail| {
-                         idx += 1;
-                         format!("  {}) {}\n", idx, fail)
-                     })
-                     .fold(res, |mut acc, elt| {
-                        acc.push_str(&elt);
-                        acc
-                     })
+        self.failures
+            .iter()
+            .map(|fail| {
+                idx += 1;
+                format!("  {}) {}\n", idx, fail)
+            })
+            .fold(res, |mut acc, elt| {
+                acc.push_str(&elt);
+                acc
+            })
     }
 
-    fn write_summary(&mut self, result: runner::RunnerResult) -> Result<(), io::Error> {
+    fn write_summary(&mut self, result: runner::RunnerResult) -> String {
         let (res, report) = match result {
             Ok(report) => ("ok", report),
             Err(report) => ("FAILED", report),
         };
 
-        writeln!(self.buf,
-                 "\n\ntest result: {}. {} examples; {} passed; {} failed;",
-                 res,
-                 report.total_tests,
-                 report.success_count,
-                 report.error_count)
+        format!("\n\ntest result: {}. {} examples; {} passed; {} failed;",
+                res,
+                report.total_tests,
+                report.success_count,
+                report.error_count)
     }
 }
 
@@ -70,7 +70,10 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
                 };
                 write!(self.buf, "{}", chr)
             }
-            Event::FinishedRunner(result) => self.write_summary(result),
+            Event::FinishedRunner(result) => {
+                let res = self.write_summary(result);
+                writeln!(self.buf, "{}", res)
+            }
             Event::EndDescribe => {
                 self.name_stack.pop();
                 Ok(())
@@ -139,13 +142,13 @@ mod tests {
                 $(
                     #[test]
                     fn $test_name() {
-                        let mut v = vec!();
-                        {
-                            let mut s = Simple::new(&mut v);
-                            s.trigger(&Event::FinishedRunner(make_report($succ, $err)))
-                        }
+                        let mut sink = io::sink();
+                        let res = {
+                            let mut s = Simple::new(&mut sink);
+                            s.write_summary(make_report($succ, $err))
+                        };
 
-                        assert_eq!($msg, str::from_utf8(&v).unwrap())
+                        assert_eq!($msg, res)
                     }
                 )+
             }
@@ -153,19 +156,19 @@ mod tests {
 
         test_and_compare_output! {
             no_test_is_ok: (success: 0, errors: 0) =>
-                "\n\ntest result: ok. 0 examples; 0 passed; 0 failed;\n",
+                "\n\ntest result: ok. 0 examples; 0 passed; 0 failed;",
             one_test: (success: 1, errors: 0) =>
-                "\n\ntest result: ok. 1 examples; 1 passed; 0 failed;\n",
+                "\n\ntest result: ok. 1 examples; 1 passed; 0 failed;",
             multiple_ok: (success: 42, errors: 0) =>
-                "\n\ntest result: ok. 42 examples; 42 passed; 0 failed;\n",
+                "\n\ntest result: ok. 42 examples; 42 passed; 0 failed;",
             one_error: (success: 0, errors: 1) =>
-              "\n\ntest result: FAILED. 1 examples; 0 passed; 1 failed;\n",
+              "\n\ntest result: FAILED. 1 examples; 0 passed; 1 failed;",
             multiple_errors: (success: 0, errors: 37) =>
-              "\n\ntest result: FAILED. 37 examples; 0 passed; 37 failed;\n",
+              "\n\ntest result: FAILED. 37 examples; 0 passed; 37 failed;",
             one_of_each: (success: 1, errors: 1) =>
-              "\n\ntest result: FAILED. 2 examples; 1 passed; 1 failed;\n",
+              "\n\ntest result: FAILED. 2 examples; 1 passed; 1 failed;",
             multiple_of_each: (success: 12, errors: 21) =>
-              "\n\ntest result: FAILED. 33 examples; 12 passed; 21 failed;\n"
+              "\n\ntest result: FAILED. 33 examples; 12 passed; 21 failed;"
         }
     }
 
@@ -279,10 +282,9 @@ mod tests {
             assert_eq!(Some(&"ok | cacao".into()), s.failures.get(1));
         }
 
-        // test the correct formating of one failure
         #[test]
         fn format_all_failures_one_error() {
-            let mut buf = vec!();
+            let mut buf = vec![];
             let res = {
                 let mut s = Simple::new(&mut buf);
                 s.trigger(&Event::StartDescribe("hola".into()));
@@ -293,9 +295,10 @@ mod tests {
 
             assert_eq!("  1) hola | holé\n", res);
         }
+
         #[test]
         fn format_all_failures() {
-            let mut buf = vec!();
+            let mut buf = vec![];
             let res = {
                 let mut s = Simple::new(&mut buf);
                 s.trigger(&Event::StartDescribe("hola".into()));
