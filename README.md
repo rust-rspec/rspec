@@ -64,7 +64,7 @@ fn test_add() {
 }
 ```
 
-You can also use rspec in integration tests, this example use the rspec runner:
+You can also use rspec in integration tests, this example uses the rspec runner:
 
 ```rust
 extern crate rspec;
@@ -123,7 +123,7 @@ which is:
 3. Code and commit inside this branch. I have a personnal preference for small
    atomic commits, but that's not a hard rule.
 4. Make sure you have written tests for your feature. If you don't know how to
-   do that, push the PR with `[WIP]` in the title and we gladly help you.
+   do that, push the PR with `[WIP]` in the title and we'll gladly help you.
 5. When tests are ok, and you features/bug fixes are covered, we will review the
    code together, make it better together.
 6. When everyone agrees that the code is right, and the tests pass, you will
