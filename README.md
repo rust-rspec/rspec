@@ -6,7 +6,7 @@ Do you like writing your tests in a tree of `describe`, and `it`, but also have
 a hard requirement on stable rust ? This crate is for you !
 
 If you don't know what is Rust, are confused by the terms BDD, TDD, or just want
-a gently beginner introduction, [please go to the Beginner Section](#Beginners).
+a gently beginner introduction, [please go to the Beginner Section](#beginners).
 
 The last stable documentation is available for consultation at
 [mackwic.github.io/rspec](https://mackwic.github.io/rspec).
@@ -110,6 +110,30 @@ Again, you can see complete examples in the [`examples/`](https://github.com/mac
 The last stable documentation is available for consultation at
 [mackwic.github.io/rspec](https://mackwic.github.io/rspec).
 
+## Contributions
+
+... are greatly welcome ! Contributions follow the standard Github workflow,
+which is:
+
+1. Fork this repository
+2. Create a feature branch
+3. Code and commit inside this branch. I have a personnal preference for small
+   atomic commits, but that's not a hard rule.
+4. Make sure you have written tests for your feature. If you don't know how to
+   do that, push the PR with `[WIP]` in the title and we gladly help you.
+5. When tests are ok, and you features/bug fixes are covered, we will review the
+   code together, make it better together.
+6. When everyone agrees that the code is right, and the tests pass, you will
+   have the privilege to merge your PR and become a mighty Contributor.
+   Congrats.
+
+Take a look at [the issues](https://github.com/mackwic/rspec/issues) if you want
+to help without knowing how. Some issues are mentored !
+
+## Contributors
+
+- Thomas Wickham: [@mackwic](https://github.com/mackwic)
+- Pascal Hertleif [@killercup](https://github.com/killercup)
 
 ## Beginners
 
@@ -183,37 +207,15 @@ BDD written with the Gherkin formalism can really gain from a layer of DDD
 (Domain Driven Development), [but this is another
 story...](https://msdn.microsoft.com/en-us/magazine/dd419654.aspx).
 
-## Contributions
-
-... are greatly welcome ! Contributions follow the standard Github workflow,
-which is:
-
-1. Fork this repository
-2. Create a feature branch
-3. Code and commit inside this branch. I have a personnal preference for small
-   atomic commits, but that's not a hard rule.
-4. Make sure you have written tests for your feature. If you don't know how to
-   do that, push the PR with `[WIP]` in the title and we gladly help you.
-5. When tests are ok, and you features/bug fixes are covered, we will review the
-   code together, make it better together.
-6. When everyone agrees that the code is right, and the tests pass, you will
-   have the privilege to merge your PR and become a mighty Contributor.
-   Congrats.
-
-## Contributors
-
-- Thomas Wickham: [@mackwic](https://github.com/mackwic)
-- Pascal Hertleif [@killercup](https://github.com/killercup)
-
 ## Licence
 
 Mozilla Public Licence 2.0. See the LICENCE file at the root of the repository.
 
 In non legal terms it means that:
 - if you fix a bug, you MUST give back the code of the fix (it's only fair, see
-  the [Contributing Section](#Contributing)).
+  the [Contributing Section](#contributions)).
 - if you change/extend the API, you MUST give back the code you changed in the
-  files under MPL2. The [Contributing Section](#Contributing) can help there.
+  files under MPL2. The [Contributing Section](#contributions) can help there.
 - you CAN'T sue the authors of this project for anything about this code
 - appart from that, you can do almost whatever you want. See the LICENCE file
   for details.
