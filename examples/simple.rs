@@ -17,7 +17,7 @@ pub fn main() {
             ctx.it("failed if the return is_err()", || Err(()));
 
             ctx.it("is executed so you can use dynamic values", || {
-                if (42 % 37 + 2) < 3 { Ok(()) } else { Err(()) }
+                if (42 % 37 + 2) > 3 { Ok(()) } else { Err(()) }
             })
         });
 
