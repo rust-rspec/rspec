@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/mackwic/rspec.svg?branch=master)](https://travis-ci.org/mackwic/rspec) [![Coverage Status](https://coveralls.io/repos/github/mackwic/rspec/badge.svg)](https://coveralls.io/github/mackwic/rspec) [![Crates.io](https://img.shields.io/crates/v/rspec.svg?maxAge=2592000)](https://crates.io/crates/rspec) [![Crates.io](https://img.shields.io/crates/l/rspec.svg?maxAge=2592000)](https://github.com/mackwic/rspec/blob/master/LICENSE)
 
 Do you like writing your tests in a tree of `describe`, and `it`, but also have
-a hard requirement on stable rust ? This crate is for you !
+a hard requirement on stable rust? This crate is for you!
 
 If you don't know what is Rust, are confused by the terms BDD, TDD, or just want
 a gently beginner introduction, [please go to the Beginner Section](#beginners).
@@ -115,7 +115,7 @@ The last stable documentation is available for consultation at
 
 ## Contributions
 
-... are greatly welcome ! Contributions follow the standard Github workflow,
+... are greatly welcome! Contributions follow the standard Github workflow,
 which is:
 
 1. Fork this repository
@@ -131,23 +131,24 @@ which is:
    Congrats.
 
 Take a look at [the issues](https://github.com/mackwic/rspec/issues) if you want
-to help without knowing how. Some issues are mentored !
+to help without knowing how. Some issues are mentored!
 
 ## Contributors
 
-- Thomas Wickham: [@mackwic](https://github.com/mackwic)
-- Pascal Hertleif [@killercup](https://github.com/killercup)
+- Thomas WICKHAM [@mackwic](https://github.com/mackwic)
+- Pascal HERTLEIF [@killercup](https://github.com/killercup)
+- Matthias BOURG [@pol0nium](https://github.com/pol0nium)
 
 ## Beginners
 
 #### About Rust
 
-Welcome in the Rust community ! Here are some links which can hopefully help:
+Welcome in the Rust community! Here are some links which can hopefully help:
 
 - [**Rust is a system programming language**](https://www.rust-lang.org). Check the
   rust-lang link for a detailed description, you can install it [with rustup](https://www.rustup.rs/).
 - **Newcomers**: [Rust by Example](http://rustbyexample.com/) is a fantastic
-  resource to get started and grasp most of the Rust semantic. Check it out !
+  resource to get started and grasp most of the Rust semantic. Check it out!
 - **Intermediate**: [The Rust Book](https://doc.rust-lang.org/book/) is the best
   resource to begin the journey to learn Rust.
 - **Advanced**: [Learning Rust with too many linked lists](http://cglab.ca/~abeinges/blah/too-many-lists/book/) is a great book which explains by examples and with great details the system of ownership and how to use it. [The Rustonomicon](https://doc.rust-lang.org/nomicon/) Is another resoure helpful to understand how the compiler thinks and will help you converge quickly to a compilable code.
@@ -195,7 +196,7 @@ described. Thinking in term of behavior has two benefits:
   This is the describe/it approach, which this crate hopes to fill.
 
 - By describing behavior, we are doing an _analysis_ of our program. This
-  analysis can be very useful ! Say... an User Story, for example. Given the
+  analysis can be very useful! Say... an User Story, for example. Given the
   formalism _As a X, When Y, I want Z_, you can assign scenarii describing the
   high-level behavior of your units. The Gherkin formalism is often employed for
   this, it use a _Given X, When Y, Then Z_ structure.   
