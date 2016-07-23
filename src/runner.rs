@@ -1,3 +1,12 @@
+//! The Runner is where all the examples are actually executed.
+//!
+//! A Runner is instanciated by using [`context::describe`](../context/fn.describe.html) and
+//! [`context::rdescribe`](../context/fn.rdescribe.html). You should not try to instanciate
+//! a Runner directly.
+//!
+//! The main methods are `Runner::run` and `Runner::result`.
+
+
 use context::*;
 use events;
 use events::Event;

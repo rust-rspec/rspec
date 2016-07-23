@@ -1,8 +1,12 @@
-//!
 //! The Context module holds all the functionality for the test declaration, that is: `describe`,
 //! `before`, `after`, `it` and their variants.
 //!
-//! Running these tests and doing asserts is not the job of the Context.
+//! A Context can also holds reference to children Contextes, for whom the before closures will be
+//! executed after the before closures of the current context. The order of execution of tests
+//! respect the order of declaration of theses tests.
+//!
+//! Running these tests and doing asserts is not the job of the Context, but the Runner, which is
+//! a struct returned by the root context declaration.
 //!
 //! # Examples
 //! ```
@@ -27,11 +31,26 @@
 
 use runner::*;
 
+/// This is the type used by the closure given as argument of a `Context::before()` call.
+///
+/// It is Send and Sync for forward compatibility reasons.
+///
+/// **Please Note** that `before` is effectively a `before each child of current context` function.
 pub type BeforeFunction<'a> = FnMut() -> () + 'a + Send + Sync;
+/// This is the type used by the closure given as argument of a `Context::after()` call.
+///
+/// This is Send and Sync for forward compatibility reasons.
+///
+/// **Please Note** that `after` is effectively a `after each child of current context` function.
 pub type AfterFunction<'a> = BeforeFunction<'a>;
+/// This is the type used by the closure given as argument of a `Context::it()` call.
+///
+/// This is Send and Sync for forward compatibility reasons.
 pub type TestFunction<'a> = FnMut() -> TestResult + 'a + Send + Sync;
+/// The type used for a test result
 pub type TestResult = Result<(), ()>;
 
+/// This enum is used to build a tree of named tests and contextes.
 pub enum Testable<'a> {
     /// Name and Test body
     Test(String, Box<TestFunction<'a>>),
@@ -39,6 +58,10 @@ pub enum Testable<'a> {
     Describe(String, Context<'a>),
 }
 
+/// A Context holds a collection of tests, a collection of closures to call before running any
+/// tests, and a collection of closure to call _after_ all the tests..
+///
+/// This is effectively the struct we fill when calling `ctx.it()`
 #[derive(Default)]
 pub struct Context<'a> {
     pub tests: Vec<Testable<'a>>,
@@ -47,6 +70,37 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
+    /// Open and name a new example group, which will be keeped as a child context of the current
+    /// context.
+    ///
+    /// Note that the order of declaration is respected for running the tests.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rspec::context::rdescribe;
+    ///
+    /// // `rdescribe` instanciate a runner and run it transparently
+    /// rdescribe("inside this describe, we use the context", |ctx| {
+    ///
+    ///     ctx.it("should run first", || Ok(()));
+    ///
+    ///     ctx.describe("open describe", |ctx| {
+    ///
+    ///         ctx.it("should run second", || Ok(()));
+    ///
+    ///         ctx.describe("in a describe", |ctx| {
+    ///
+    ///             ctx.describe("in a describe", |_ctx| {});
+    ///
+    ///             ctx.it("should run third", || Ok(()));
+    ///
+    ///         });
+    ///     });
+    ///
+    ///     ctx.it("should run last", || Ok(()));
+    /// });
+    /// ```
     pub fn describe<F>(&mut self, name: &'a str, mut body: F)
         where F: 'a + Send + Sync + FnMut(&mut Context<'a>) -> ()
     {
@@ -56,6 +110,33 @@ impl<'a> Context<'a> {
         self.tests.push(Testable::Describe(String::from(name), child))
     }
 
+    /// Register and name a closure as an example
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rspec::context::rdescribe;
+    ///
+    /// // `rdescribe` instanciate a runner and run it transparently
+    /// rdescribe("inside this describe, we use the context", |ctx| {
+    ///
+    ///     ctx.it("test at the root", || Ok(()));
+    ///
+    ///     ctx.describe("a group of examples", |ctx| {
+    ///
+    ///         ctx.it("should be usable inside a describe", || Ok(()));
+    ///
+    ///         ctx.describe("a nested describe", |ctx| {
+    ///
+    ///             ctx.it("should be usabel inside multiple describes", || Ok(()));
+    ///             ctx.it("should be able to declare multiple tests", || Ok(()));
+    ///
+    ///         });
+    ///
+    ///         ctx.it("doesn't care if it's before or after a describe", || Ok(()));
+    ///     });
+    /// });
+    /// ```
     pub fn it<F>(&mut self, name: &'a str, body: F)
         where F: 'a + Send + Sync + FnMut() -> TestResult
     {
@@ -63,6 +144,50 @@ impl<'a> Context<'a> {
         self.tests.push(Testable::Test(String::from(name), Box::new(body)))
     }
 
+    /// Declares a closure that will be executed before each test of the current Context.
+    ///
+    /// **PLEASE NOTE**: due to a bug in current versions of rspec, the before closures **WILL BE
+    /// CALLED ONLY ONCE** for all the children of the current context.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rspec::context::rdescribe;
+    /// use std::sync::atomic::{AtomicUsize, Ordering};
+    ///
+    /// let counter = &mut AtomicUsize::new(0);
+    ///
+    /// // `rdescribe` instanciate a runner and run it transparently
+    /// rdescribe("inside this describe, we use the context", |ctx| {
+    ///
+    ///     // This will increment the counter at each test
+    ///     ctx.before(|| { counter.fetch_add(1, Ordering::SeqCst); });
+    ///
+    ///     ctx.it("should run after the before", || {
+    ///         assert_eq!(1, counter.load(Ordering::SeqCst));
+    ///         Ok(())
+    ///     });
+    ///
+    ///     ctx.describe("a group of examples", |ctx| {
+    ///
+    ///         ctx.it("should see 1 increment", || {
+    ///             assert_eq!(2, counter.load(Ordering::SeqCst));
+    ///             Ok(())
+    ///         });
+    ///
+    ///         // XXX - note that the before has not been applied another time
+    ///         ctx.it("should NOT see another increment", || {
+    ///             assert_eq!(2, counter.load(Ordering::SeqCst));
+    ///             Ok(())
+    ///         });
+    ///     });
+    ///
+    ///     ctx.it("should run after the all the befores AND the previous it", || {
+    ///         assert_eq!(3, counter.load(Ordering::SeqCst));
+    ///         Ok(())
+    ///     });
+    /// });
+    /// ```
     pub fn before<F>(&mut self, body: F)
         where F: 'a + Send + Sync + FnMut() -> ()
     {
@@ -70,6 +195,50 @@ impl<'a> Context<'a> {
         self.before_each.push(Box::new(body))
     }
 
+    /// Declares a closure that will be executed after each test of the current Context.
+    ///
+    /// **PLEASE NOTE**: due to a bug in current versions of rspec, the after closures **WILL BE
+    /// CALLED ONLY ONCE** for all the children of the current context.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rspec::context::rdescribe;
+    /// use std::sync::atomic::{AtomicUsize, Ordering};
+    ///
+    /// let counter = &mut AtomicUsize::new(0);
+    ///
+    /// // `rdescribe` instanciate a runner and run it transparently
+    /// rdescribe("inside this describe, we use the context", |ctx| {
+    ///
+    ///     // This will increment the counter at each test
+    ///     ctx.after(|| { counter.fetch_add(1, Ordering::SeqCst); });
+    ///
+    ///     ctx.it("should run after the after", || {
+    ///         assert_eq!(0, counter.load(Ordering::SeqCst));
+    ///         Ok(())
+    ///     });
+    ///
+    ///     ctx.describe("a group of examples", |ctx| {
+    ///
+    ///         ctx.it("should see 1 increment", || {
+    ///             assert_eq!(1, counter.load(Ordering::SeqCst));
+    ///             Ok(())
+    ///         });
+    ///
+    ///         // XXX - note that the after has not been applied another time
+    ///         ctx.it("should NOT see another increment", || {
+    ///             assert_eq!(1, counter.load(Ordering::SeqCst));
+    ///             Ok(())
+    ///         });
+    ///     });
+    ///
+    ///     ctx.it("should run after the all the afters AND the previous it", || {
+    ///         assert_eq!(2, counter.load(Ordering::SeqCst));
+    ///         Ok(())
+    ///     });
+    /// });
+    /// ```
     pub fn after<F>(&mut self, body: F)
         where F: 'a + Send + Sync + FnMut() -> ()
     {
@@ -78,6 +247,37 @@ impl<'a> Context<'a> {
     }
 }
 
+/// This is the root describe. It will instanciate a root `Context` that you can use to declare
+/// examples, and will returns a Runner ready to run the tests.
+///
+/// See [`rdescribe`](fn.rdescribe.html) if you want an helper which will setup and run the tests
+/// for you.
+///
+/// # Examples
+///
+/// ```
+/// use rspec::context::describe;
+///
+/// let mut runner = describe("inside this describe, we use the context", |ctx| {
+///
+///     ctx.it("test at the root", || Ok(()));
+///
+///     ctx.describe("a group of examples", |ctx| {
+///
+///         ctx.it("should be usable inside a describe", || Ok(()));
+///
+///         ctx.describe("a nested describe", |ctx| {
+///
+///             ctx.it("should be usabel inside multiple describes", || Ok(()));
+///             ctx.it("should be able to declare multiple tests", || Ok(()));
+///
+///         });
+///
+///         ctx.it("doesn't care if it's before or after a describe", || Ok(()));
+///     });
+/// });
+/// runner.run().unwrap();
+/// ```
 pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
     where F: 'a + FnOnce(&mut Context<'a>) -> ()
 {
@@ -87,7 +287,41 @@ pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
     Runner::new(c)
 }
 
-// TODO: need refactoring
+/// This is the root describe with a sugar. It will instanciate a root `Context` that you can use
+/// to declare examples, will instanciate a `Runner` for the test and run them.
+///
+/// See [`describe`](fn.describe.html) if you want to control the runner precisely.
+///
+/// # Panics
+///
+/// If the runner failed, which could means that one or more examples failed (likely) or that
+/// another kind of error made the run to stop (unlikely).
+///
+/// # Examples
+///
+/// ```
+/// use rspec::context::rdescribe;
+///
+/// // `rdescribe` instanciate a runner and run it transparently
+/// rdescribe("inside this describe, we use the context", |ctx| {
+///
+///     ctx.it("test at the root", || Ok(()));
+///
+///     ctx.describe("a group of examples", |ctx| {
+///
+///         ctx.it("should be usable inside a describe", || Ok(()));
+///
+///         ctx.describe("a nested describe", |ctx| {
+///
+///             ctx.it("should be usabel inside multiple describes", || Ok(()));
+///             ctx.it("should be able to declare multiple tests", || Ok(()));
+///
+///         });
+///
+///         ctx.it("doesn't care if it's before or after a describe", || Ok(()));
+///     });
+/// });
+/// ```
 pub fn rdescribe<'a, 'b, F>(block_name: &'b str, body: F) -> ()
     where F: 'a + FnOnce(&mut Context<'a>) -> ()
 {
