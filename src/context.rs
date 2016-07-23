@@ -104,7 +104,6 @@ pub fn rdescribe<'a, 'b, F>(block_name: &'b str, body: F) -> ()
 #[cfg(test)]
 mod tests {
     pub use super::*;
-    pub use expectest::prelude::*;
 
     pub trait ToRes {
         fn to_res(self) -> Result<(), ()>;
@@ -165,7 +164,7 @@ mod tests {
                 runner.run().unwrap();
             }
 
-            expect!(ran_counter.load(Ordering::Relaxed)).to(be_equal_to(3));
+            assert_eq!(3, ran_counter.load(Ordering::Relaxed));
         }
 
         #[test]
@@ -208,7 +207,7 @@ mod tests {
                 runner.run().unwrap();
             }
 
-            expect!(ran_counter.load(Ordering::Relaxed)).to(be_equal_to(3));
+            assert_eq!(3, ran_counter.load(Ordering::Relaxed));
         }
 
         #[test]
@@ -232,7 +231,7 @@ mod tests {
                 runner.result()
             };
 
-            expect!(report).to(be_ok());
+            assert!(report.is_ok());
         }
     }
 

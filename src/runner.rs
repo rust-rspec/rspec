@@ -132,7 +132,6 @@ impl<'a> Runner<'a> {
 mod tests {
     pub use super::*;
     pub use context::*;
-    pub use expectest::prelude::*;
 
     mod run {
         pub use super::*;
@@ -145,7 +144,7 @@ mod tests {
                     Ok(())
                 })
             });
-            expect!(runner.run()).to(be_ok());
+            assert!(runner.run().is_ok());
         }
 
         #[test]
@@ -374,7 +373,7 @@ mod tests {
             let mut runner = describe("A root", |ctx| ctx.it("should fail", || Err(())));
             runner.run().unwrap();
 
-            expect!(runner.result()).to(be_err());
+            assert!(runner.result().is_err());
         }
 
         #[test]
@@ -382,7 +381,7 @@ mod tests {
             let mut runner = describe("A root", |ctx| ctx.it("should be ok", || Ok(())));
             runner.run().unwrap();
 
-            expect!(runner.result()).to(be_ok());
+            assert!(runner.result().is_ok());
         }
 
         #[test]
@@ -390,7 +389,7 @@ mod tests {
             let mut runner = describe("A root", |_ctx| {});
             runner.run().unwrap();
 
-            expect!(runner.result()).to(be_ok());
+            assert!(runner.result().is_ok());
         }
 
         #[test]
@@ -401,7 +400,7 @@ mod tests {
             });
             runner.run().unwrap();
 
-            expect!(runner.result()).to(be_err());
+            assert!(runner.result().is_err());
         }
 
         #[test]
@@ -414,7 +413,7 @@ mod tests {
             });
             runner.run().unwrap();
 
-            expect!(runner.result()).to(be_ok());
+            assert!(runner.result().is_ok());
         }
 
         #[test]
@@ -434,8 +433,8 @@ mod tests {
             });
             runner.run().unwrap();
 
-            expect!(runner.result()).to(be_err());
-            expect!(counter.load(Ordering::Relaxed)).to(be_equal_to(1));
+            assert!(runner.result().is_err());
+            assert_eq!(1, counter.load(Ordering::Relaxed));
         }
 
         #[test]
@@ -448,9 +447,9 @@ mod tests {
             runner.run().unwrap();
             let result = runner.result();
 
-            expect!(result).to(be_ok());
+            assert!(result.is_ok());
             if let Ok(report) = result {
-                expect!(report.total_tests).to(be_equal_to(3));
+                assert_eq!(3, report.total_tests);
             }
         }
 
@@ -464,9 +463,9 @@ mod tests {
             runner.run().unwrap();
             let result = runner.result();
 
-            expect!(result).to(be_ok());
+            assert!(result.is_ok());
             if let Ok(report) = result {
-                expect!(report.success_count).to(be_equal_to(3));
+                assert_eq!(3, report.success_count);
             }
         }
 
@@ -480,9 +479,9 @@ mod tests {
             runner.run().unwrap();
             let result = runner.result();
 
-            expect!(result).to(be_err());
+            assert!(result.is_err());
             if let Err(report) = result {
-                expect!(report.error_count).to(be_equal_to(2));
+                assert_eq!(2, report.error_count);
             }
         }
     }

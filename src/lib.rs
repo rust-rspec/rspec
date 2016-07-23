@@ -5,10 +5,6 @@
 
 #![allow(dead_code)]
 
-#[macro_use(expect)]
-extern crate expectest;
-pub use expectest::prelude::*;
-
 pub mod events;
 pub mod context;
 pub mod runner;
