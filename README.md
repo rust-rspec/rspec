@@ -1,6 +1,6 @@
 # rspec - a BDD test harness that works with stable Rust
 
-[![Build Status](https://travis-ci.org/mackwic/rspec.svg?branch=master)](https://travis-ci.org/mackwic/rspec) [![Coverage Status](https://coveralls.io/repos/github/mackwic/rspec/badge.svg)](https://coveralls.io/github/mackwic/rspec) [![Crates.io](https://img.shields.io/crates/v/rspec.svg?maxAge=2592000)](https://crates.io/crates/rspec) [![Crates.io](https://img.shields.io/crates/l/rspec.svg?maxAge=2592000)]()
+[![Build Status](https://travis-ci.org/mackwic/rspec.svg?branch=master)](https://travis-ci.org/mackwic/rspec) [![Coverage Status](https://coveralls.io/repos/github/mackwic/rspec/badge.svg)](https://coveralls.io/github/mackwic/rspec) [![Crates.io](https://img.shields.io/crates/v/rspec.svg?maxAge=2592000)](https://crates.io/crates/rspec) [![Crates.io](https://img.shields.io/crates/l/rspec.svg?maxAge=2592000)](https://github.com/mackwic/rspec/blob/master/LICENSE)
 
 Do you like writing your tests in a tree of `describe`, and `it`, but also have
 a hard requirement on stable rust ? This crate is for you !
@@ -10,6 +10,9 @@ a gently beginner introduction, [please go to the Beginner Section](#beginners).
 
 The last stable documentation is available for consultation at
 [mackwic.github.io/rspec](https://mackwic.github.io/rspec).
+
+**All rspec releases are garanteed to compile against the latest stable rust and
+are tested from rust 1.9**.
 
 ## How to use
 
