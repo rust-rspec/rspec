@@ -15,21 +15,22 @@
 //! // `rdescribe` instanciate a runner and run it transparently
 //! rdescribe("Context", |ctx| {
 //!     describe("Context::describe", |ctx| {
-//!         ctx.it("can be nested", || Ok(()));
-//!         ctx.it("use a `ctx` object", || Ok(()))
+//!         ctx.it("can be nested", || Ok(()) as Result<(),()>);
+//!         ctx.it("use a `ctx` object", || Ok(()) as Result<(),()>)
 //!     });
 //!
 //!     describe("Context::it", |ctx| {
-//!         ctx.it("uses a Result returns", || Ok(()));
+//!         ctx.it("uses a Result returns", || Ok(()) as Result<(),()>);
 //!         ctx.it("can also use asserts", || {
 //!             assert_eq!(42, 12 + 30);
-//!             Ok(()) // don't forget the result type
+//!             Ok(()) as Result<(),()> // don't forget the result type
 //!         })
 //!     });
 //! });
 //!
 
 use runner::*;
+use std::any::Any;
 
 /// This is the type used by the closure given as argument of a `Context::before()` call.
 ///
@@ -46,7 +47,7 @@ pub type AfterFunction<'a> = BeforeFunction<'a>;
 /// This is the type used by the closure given as argument of a `Context::it()` call.
 ///
 /// This is Send and Sync for forward compatibility reasons.
-pub type TestFunction<'a> = FnMut() -> TestResult + 'a + Send + Sync;
+pub type TestFunction<'a> = FnMut() -> Box<Any> + 'a + Send + Sync;
 /// The type used for a test result
 pub type TestResult = Result<(), ()>;
 
@@ -83,22 +84,22 @@ impl<'a> Context<'a> {
     /// // `rdescribe` instanciate a runner and run it transparently
     /// rdescribe("inside this describe, we use the context", |ctx| {
     ///
-    ///     ctx.it("should run first", || Ok(()));
+    ///     ctx.it("should run first", || Ok(()) as Result<(),()>);
     ///
     ///     ctx.describe("open describe", |ctx| {
     ///
-    ///         ctx.it("should run second", || Ok(()));
+    ///         ctx.it("should run second", || Ok(()) as Result<(),()>);
     ///
     ///         ctx.describe("in a describe", |ctx| {
     ///
     ///             ctx.describe("in a describe", |_ctx| {});
     ///
-    ///             ctx.it("should run third", || Ok(()));
+    ///             ctx.it("should run third", || Ok(()) as Result<(),()>);
     ///
     ///         });
     ///     });
     ///
-    ///     ctx.it("should run last", || Ok(()));
+    ///     ctx.it("should run last", || Ok(()) as Result<(),()>);
     /// });
     /// ```
     pub fn describe<F>(&mut self, name: &'a str, mut body: F)
@@ -120,28 +121,30 @@ impl<'a> Context<'a> {
     /// // `rdescribe` instanciate a runner and run it transparently
     /// rdescribe("inside this describe, we use the context", |ctx| {
     ///
-    ///     ctx.it("test at the root", || Ok(()));
+    ///     ctx.it("test at the root", || Ok(()) as Result<(),()>);
     ///
     ///     ctx.describe("a group of examples", |ctx| {
     ///
-    ///         ctx.it("should be usable inside a describe", || Ok(()));
+    ///         ctx.it("should be usable inside a describe", || Ok(()) as Result<(),()>);
     ///
     ///         ctx.describe("a nested describe", |ctx| {
     ///
-    ///             ctx.it("should be usabel inside multiple describes", || Ok(()));
-    ///             ctx.it("should be able to declare multiple tests", || Ok(()));
+    ///             ctx.it("should be usabel inside multiple describes", || Ok(()) as Result<(),()>);
+    ///             ctx.it("should be able to declare multiple tests", || Ok(()) as Result<(),()>);
     ///
     ///         });
     ///
-    ///         ctx.it("doesn't care if it's before or after a describe", || Ok(()));
+    ///         ctx.it("doesn't care if it's before or after a describe", || Ok(()) as Result<(),()>);
     ///     });
     /// });
     /// ```
-    pub fn it<F>(&mut self, name: &'a str, body: F)
-        where F: 'a + Send + Sync + FnMut() -> TestResult
+    pub fn it<F, T>(&mut self, name: &'a str, mut body: F)
+        where F: 'a + Send + Sync + FnMut() -> T,
+              T: Any
     {
 
-        self.tests.push(Testable::Test(String::from(name), Box::new(body)))
+        let f = move || { Box::new(body()) as Box<Any> };
+        self.tests.push(Testable::Test(String::from(name), Box::new(f)))
     }
 
     /// Declares a closure that will be executed before each test of the current Context.
@@ -165,26 +168,26 @@ impl<'a> Context<'a> {
     ///
     ///     ctx.it("should run after the before", || {
     ///         assert_eq!(1, counter.load(Ordering::SeqCst));
-    ///         Ok(())
+    ///         Ok(()) as Result<(),()>
     ///     });
     ///
     ///     ctx.describe("a group of examples", |ctx| {
     ///
     ///         ctx.it("should see 1 increment", || {
     ///             assert_eq!(2, counter.load(Ordering::SeqCst));
-    ///             Ok(())
+    ///             Ok(()) as Result<(),()>
     ///         });
     ///
     ///         // XXX - note that the before has not been applied another time
     ///         ctx.it("should NOT see another increment", || {
     ///             assert_eq!(2, counter.load(Ordering::SeqCst));
-    ///             Ok(())
+    ///             Ok(()) as Result<(),()>
     ///         });
     ///     });
     ///
     ///     ctx.it("should run after the all the befores AND the previous it", || {
     ///         assert_eq!(3, counter.load(Ordering::SeqCst));
-    ///         Ok(())
+    ///         Ok(()) as Result<(),()>
     ///     });
     /// });
     /// ```
@@ -216,26 +219,26 @@ impl<'a> Context<'a> {
     ///
     ///     ctx.it("should run after the after", || {
     ///         assert_eq!(0, counter.load(Ordering::SeqCst));
-    ///         Ok(())
+    ///         Ok(()) as Result<(),()>
     ///     });
     ///
     ///     ctx.describe("a group of examples", |ctx| {
     ///
     ///         ctx.it("should see 1 increment", || {
     ///             assert_eq!(1, counter.load(Ordering::SeqCst));
-    ///             Ok(())
+    ///             Ok(()) as Result<(),()>
     ///         });
     ///
     ///         // XXX - note that the after has not been applied another time
     ///         ctx.it("should NOT see another increment", || {
     ///             assert_eq!(1, counter.load(Ordering::SeqCst));
-    ///             Ok(())
+    ///             Ok(()) as Result<(),()>
     ///         });
     ///     });
     ///
     ///     ctx.it("should run after the all the afters AND the previous it", || {
     ///         assert_eq!(2, counter.load(Ordering::SeqCst));
-    ///         Ok(())
+    ///         Ok(()) as Result<(),()>
     ///     });
     /// });
     /// ```
@@ -260,20 +263,20 @@ impl<'a> Context<'a> {
 ///
 /// let mut runner = describe("inside this describe, we use the context", |ctx| {
 ///
-///     ctx.it("test at the root", || Ok(()));
+///     ctx.it("test at the root", || Ok(()) as Result<(),()>);
 ///
 ///     ctx.describe("a group of examples", |ctx| {
 ///
-///         ctx.it("should be usable inside a describe", || Ok(()));
+///         ctx.it("should be usable inside a describe", || Ok(()) as Result<(),()>);
 ///
 ///         ctx.describe("a nested describe", |ctx| {
 ///
-///             ctx.it("should be usabel inside multiple describes", || Ok(()));
-///             ctx.it("should be able to declare multiple tests", || Ok(()));
+///             ctx.it("should be usabel inside multiple describes", || Ok(()) as Result<(),()>);
+///             ctx.it("should be able to declare multiple tests", || Ok(()) as Result<(),()>);
 ///
 ///         });
 ///
-///         ctx.it("doesn't care if it's before or after a describe", || Ok(()));
+///         ctx.it("doesn't care if it's before or after a describe", || Ok(()) as Result<(),()>);
 ///     });
 /// });
 /// runner.run().unwrap();
@@ -305,20 +308,20 @@ pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
 /// // `rdescribe` instanciate a runner and run it transparently
 /// rdescribe("inside this describe, we use the context", |ctx| {
 ///
-///     ctx.it("test at the root", || Ok(()));
+///     ctx.it("test at the root", || Ok(()) as Result<(),()>);
 ///
 ///     ctx.describe("a group of examples", |ctx| {
 ///
-///         ctx.it("should be usable inside a describe", || Ok(()));
+///         ctx.it("should be usable inside a describe", || Ok(()) as Result<(),()>);
 ///
 ///         ctx.describe("a nested describe", |ctx| {
 ///
-///             ctx.it("should be usabel inside multiple describes", || Ok(()));
-///             ctx.it("should be able to declare multiple tests", || Ok(()));
+///             ctx.it("should be usabel inside multiple describes", || Ok(()) as Result<(),()>);
+///             ctx.it("should be able to declare multiple tests", || Ok(()) as Result<(),()>);
 ///
 ///         });
 ///
-///         ctx.it("doesn't care if it's before or after a describe", || Ok(()));
+///         ctx.it("doesn't care if it's before or after a describe", || Ok(()) as Result<(),()>);
 ///     });
 /// });
 /// ```
@@ -345,9 +348,9 @@ mod tests {
     impl ToRes for bool {
         fn to_res(self) -> Result<(), ()> {
             if self {
-                Ok(())
+                Ok(()) as Result<(),()>
             } else {
-                Err(())
+                Err(()) as Result<(),()>
             }
         }
     }
@@ -367,15 +370,35 @@ mod tests {
 
         #[test]
         fn it_can_call_it_inside_describe_body() {
-            describe("A root", |ctx| ctx.it("is a test", || Ok(())));
+            describe("A root", |ctx| ctx.it("is a test", || Ok(()) as Result<(),()>));
+        }
+    }
+
+    mod it {
+        pub use super::*;
+
+        #[test]
+        fn it_can_return_a_unit() {
+            rdescribe("A root", |ctx| {
+                ctx.it("a unit is ok", || {} )
+            })
         }
 
-        // #[test]
-        // fn it_can_implicitely_returns_ok() {
-        // describe("a root", |ctx| {
-        // ctx.it("is ok", || {})
-        // })
-        // }
+        #[test]
+        fn is_can_return_a_bool_true() {
+            rdescribe("a root", |ctx| {
+                ctx.it("a bool true is err", || { true });
+            });
+        }
+
+        #[test]
+        fn is_can_return_a_bool_false() {
+            let mut runner = describe("a root", |ctx| {
+                ctx.it("a bool true is err", || { false });
+            });
+            runner.run().unwrap();
+            assert!(runner.result().is_err())
+        }
     }
 
     mod before {
@@ -391,9 +414,9 @@ mod tests {
                     ctx.before(|| {
                         ran_counter.fetch_add(1, Ordering::Relaxed);
                     });
-                    ctx.it("first", || Ok(()));
-                    ctx.it("second", || Ok(()));
-                    ctx.it("third", || Ok(()));
+                    ctx.it("first", || Ok(()) as Result<(),()>);
+                    ctx.it("second", || Ok(()) as Result<(),()>);
+                    ctx.it("third", || Ok(()) as Result<(),()>);
                 });
                 runner.run().unwrap();
             }
@@ -434,9 +457,9 @@ mod tests {
                     ctx.after(|| {
                         ran_counter.fetch_add(1, Ordering::Relaxed);
                     });
-                    ctx.it("first", || Ok(()));
-                    ctx.it("second", || Ok(()));
-                    ctx.it("third", || Ok(()));
+                    ctx.it("first", || Ok(()) as Result<(),()>);
+                    ctx.it("second", || Ok(()) as Result<(),()>);
+                    ctx.it("third", || Ok(()) as Result<(),()>);
                 });
                 runner.run().unwrap();
             }
@@ -494,9 +517,9 @@ mod tests {
         #[should_panic]
         fn it_fails_when_run_fails() {
             rdescribe("a failed root", |ctx| {
-                ctx.it("a ok test", || Ok(()));
-                ctx.it("a failed test", || Err(()));
-                ctx.it("a ok test", || Ok(()));
+                ctx.it("a ok test", || Ok(()) as Result<(),()>);
+                ctx.it("a failed test", || Err(()) as Result<(),()>);
+                ctx.it("a ok test", || Ok(()) as Result<(),()>);
             })
         }
     }
