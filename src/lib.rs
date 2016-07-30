@@ -5,6 +5,7 @@
 
 #![allow(dead_code)]
 
+pub mod example_result;
 pub mod events;
 pub mod context;
 pub mod runner;

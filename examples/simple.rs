@@ -8,30 +8,31 @@ pub fn main() {
     let mut formatter = rspec::formatter::simple::Simple::new(stdout);
     let mut runner = describe("rspec is a classic BDD testing", |ctx| {
 
-        ctx.it("can define tests", || Ok(()));
+        ctx.it("can define tests", || true);
 
         ctx.describe("rspec use results for tests results", |ctx| {
 
-            ctx.it("passed if the return is_ok()", || Ok(()));
+            ctx.it("passed if the return is_ok()", || Err(()) as Result<(),()>);
 
-            ctx.it("failed if the return is_err()", || Err(()));
+            ctx.it("failed if the return is_err()", || Err(()) as Result<(),()>);
+        });
 
-            ctx.it("is executed so you can use dynamic values", || {
-                if (42 % 37 + 2) > 3 { Ok(()) } else { Err(()) }
+        ctx.describe("rspec can use bools", |ctx| {
+
+            ctx.it("should pass if true", || true);
+
+            ctx.it("should fail if false", || false);
+
+            ctx.it("is convenient for comparisons", || {
+                (42 % 37 + 2) > 3
             })
         });
 
-        ctx.describe("rspec also supports asserts", |ctx| {
+        ctx.describe("rspec can use units", |ctx| {
 
-            ctx.it("is a simple test", || {
-                assert_eq!(true, false);
-                Ok(()) // don't forget to return a Result
-            });
+            ctx.it("should pass if the return is ()", || {});
 
-            ctx.it("can also pass", || {
-                assert_eq!(true, true);
-                Ok(())
-            });
+            ctx.it("is convenient for asserts", || assert_eq!(1, 1));
         });
     });
     runner.add_event_handler(&mut formatter);
