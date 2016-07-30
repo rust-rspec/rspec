@@ -53,8 +53,6 @@ pub struct TestReport {
     pub error_count: u32,
 }
 
-use std::any::Any;
-
 impl<'a> Runner<'a> {
 
     #[cfg_attr(feature="clippy", allow(redundant_closure))]

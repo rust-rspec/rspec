@@ -1,6 +1,5 @@
 //! Events are send by the Runner to signal the progression in the test suite, with the results
 
-use context;
 use runner;
 use example_result::ExampleResult;
 

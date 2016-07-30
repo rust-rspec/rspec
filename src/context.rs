@@ -30,7 +30,6 @@
 //!
 
 use runner::*;
-use std::any::Any;
 use example_result::ExampleResult;
 
 /// This is the type used by the closure given as argument of a `Context::before()` call.
@@ -144,10 +143,7 @@ impl<'a> Context<'a> {
               T: Into<ExampleResult>
     {
 
-        let f = move || {
-            let res : ExampleResult = body().into();
-            res
-        };
+        let f = move || { body().into() };
         self.tests.push(Testable::Test(String::from(name), Box::new(f)))
     }
 
