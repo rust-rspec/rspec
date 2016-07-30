@@ -2,6 +2,7 @@
 
 use context;
 use runner;
+use example_result::ExampleResult;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
@@ -10,7 +11,7 @@ pub enum Event {
     StartDescribe(String),
     EndDescribe,
     StartTest(String),
-    EndTest(context::TestResult), /* {Start,End}Before
+    EndTest(ExampleResult), /* {Start,End}Before
                                    * {Start,End}After */
 }
 

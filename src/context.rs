@@ -31,6 +31,7 @@
 
 use runner::*;
 use std::any::Any;
+use example_result::ExampleResult;
 
 /// This is the type used by the closure given as argument of a `Context::before()` call.
 ///
@@ -47,7 +48,7 @@ pub type AfterFunction<'a> = BeforeFunction<'a>;
 /// This is the type used by the closure given as argument of a `Context::it()` call.
 ///
 /// This is Send and Sync for forward compatibility reasons.
-pub type TestFunction<'a> = FnMut() -> Box<Any> + 'a + Send + Sync;
+pub type TestFunction<'a> = FnMut() -> ExampleResult + 'a + Send + Sync;
 /// The type used for a test result
 pub type TestResult = Result<(), ()>;
 
@@ -140,10 +141,13 @@ impl<'a> Context<'a> {
     /// ```
     pub fn it<F, T>(&mut self, name: &'a str, mut body: F)
         where F: 'a + Send + Sync + FnMut() -> T,
-              T: Any
+              T: Into<ExampleResult>
     {
 
-        let f = move || { Box::new(body()) as Box<Any> };
+        let f = move || {
+            let res : ExampleResult = body().into();
+            res
+        };
         self.tests.push(Testable::Test(String::from(name), Box::new(f)))
     }
 
@@ -341,19 +345,7 @@ pub fn rdescribe<'a, 'b, F>(block_name: &'b str, body: F) -> ()
 #[cfg(test)]
 mod tests {
     pub use super::*;
-
-    pub trait ToRes {
-        fn to_res(self) -> Result<(), ()>;
-    }
-    impl ToRes for bool {
-        fn to_res(self) -> Result<(), ()> {
-            if self {
-                Ok(()) as Result<(),()>
-            } else {
-                Err(()) as Result<(),()>
-            }
-        }
-    }
+    pub use example_result::ExampleResult;
 
     mod describe {
         pub use super::*;
@@ -399,6 +391,39 @@ mod tests {
             runner.run().unwrap();
             assert!(runner.result().is_err())
         }
+
+        #[test]
+        fn it_can_return_a_result_ok() {
+            rdescribe("a root", |ctx| {
+                ctx.it("is ok", || Ok(()) as Result<(), ()>);
+            });
+        }
+
+        #[test]
+        fn it_can_return_a_result_err() {
+            let mut runner = describe("a root", |ctx| {
+                ctx.it("is err", || Err(()) as Result<(), ()>);
+            });
+            runner.run().unwrap();
+            assert!(runner.result().is_err())
+        }
+
+        #[test]
+        fn it_can_return_any_result() {
+            rdescribe("a root", |ctx| {
+                ctx.it("is ok", || Ok(3) as Result<i32, ()>);
+            });
+        }
+
+        // XXX this MUST NOT compiles
+        //#[test]
+        //fn it_cant_returns_something_that_dont_implements_to_res() {
+        //    let mut runner = describe("a root", |ctx| {
+        //        ctx.it("a bool true is err", || { 3 });
+        //    });
+        //    runner.run().unwrap();
+        //    assert!(runner.result().is_err())
+        //}
     }
 
     mod before {
@@ -431,13 +456,13 @@ mod tests {
 
             rdescribe("root", |ctx| {
                 ctx.it("shouldn't see the before hook",
-                       || (0 == ran_counter.load(Ordering::SeqCst)).to_res());
+                       || (0 == ran_counter.load(Ordering::SeqCst)));
                 ctx.describe("a sub-root", |ctx| {
                     ctx.before(|| {
                         ran_counter.fetch_add(1, Ordering::SeqCst);
                     });
                     ctx.it("should see the before hook",
-                           || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
+                           || (1 == ran_counter.load(Ordering::SeqCst)));
                 })
 
             })
@@ -478,11 +503,11 @@ mod tests {
                         ran_counter.fetch_add(1, Ordering::SeqCst);
                     });
                     ctx.it("first",
-                           || (0 == ran_counter.load(Ordering::SeqCst)).to_res());
+                           || 0 == ran_counter.load(Ordering::SeqCst));
                     ctx.it("second",
-                           || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
+                           || 1 == ran_counter.load(Ordering::SeqCst));
                     ctx.it("third",
-                           || (2 == ran_counter.load(Ordering::SeqCst)).to_res());
+                           || 2 == ran_counter.load(Ordering::SeqCst));
                 });
                 runner.run().unwrap();
                 runner.result()
@@ -505,11 +530,11 @@ mod tests {
                     ran_counter.fetch_add(1, Ordering::SeqCst);
                 });
                 ctx.it("should be runned (1)",
-                       || (1 == ran_counter.load(Ordering::SeqCst)).to_res());
+                       || 1 == ran_counter.load(Ordering::SeqCst));
                 ctx.it("should be runned (2)",
-                       || (2 == ran_counter.load(Ordering::SeqCst)).to_res());
+                       || 2 == ran_counter.load(Ordering::SeqCst));
                 ctx.it("should be runned (3)",
-                       || (3 == ran_counter.load(Ordering::SeqCst)).to_res());
+                       || 3 == ran_counter.load(Ordering::SeqCst));
             })
         }
 

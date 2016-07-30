@@ -94,6 +94,7 @@ mod tests {
     pub use super::*;
     pub use formatter::formatter::Formatter;
     pub use events::{Event, EventHandler};
+    pub use example_result::*;
     pub use std::io;
     pub use std::str;
 
@@ -185,7 +186,7 @@ mod tests {
             let mut v = vec![];
             {
                 let mut s = Simple::new(&mut v);
-                s.trigger(&Event::EndTest(Ok(())));
+                s.trigger(&Event::EndTest(SUCCESS_RES))
             }
 
             assert_eq!(".", str::from_utf8(&v).unwrap());
@@ -197,7 +198,7 @@ mod tests {
             let mut v = vec![];
             {
                 let mut s = Simple::new(&mut v);
-                s.trigger(&Event::EndTest(Err(())));
+                s.trigger(&Event::EndTest(FAILED_RES))
             }
 
             assert_eq!("F", str::from_utf8(&v).unwrap());
@@ -244,7 +245,7 @@ mod tests {
             let mut sink = &mut io::sink();
             let mut s = Simple::new(&mut sink);
             s.trigger(&Event::StartTest("hola".into()));
-            s.trigger(&Event::EndTest(Err(())));
+            s.trigger(&Event::EndTest(FAILED_RES));
             assert_eq!(1, s.failures.len());
         }
 
@@ -253,7 +254,7 @@ mod tests {
             let mut sink = &mut io::sink();
             let mut s = Simple::new(&mut sink);
             s.trigger(&Event::StartTest("hola".into()));
-            s.trigger(&Event::EndTest(Err(())));
+            s.trigger(&Event::EndTest(FAILED_RES));
             assert_eq!(Some(&"hola".into()), s.failures.get(0));
         }
 
@@ -263,12 +264,12 @@ mod tests {
             let mut s = Simple::new(&mut sink);
             s.trigger(&Event::StartDescribe("hola".into()));
             s.trigger(&Event::StartTest("holé".into()));
-            s.trigger(&Event::EndTest(Err(())));
+            s.trigger(&Event::EndTest(FAILED_RES));
             assert_eq!(Some(&"hola | holé".into()), s.failures.get(0));
 
             s.trigger(&Event::StartDescribe("ohééé".into()));
             s.trigger(&Event::StartTest("holé".into()));
-            s.trigger(&Event::EndTest(Err(())));
+            s.trigger(&Event::EndTest(FAILED_RES));
             assert_eq!(Some(&"hola | ohééé | holé".into()), s.failures.get(1));
         }
 
@@ -278,12 +279,12 @@ mod tests {
             let mut s = Simple::new(&mut sink);
             s.trigger(&Event::StartDescribe("hola".into()));
             s.trigger(&Event::StartTest("holé".into()));
-            s.trigger(&Event::EndTest(Err(())));
+            s.trigger(&Event::EndTest(FAILED_RES));
 
             s.trigger(&Event::EndDescribe);
             s.trigger(&Event::StartDescribe("ok".into()));
             s.trigger(&Event::StartTest("cacao".into()));
-            s.trigger(&Event::EndTest(Err(())));
+            s.trigger(&Event::EndTest(FAILED_RES));
             assert_eq!(Some(&"ok | cacao".into()), s.failures.get(1));
         }
 
@@ -293,7 +294,7 @@ mod tests {
             let mut s = Simple::new(&mut sink);
             s.trigger(&Event::StartDescribe("hola".into()));
             s.trigger(&Event::StartTest("holé".into()));
-            s.trigger(&Event::EndTest(Ok(())));
+            s.trigger(&Event::EndTest(SUCCESS_RES));
 
             assert_eq!(None, s.failures.get(0));
         }
@@ -304,9 +305,9 @@ mod tests {
             let mut s = Simple::new(&mut sink);
             s.trigger(&Event::StartDescribe("hola".into()));
             s.trigger(&Event::StartTest("holé".into()));
-            s.trigger(&Event::EndTest(Ok(())));
+            s.trigger(&Event::EndTest(SUCCESS_RES));
             s.trigger(&Event::StartTest("holé".into()));
-            s.trigger(&Event::EndTest(Err(())));
+            s.trigger(&Event::EndTest(FAILED_RES));
 
             // not "hola | holé | holé"
             assert_eq!(Some(&"hola | holé".into()), s.failures.get(0));
@@ -319,7 +320,7 @@ mod tests {
                 let mut s = Simple::new(&mut sink);
                 s.trigger(&Event::StartDescribe("hola".into()));
                 s.trigger(&Event::StartTest("holé".into()));
-                s.trigger(&Event::EndTest(Err(())));
+                s.trigger(&Event::EndTest(FAILED_RES));
                 s.failures_summary()
             };
 
@@ -333,9 +334,9 @@ mod tests {
                 let mut s = Simple::new(&mut sink);
                 s.trigger(&Event::StartDescribe("hola".into()));
                 s.trigger(&Event::StartTest("holé".into()));
-                s.trigger(&Event::EndTest(Err(())));
+                s.trigger(&Event::EndTest(FAILED_RES));
                 s.trigger(&Event::StartTest("hola".into()));
-                s.trigger(&Event::EndTest(Err(())));
+                s.trigger(&Event::EndTest(FAILED_RES));
                 s.failures_summary()
             };
 
@@ -345,12 +346,12 @@ mod tests {
                 let mut s = Simple::new(&mut sink);
                 s.trigger(&Event::StartDescribe("hola".into()));
                 s.trigger(&Event::StartTest("holé".into()));
-                s.trigger(&Event::EndTest(Err(())));
+                s.trigger(&Event::EndTest(FAILED_RES));
                 s.trigger(&Event::EndDescribe);
                 s.trigger(&Event::StartDescribe("second".into()));
                 s.trigger(&Event::StartDescribe("third".into()));
                 s.trigger(&Event::StartTest("hola".into()));
-                s.trigger(&Event::EndTest(Err(())));
+                s.trigger(&Event::EndTest(FAILED_RES));
                 s.failures_summary()
             };
 

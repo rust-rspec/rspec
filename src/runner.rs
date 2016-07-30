@@ -10,6 +10,8 @@
 use context::*;
 use events;
 use events::Event;
+use example_result;
+use example_result::ExampleResult;
 
 pub type RunnerResult = Result<TestReport, TestReport>;
 
@@ -55,39 +57,22 @@ use std::any::Any;
 
 impl<'a> Runner<'a> {
 
-    fn normalize_result(res: Box<Any>) -> Result<(), ()> {
-
-        if let Some(res) = res.downcast_ref::<Result<(), ()>>() {
-            return *res
-        }
-
-        if let Some(_) = res.downcast_ref::<()>() {
-            return Ok(())
-        }
-
-        if let Some(res) = res.downcast_ref::<bool>() {
-            return if *res { Ok(()) } else { Err(()) }
-        }
-
-        // TODO: put a log here
-        Err(())
-    }
-
     #[cfg_attr(feature="clippy", allow(redundant_closure))]
     fn run_test(test_name: &str,
                 test_function: &mut Box<TestFunction>,
                 handlers: &mut Handlers)
-                -> TestResult {
+                -> ExampleResult {
 
         use std::panic::{catch_unwind, AssertUnwindSafe};
+        use example_result;
 
         handlers.broadcast(&Event::StartTest(String::from(test_name)));
         let res = catch_unwind(AssertUnwindSafe(|| test_function()));
 
         let res = match res {
-            Ok(res) => Runner::normalize_result(res),
+            Ok(res) => res,
             // if test panicked, it means that it failed
-            Err(_) => Err(())
+            Err(_) => example_result::FAILED_RES
         };
         handlers.broadcast(&Event::EndTest(res));
         res
@@ -96,8 +81,8 @@ impl<'a> Runner<'a> {
     fn run_and_recurse(report: &mut TestReport,
                        child_ctx: &mut Context,
                        handlers: &mut Handlers)
-                       -> TestResult {
-        let mut result = Ok(());
+                       -> ExampleResult {
+        let mut result = example_result::SUCCESS_RES;
         let before_functions = &mut child_ctx.before_each;
         let after_functions = &mut child_ctx.after_each;
 
@@ -123,15 +108,13 @@ impl<'a> Runner<'a> {
                 res
             };
 
-            result = match result {
-                Ok(()) => {
-                    report.success_count += 1;
-                    test_res
-                }
-                old => {
-                    report.error_count += 1;
-                    old
-                }
+            //  FIXME: bug here ? why not test_res ?
+            result = if result.is_ok() {
+                report.success_count += 1;
+                test_res
+            } else {
+                report.error_count += 1;
+                result
             };
 
             report.total_tests += 1;
@@ -145,7 +128,7 @@ impl<'a> Runner<'a> {
 
         let mut report = TestReport::default();
         let result = Runner::run_and_recurse(&mut report, &mut self.describe, &mut self.handlers);
-        let result = result.and(Ok(report)).or_else(|_| Err(report));
+        let result = result.res().and(Ok(report)).or_else(|_| Err(report));
 
         self.report = Some(result);
         self.handlers.broadcast(&Event::FinishedRunner(result));
@@ -166,6 +149,7 @@ impl<'a> Runner<'a> {
 mod tests {
     pub use super::*;
     pub use context::*;
+    pub use example_result::*;
 
     mod run {
         pub use super::*;
@@ -363,7 +347,7 @@ mod tests {
                     runner.run().unwrap();
                 }
 
-                assert_eq!(Some(&EndTest(Ok(()) as Result<(),()>)), handler.events.get(2));
+                assert_eq!(Some(&EndTest(SUCCESS_RES)), handler.events.get(2));
             }
 
             #[test]
