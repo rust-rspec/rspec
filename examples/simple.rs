@@ -5,7 +5,7 @@ use std::io;
 
 pub fn main() {
     let stdout = &mut io::stdout();
-    let mut formatter = rspec::formatter::simple::Simple::new(stdout);
+    let mut formatter = rspec::formatter::Simple::new(stdout);
     let mut runner = describe("rspec is a classic BDD testing", |ctx| {
 
         ctx.it("can define tests", || true);
