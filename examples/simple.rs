@@ -12,7 +12,7 @@ pub fn main() {
 
         ctx.describe("rspec use results for tests results", |ctx| {
 
-            ctx.it("passed if the return is_ok()", || Err(()) as Result<(),()>);
+            ctx.it("passed if the return is_ok()", || Ok(()) as Result<(),()>);
 
             ctx.it("failed if the return is_err()", || Err(()) as Result<(),()>);
         });
