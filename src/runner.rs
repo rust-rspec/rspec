@@ -106,16 +106,15 @@ impl<'a> Runner<'a> {
                 res
             };
 
-            //  FIXME: bug here ? why not test_res ?
-            result = if result.is_ok() {
-                report.success_count += 1;
-                test_res
-            } else {
-                report.error_count += 1;
-                result
-            };
-
             report.total_tests += 1;
+
+            if test_res.is_ok() {
+                report.success_count += 1;
+            } else {
+                report.error_count += 1
+            }
+
+            result = test_res.or(result);
         }
 
         result
@@ -430,6 +429,22 @@ mod tests {
             runner.run().unwrap();
 
             assert!(runner.result().is_ok());
+        }
+
+        #[test]
+        fn correctly_count_errors() {
+            let mut runner = describe("a root", |ctx| {
+                ctx.it("first is ok", || ());
+                ctx.it("second is not", || false);
+            });
+            runner.run().unwrap();
+            if let Err(res) = runner.result() {
+                assert_eq!((1, 1),
+                           (res.success_count, res.error_count));
+            } else {
+                assert!(false, "unreachable");
+            }
+
         }
 
         #[test]
