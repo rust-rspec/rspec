@@ -57,7 +57,7 @@ impl<'a> Runner<'a> {
 
     #[cfg_attr(feature="clippy", allow(redundant_closure))]
     fn run_test(test_name: &str,
-                test_function: &mut Box<TestFunction>,
+                mut test_function: Box<TestFunction>,
                 handlers: &mut Handlers)
                 -> ExampleResult {
 
@@ -80,18 +80,25 @@ impl<'a> Runner<'a> {
                        child_ctx: &mut Context,
                        handlers: &mut Handlers)
                        -> ExampleResult {
-        let mut result = example_result::SUCCESS_RES;
-        let before_functions = &mut child_ctx.before_each;
-        let after_functions = &mut child_ctx.after_each;
 
-        for test_function in &mut child_ctx.tests {
+        use std::mem;
+        let mut result = example_result::SUCCESS_RES;
+
+        let ctx = mem::replace(child_ctx, Context::default());
+
+        let tests = ctx.tests;
+        let mut before_functions = ctx.before_each;
+        let mut after_functions = ctx.after_each;
+
+
+        for mut test_function in tests {
             let test_res = {
                 for before_function in before_functions.iter_mut() {
                     before_function()
                 }
-                let res = match *test_function {
-                    Testable::Test(ref name, ref mut test_function) => {
-                        Runner::run_test(name, test_function, handlers)
+                let res = match test_function {
+                    Testable::Test(name, test_function) => {
+                        Runner::run_test(&name, test_function, handlers)
                     }
                     Testable::Describe(ref name, ref mut desc) => {
                         handlers.broadcast(&Event::StartDescribe(name.clone()));
@@ -120,16 +127,15 @@ impl<'a> Runner<'a> {
         result
     }
 
-    pub fn run(&mut self) -> Result<(), ()> {
+    pub fn run(mut self) -> RunnerResult {
         self.handlers.broadcast(&Event::StartRunner);
 
         let mut report = TestReport::default();
         let result = Runner::run_and_recurse(&mut report, &mut self.describe, &mut self.handlers);
         let result = result.res().and(Ok(report)).or_else(|_| Err(report));
 
-        self.report = Some(result);
         self.handlers.broadcast(&Event::FinishedRunner(result));
-        Ok(())
+        result
     }
 
     pub fn result(&self) -> RunnerResult {
@@ -153,7 +159,7 @@ mod tests {
 
         #[test]
         fn it_create_a_runner_that_can_be_runned() {
-            let mut runner = describe("A root", |ctx| {
+            let runner = describe("A root", |ctx| {
                 ctx.it("is expected to run", || {
                     assert_eq!(true, true);
                     Ok(()) as Result<(),()>
@@ -167,13 +173,13 @@ mod tests {
             let ran = &mut false;
 
             {
-                let mut runner = describe("A root", |ctx| {
+                let runner = describe("A root", |ctx| {
                     ctx.it("is expected to run", || {
                         *ran = true;
                         Ok(()) as Result<(),()>
                     })
                 });
-                runner.run().unwrap()
+                runner.run().unwrap();
             }
 
             assert_eq!(true, *ran)
@@ -185,7 +191,7 @@ mod tests {
             let ran_counter = &mut AtomicUsize::new(0);
 
             {
-                let mut runner = describe("A root", |ctx| {
+                let runner = describe("A root", |ctx| {
                     ctx.it("first run", || {
                         ran_counter.fetch_add(1, Ordering::Relaxed);
                         Ok(()) as Result<(),()>
@@ -207,7 +213,7 @@ mod tests {
             let ran_counter = &mut AtomicUsize::new(0);
 
             {
-                let mut runner = describe("A root", |ctx| {
+                let runner = describe("A root", |ctx| {
                     ctx.describe("first describe", |ctx| {
                         ctx.it("first run", || {
                             ran_counter.fetch_add(1, Ordering::Relaxed);
@@ -385,60 +391,60 @@ mod tests {
 
         #[test]
         fn tests_can_fail_with_an_error_result() {
-            let mut runner = describe("A root", |ctx| ctx.it("should fail", || Err(()) as Result<(),()>));
-            runner.run().unwrap();
+            let runner = describe("A root", |ctx| ctx.it("should fail", || Err(()) as Result<(),()>));
+            let result = runner.run();
 
-            assert!(runner.result().is_err());
+            assert!(result.is_err());
         }
 
         #[test]
         fn should_be_ok_if_tests_are_ok() {
-            let mut runner = describe("A root", |ctx| ctx.it("should be ok", || Ok(()) as Result<(),()>));
-            runner.run().unwrap();
+            let runner = describe("A root", |ctx| ctx.it("should be ok", || Ok(()) as Result<(),()>));
+            let result = runner.run();
 
-            assert!(runner.result().is_ok());
+            assert!(result.is_ok());
         }
 
         #[test]
         fn is_ok_if_no_tests_have_been_runned() {
-            let mut runner = describe("A root", |_ctx| {});
-            runner.run().unwrap();
+            let runner = describe("A root", |_ctx| {});
+            let result = runner.run();
 
-            assert!(runner.result().is_ok());
+            assert!(result.is_ok());
         }
 
         #[test]
         fn is_err_if_one_test_is_err() {
-            let mut runner = describe("A root", |ctx| {
+            let runner = describe("A root", |ctx| {
                 ctx.it("an err", || Err(()) as Result<(),()>);
                 ctx.it("an ok", || Ok(()) as Result<(),()>);
             });
-            runner.run().unwrap();
+            let result = runner.run();
 
-            assert!(runner.result().is_err());
+            assert!(result.is_err());
         }
 
         #[test]
         fn is_ok_if_all_tests_are_ok() {
-            let mut runner = describe("A root", |ctx| {
+            let runner = describe("A root", |ctx| {
                 ctx.it("ok 1", || Ok(()) as Result<(),()>);
                 ctx.it("ok 2", || Ok(()) as Result<(),()>);
                 ctx.it("ok 3", || Ok(()) as Result<(),()>);
                 ctx.it("ok 4", || Ok(()) as Result<(),()>);
             });
-            runner.run().unwrap();
+            let result = runner.run();
 
-            assert!(runner.result().is_ok());
+            assert!(result.is_ok());
         }
 
         #[test]
         fn correctly_count_errors() {
-            let mut runner = describe("a root", |ctx| {
+            let runner = describe("a root", |ctx| {
                 ctx.it("first is ok", || ());
                 ctx.it("second is not", || false);
             });
-            runner.run().unwrap();
-            if let Err(res) = runner.result() {
+
+            if let Err(res) = runner.run() {
                 assert_eq!((1, 1),
                            (res.success_count, res.error_count));
             } else {
@@ -452,7 +458,7 @@ mod tests {
             use std::sync::atomic::{AtomicUsize, Ordering};
             let counter = &mut AtomicUsize::new(0);
 
-            let mut runner = describe("A root", |ctx| {
+            let runner = describe("A root", |ctx| {
                 ctx.it("assert_eq fail", || {
                     assert_eq!(true, false);
                     Ok(()) as Result<(),()>
@@ -462,37 +468,36 @@ mod tests {
                     Ok(()) as Result<(),()>
                 })
             });
-            runner.run().unwrap();
+            let result = runner.run();
 
-            assert!(runner.result().is_err());
+            // TODO refactor this to tuple
+            assert!(result.is_err());
             assert_eq!(1, counter.load(Ordering::Relaxed));
         }
 
         #[test]
         fn can_count_the_tests() {
-            let mut runner = describe("a root", |ctx| {
+            let runner = describe("a root", |ctx| {
                 ctx.it("first", || Ok(()) as Result<(),()>);
                 ctx.it("second", || Ok(()) as Result<(),()>);
                 ctx.it("third", || Ok(()) as Result<(),()>);
             });
-            runner.run().unwrap();
-            let result = runner.result();
+            let results = runner.run();
 
-            assert!(result.is_ok());
-            if let Ok(report) = result {
+            assert!(results.is_ok());
+            if let Ok(report) = results {
                 assert_eq!(3, report.total_tests);
             }
         }
 
         #[test]
         fn can_count_succes() {
-            let mut runner = describe("a root", |ctx| {
+            let runner = describe("a root", |ctx| {
                 ctx.it("first", || Ok(()) as Result<(),()>);
                 ctx.it("second", || Ok(()) as Result<(),()>);
                 ctx.it("third", || Ok(()) as Result<(),()>);
             });
-            runner.run().unwrap();
-            let result = runner.result();
+            let result = runner.run();
 
             assert!(result.is_ok());
             if let Ok(report) = result {
@@ -502,13 +507,12 @@ mod tests {
 
         #[test]
         fn can_count_errors() {
-            let mut runner = describe("a root", |ctx| {
+            let runner = describe("a root", |ctx| {
                 ctx.it("first", || Err(()) as Result<(),()>);
                 ctx.it("second", || Err(()) as Result<(),()>);
                 ctx.it("third", || Ok(()) as Result<(),()>);
             });
-            runner.run().unwrap();
-            let result = runner.result();
+            let result = runner.run();
 
             assert!(result.is_err());
             if let Err(report) = result {
