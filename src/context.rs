@@ -102,8 +102,8 @@ impl<'a> Context<'a> {
     ///     ctx.it("should run last", || Ok(()) as Result<(),()>);
     /// });
     /// ```
-    pub fn describe<F>(&mut self, name: &'a str, mut body: F)
-        where F: 'a + Send + Sync + FnMut(&mut Context<'a>) -> ()
+    pub fn describe<F>(&mut self, name: &'a str, body: F)
+        where F: 'a + Send + Sync + FnOnce(&mut Context<'a>) -> ()
     {
 
         let mut child = Context::default();
@@ -279,7 +279,7 @@ impl<'a> Context<'a> {
 ///         ctx.it("doesn't care if it's before or after a describe", || Ok(()) as Result<(),()>);
 ///     });
 /// });
-/// runner.run().unwrap();
+/// let result = runner.run();
 /// ```
 pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
     where F: 'a + FnOnce(&mut Context<'a>) -> ()
@@ -329,9 +329,8 @@ pub fn rdescribe<'a, 'b, F>(block_name: &'b str, body: F) -> ()
     where F: 'a + FnOnce(&mut Context<'a>) -> ()
 {
 
-    let mut runner = describe(block_name, body);
-    runner.run().expect("run should be ok");
-    let result = runner.result();
+    let runner = describe(block_name, body);
+    let result = runner.run();
     assert!(result.is_ok(),
             "Tests ran with one mor more failures: {:?}",
             result)
@@ -381,11 +380,10 @@ mod tests {
 
         #[test]
         fn is_can_return_a_bool_false() {
-            let mut runner = describe("a root", |ctx| {
+            let runner = describe("a root", |ctx| {
                 ctx.it("a bool true is err", || { false });
             });
-            runner.run().unwrap();
-            assert!(runner.result().is_err())
+            assert!(runner.run().is_err())
         }
 
         #[test]
@@ -397,11 +395,10 @@ mod tests {
 
         #[test]
         fn it_can_return_a_result_err() {
-            let mut runner = describe("a root", |ctx| {
+            let runner = describe("a root", |ctx| {
                 ctx.it("is err", || Err(()) as Result<(), ()>);
             });
-            runner.run().unwrap();
-            assert!(runner.result().is_err())
+            assert!(runner.run().is_err())
         }
 
         #[test]
@@ -417,8 +414,7 @@ mod tests {
         //    let mut runner = describe("a root", |ctx| {
         //        ctx.it("a bool true is err", || { 3 });
         //    });
-        //    runner.run().unwrap();
-        //    assert!(runner.result().is_err())
+        //    assert!(runner.run().is_err())
         //}
     }
 
@@ -431,7 +427,7 @@ mod tests {
             let ran_counter = &mut AtomicUsize::new(0);
 
             {
-                let mut runner = describe("a root", |ctx| {
+                let runner = describe("a root", |ctx| {
                     ctx.before(|| {
                         ran_counter.fetch_add(1, Ordering::Relaxed);
                     });
@@ -439,7 +435,7 @@ mod tests {
                     ctx.it("second", || Ok(()) as Result<(),()>);
                     ctx.it("third", || Ok(()) as Result<(),()>);
                 });
-                runner.run().unwrap();
+                let _ = runner.run();
             }
 
             assert_eq!(3, ran_counter.load(Ordering::Relaxed));
@@ -474,7 +470,7 @@ mod tests {
             let ran_counter = &mut AtomicUsize::new(0);
 
             {
-                let mut runner = describe("a root", |ctx| {
+                let runner = describe("a root", |ctx| {
                     ctx.after(|| {
                         ran_counter.fetch_add(1, Ordering::Relaxed);
                     });
@@ -482,7 +478,7 @@ mod tests {
                     ctx.it("second", || Ok(()) as Result<(),()>);
                     ctx.it("third", || Ok(()) as Result<(),()>);
                 });
-                runner.run().unwrap();
+                let _ = runner.run();
             }
 
             assert_eq!(3, ran_counter.load(Ordering::Relaxed));
@@ -494,7 +490,7 @@ mod tests {
             let ran_counter = &mut AtomicUsize::new(0);
 
             let report = {
-                let mut runner = describe("a root", |ctx| {
+                let runner = describe("a root", |ctx| {
                     ctx.after(|| {
                         ran_counter.fetch_add(1, Ordering::SeqCst);
                     });
@@ -505,8 +501,7 @@ mod tests {
                     ctx.it("third",
                            || 2 == ran_counter.load(Ordering::SeqCst));
                 });
-                runner.run().unwrap();
-                runner.result()
+                runner.run()
             };
 
             assert!(report.is_ok());
