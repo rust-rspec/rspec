@@ -135,10 +135,6 @@ impl<'a> Runner<'a> {
         result
     }
 
-    pub fn result(&self) -> RunnerResult {
-        self.report.unwrap_or_else(|| Ok(TestReport::default()))
-    }
-
     pub fn add_event_handler<H: events::EventHandler>(&mut self, handler: &'a mut H) {
         self.handlers.handlers.push(handler)
     }
