@@ -18,26 +18,26 @@ pub type RunnerResult = Result<TestReport, TestReport>;
 /// Handlers is a separate struct which only holds the registered handlers.
 /// This is useful to Runner so that its recursive call doesn't have to keep a refernce to `self`
 #[derive(Default)]
-struct Handlers<'a> {
-    handlers: Vec<&'a mut events::EventHandler>,
+struct Handlers {
+    handlers: Vec<Box<events::EventHandler>>,
 }
 
-impl<'a> Handlers<'a> {
-    fn broadcast(&mut self, event: &events::Event) {
-        for h in &mut self.handlers {
-            h.trigger(event)
+impl Handlers {
+    fn broadcast(&mut self, event: events::Event) {
+        for ref h in &mut self.handlers {
+            h.trigger(&event)
         }
     }
 }
 
-pub struct Runner<'a> {
-    describe: Context<'a>,
+pub struct Runner {
+    describe: Context,
     report: Option<RunnerResult>,
-    handlers: Handlers<'a>,
+    handlers: Handlers,
 }
 
-impl<'a> Runner<'a> {
-    pub fn new(context: Context<'a>) -> Runner<'a> {
+impl Runner {
+    pub fn new(context: Context) -> Runner {
         Runner {
             describe: context,
             handlers: Handlers::default(),
@@ -53,7 +53,7 @@ pub struct TestReport {
     pub error_count: u32,
 }
 
-impl<'a> Runner<'a> {
+impl Runner {
 
     #[cfg_attr(feature="clippy", allow(redundant_closure))]
     fn run_test(test_name: &str,
@@ -64,7 +64,7 @@ impl<'a> Runner<'a> {
         use std::panic::{catch_unwind, AssertUnwindSafe};
         use example_result;
 
-        handlers.broadcast(&Event::StartTest(String::from(test_name)));
+        handlers.broadcast(Event::StartTest(String::from(test_name)));
         let res = catch_unwind(AssertUnwindSafe(|| test_function()));
 
         let res = match res {
@@ -72,7 +72,7 @@ impl<'a> Runner<'a> {
             // if test panicked, it means that it failed
             Err(_) => example_result::FAILED_RES
         };
-        handlers.broadcast(&Event::EndTest(res));
+        handlers.broadcast(Event::EndTest(res));
         res
     }
 
@@ -85,7 +85,7 @@ impl<'a> Runner<'a> {
         let after_functions = &mut child_ctx.after_each;
 
         for test_function in &mut child_ctx.tests {
-            let test_res = {
+            let test_res : ExampleResult = {
                 for before_function in before_functions.iter_mut() {
                     before_function()
                 }
@@ -94,9 +94,9 @@ impl<'a> Runner<'a> {
                         Runner::run_test(name, test_function, handlers)
                     }
                     Testable::Describe(ref name, ref mut desc) => {
-                        handlers.broadcast(&Event::StartDescribe(name.clone()));
+                        handlers.broadcast(Event::StartDescribe(name.clone()));
                         let res = Runner::run_and_recurse(report, desc, handlers);
-                        handlers.broadcast(&Event::EndDescribe);
+                        handlers.broadcast(Event::EndDescribe);
                         res
                     }
                 };
@@ -121,14 +121,14 @@ impl<'a> Runner<'a> {
     }
 
     pub fn run(&mut self) -> Result<(), ()> {
-        self.handlers.broadcast(&Event::StartRunner);
+        self.handlers.broadcast(Event::StartRunner);
 
         let mut report = TestReport::default();
         let result = Runner::run_and_recurse(&mut report, &mut self.describe, &mut self.handlers);
         let result = result.res().and(Ok(report)).or_else(|_| Err(report));
 
         self.report = Some(result);
-        self.handlers.broadcast(&Event::FinishedRunner(result));
+        self.handlers.broadcast(Event::FinishedRunner(result));
         Ok(())
     }
 
@@ -136,8 +136,8 @@ impl<'a> Runner<'a> {
         self.report.unwrap_or_else(|| Ok(TestReport::default()))
     }
 
-    pub fn add_event_handler<H: events::EventHandler>(&mut self, handler: &'a mut H) {
-        self.handlers.handlers.push(handler)
+    pub fn add_event_handler<H: 'static + events::EventHandler>(&mut self, handler: H) {
+        self.handlers.handlers.push(Box::new(handler))
     }
 }
 
@@ -256,7 +256,7 @@ mod tests {
                 let mut handler = StubEventHandler::default();
                 {
                     let mut runner = describe("empty but should run anyway", |_| {});
-                    runner.add_event_handler(&mut handler);
+                    runner.add_event_handler(handler);
 
                     runner.run().unwrap();
                 }
@@ -270,7 +270,7 @@ mod tests {
 
                 {
                     let mut runner = describe("empty but should run anyway", |_| {});
-                    runner.add_event_handler(&mut handler);
+                    runner.add_event_handler(handler);
                 }
 
                 assert_eq!(None, handler.events.get(0))
@@ -281,7 +281,7 @@ mod tests {
                 let mut handler = StubEventHandler::default();
                 {
                     let mut runner = describe("empty but should run anyway", |_| {});
-                    runner.add_event_handler(&mut handler);
+                    runner.add_event_handler(handler);
 
                     runner.run().unwrap();
                 }
@@ -299,7 +299,7 @@ mod tests {
                 {
                     let mut runner = describe("one good test",
                                               |ctx| ctx.it("is a good test", || Ok(()) as Result<(),()>));
-                    runner.add_event_handler(&mut handler);
+                    runner.add_event_handler(handler);
 
                     runner.run().unwrap();
                 }
@@ -324,7 +324,7 @@ mod tests {
                     let mut runner = describe("root", |ctx| {
                         ctx.it("should run with an event", || Ok(()) as Result<(),()>);
                     });
-                    runner.add_event_handler(&mut handler);
+                    runner.add_event_handler(handler);
                     runner.run().unwrap();
                 }
 
@@ -340,7 +340,7 @@ mod tests {
                     let mut runner = describe("root", |ctx| {
                         ctx.it("should run with an event", || Ok(()) as Result<(),()>);
                     });
-                    runner.add_event_handler(&mut handler);
+                    runner.add_event_handler(handler);
                     runner.run().unwrap();
                 }
 
@@ -355,7 +355,7 @@ mod tests {
                     let mut runner = describe("root, no hook", |ctx| {
                         ctx.describe("this has a hook", |_| {});
                     });
-                    runner.add_event_handler(&mut handler);
+                    runner.add_event_handler(handler);
                     runner.run().unwrap();
                 }
 
@@ -371,7 +371,7 @@ mod tests {
                     let mut runner = describe("root, no hook", |ctx| {
                         ctx.describe("this has a hook", |_| {});
                     });
-                    runner.add_event_handler(&mut handler);
+                    runner.add_event_handler(handler);
                     runner.run().unwrap();
                 }
 

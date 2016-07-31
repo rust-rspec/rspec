@@ -37,26 +37,26 @@ use example_result::ExampleResult;
 /// It is Send and Sync for forward compatibility reasons.
 ///
 /// **Please Note** that `before` is effectively a `before each child of current context` function.
-pub type BeforeFunction<'a> = FnMut() -> () + 'a + Send + Sync;
+pub type BeforeFunction = FnMut() -> () + 'static + Send + Sync;
 /// This is the type used by the closure given as argument of a `Context::after()` call.
 ///
 /// This is Send and Sync for forward compatibility reasons.
 ///
 /// **Please Note** that `after` is effectively a `after each child of current context` function.
-pub type AfterFunction<'a> = BeforeFunction<'a>;
+pub type AfterFunction = BeforeFunction;
 /// This is the type used by the closure given as argument of a `Context::it()` call.
 ///
 /// This is Send and Sync for forward compatibility reasons.
-pub type TestFunction<'a> = FnMut() -> ExampleResult + 'a + Send + Sync;
+pub type TestFunction = FnMut() -> ExampleResult + 'static + Send + Sync;
 /// The type used for a test result
 pub type TestResult = Result<(), ()>;
 
 /// This enum is used to build a tree of named tests and contextes.
-pub enum Testable<'a> {
+pub enum Testable {
     /// Name and Test body
-    Test(String, Box<TestFunction<'a>>),
+    Test(String, Box<TestFunction>),
     /// Name and Describe body
-    Describe(String, Context<'a>),
+    Describe(String, Context),
 }
 
 /// A Context holds a collection of tests, a collection of closures to call before running any
@@ -64,13 +64,13 @@ pub enum Testable<'a> {
 ///
 /// This is effectively the struct we fill when calling `ctx.it()`
 #[derive(Default)]
-pub struct Context<'a> {
-    pub tests: Vec<Testable<'a>>,
-    pub before_each: Vec<Box<BeforeFunction<'a>>>,
-    pub after_each: Vec<Box<AfterFunction<'a>>>,
+pub struct Context {
+    pub tests: Vec<Testable>,
+    pub before_each: Vec<Box<BeforeFunction>>,
+    pub after_each: Vec<Box<AfterFunction>>,
 }
 
-impl<'a> Context<'a> {
+impl Context {
     /// Open and name a new example group, which will be keeped as a child context of the current
     /// context.
     ///
@@ -102,8 +102,8 @@ impl<'a> Context<'a> {
     ///     ctx.it("should run last", || Ok(()) as Result<(),()>);
     /// });
     /// ```
-    pub fn describe<F>(&mut self, name: &'a str, mut body: F)
-        where F: 'a + Send + Sync + FnMut(&mut Context<'a>) -> ()
+    pub fn describe<F>(&mut self, name: &str, mut body: F)
+        where F: Send + Sync + FnMut(&mut Context) -> ()
     {
 
         let mut child = Context::default();
@@ -138,8 +138,8 @@ impl<'a> Context<'a> {
     ///     });
     /// });
     /// ```
-    pub fn it<F, T>(&mut self, name: &'a str, mut body: F)
-        where F: 'a + Send + Sync + FnMut() -> T,
+    pub fn it<F, T>(&mut self, name: &str, mut body: F)
+        where F: 'static + Send + Sync + FnMut() -> T,
               T: Into<ExampleResult>
     {
 
@@ -192,7 +192,7 @@ impl<'a> Context<'a> {
     /// });
     /// ```
     pub fn before<F>(&mut self, body: F)
-        where F: 'a + Send + Sync + FnMut() -> ()
+        where F: 'static + Send + Sync + FnMut() -> ()
     {
 
         self.before_each.push(Box::new(body))
@@ -243,7 +243,7 @@ impl<'a> Context<'a> {
     /// });
     /// ```
     pub fn after<F>(&mut self, body: F)
-        where F: 'a + Send + Sync + FnMut() -> ()
+        where F: 'static + Send + Sync + FnMut() -> ()
     {
 
         self.after_each.push(Box::new(body))
@@ -281,8 +281,8 @@ impl<'a> Context<'a> {
 /// });
 /// runner.run().unwrap();
 /// ```
-pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
-    where F: 'a + FnOnce(&mut Context<'a>) -> ()
+pub fn describe<F>(_block_name: &str, body: F) -> Runner
+    where F: FnOnce(&mut Context) -> ()
 {
 
     let mut c = Context::default();
@@ -325,8 +325,8 @@ pub fn describe<'a, 'b, F>(_block_name: &'b str, body: F) -> Runner<'a>
 ///     });
 /// });
 /// ```
-pub fn rdescribe<'a, 'b, F>(block_name: &'b str, body: F) -> ()
-    where F: 'a + FnOnce(&mut Context<'a>) -> ()
+pub fn rdescribe<F>(block_name: &str, body: F) -> ()
+    where F: FnOnce(&mut Context) -> ()
 {
 
     let mut runner = describe(block_name, body);
@@ -428,21 +428,23 @@ mod tests {
         #[test]
         fn can_be_called_inside_describe() {
             use std::sync::atomic::{AtomicUsize, Ordering};
-            let ran_counter = &mut AtomicUsize::new(0);
+
+            let rran_counter : &mut AtomicUsize = &mut AtomicUsize::new(0);
 
             {
                 let mut runner = describe("a root", |ctx| {
+                    let ran_counter : &'static mut AtomicUsize = &mut AtomicUsize::new(0);
                     ctx.before(|| {
                         ran_counter.fetch_add(1, Ordering::Relaxed);
                     });
                     ctx.it("first", || Ok(()) as Result<(),()>);
                     ctx.it("second", || Ok(()) as Result<(),()>);
-                    ctx.it("third", || Ok(()) as Result<(),()>);
+                    ctx.it("third", || { rran_counter = ran_counter; Ok(()) as Result<(),()>});
                 });
                 runner.run().unwrap();
             }
 
-            assert_eq!(3, ran_counter.load(Ordering::Relaxed));
+            assert_eq!(3, rran_counter.load(Ordering::Relaxed));
         }
 
         #[test]
