@@ -102,8 +102,8 @@ impl<'a> Context<'a> {
     ///     ctx.it("should run last", || Ok(()) as Result<(),()>);
     /// });
     /// ```
-    pub fn describe<F>(&mut self, name: &'a str, mut body: F)
-        where F: 'a + Send + Sync + FnMut(&mut Context<'a>) -> ()
+    pub fn describe<F>(&mut self, name: &'a str, body: F)
+        where F: 'a + Send + Sync + FnOnce(&mut Context<'a>) -> ()
     {
 
         let mut child = Context::default();

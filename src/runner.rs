@@ -84,6 +84,9 @@ impl<'a> Runner<'a> {
         use std::mem;
         let mut result = example_result::SUCCESS_RES;
 
+        // As Runner::run consomes the runner, we can deconstruct the context tree as we travel
+        // among it.
+        // This effectively takes ownership of the context node and replace it with an empty one.
         let ctx = mem::replace(child_ctx, Context::default());
 
         let tests = ctx.tests;
