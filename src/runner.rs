@@ -56,24 +56,15 @@ pub struct TestReport {
 impl<'a> Runner<'a> {
 
     #[cfg_attr(feature="clippy", allow(redundant_closure))]
-    fn run_test(test_name: &str,
-                mut test_function: Box<TestFunction>,
-                handlers: &mut Handlers)
+    fn run_test(mut test_function: Box<TestFunction>)
                 -> ExampleResult {
 
         use std::panic::{catch_unwind, AssertUnwindSafe};
         use example_result;
 
-        handlers.broadcast(&Event::StartTest(String::from(test_name)));
         let res = catch_unwind(AssertUnwindSafe(|| test_function()));
 
-        let res = match res {
-            Ok(res) => res,
-            // if test panicked, it means that it failed
-            Err(_) => example_result::FAILED_RES
-        };
-        handlers.broadcast(&Event::EndTest(res));
-        res
+        res.unwrap_or_else(|_| example_result::FAILED_RES)
     }
 
     fn run_and_recurse(report: &mut TestReport,
@@ -101,7 +92,10 @@ impl<'a> Runner<'a> {
                 }
                 let res = match test_function {
                     Testable::Test(name, test_function) => {
-                        Runner::run_test(&name, test_function, handlers)
+                        handlers.broadcast(&Event::StartTest(name));
+                        let res = Runner::run_test(test_function);
+                        handlers.broadcast(&Event::EndTest(res));
+                        res
                     }
                     Testable::Describe(ref name, ref mut desc) => {
                         handlers.broadcast(&Event::StartDescribe(name.clone()));
