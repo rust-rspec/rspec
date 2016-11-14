@@ -19,12 +19,36 @@
 //!         ctx.it("use a `ctx` object", || Ok(()) as Result<(),()>)
 //!     });
 //!
+//!     describe("Context::specify", |ctx| {
+//!         ctx.specify("can used as a drop-in alternative to `Context::describe`", |ctx| {
+//!             // ...
+//!         });
+//!     });
+//!
+//!     describe("Context::context", |ctx| {
+//!         ctx.context("can used as a drop-in alternative to `Context::describe`", |ctx| {
+//!             // ...
+//!         });
+//!     });
+//!
 //!     describe("Context::it", |ctx| {
 //!         ctx.it("uses a Result returns", || Ok(()) as Result<(),()>);
 //!         ctx.it("can also use asserts", || {
 //!             assert_eq!(42, 12 + 30);
 //!             Ok(()) as Result<(),()> // don't forget the result type
 //!         })
+//!     });
+//!
+//!     describe("Context::given", |ctx| {
+//!         ctx.describe("can be used for Cucumber-style BDD, like:", |ctx| {
+//!             ctx.given("A known state of the subject", |ctx| {
+//!                 ctx.when("a key action is performed", |ctx| {
+//!                     ctx.then("the outputs can be observed", || {
+//!                         Ok(()) as Result<(),()>
+//!                     });
+//!                 });
+//!             });
+//!         });
 //!     });
 //! });
 //!
@@ -102,13 +126,60 @@ impl<'a> Context<'a> {
     ///     ctx.it("should run last", || Ok(()) as Result<(),()>);
     /// });
     /// ```
-    pub fn describe<F>(&mut self, name: &'a str, body: F)
-        where F: 'a + Send + Sync + FnOnce(&mut Context<'a>) -> ()
+    pub fn describe<S, F>(&mut self, name: S, body: F)
+        where S: Into<String>,
+              F: 'a + Send + Sync + FnOnce(&mut Context<'a>) -> ()
     {
 
         let mut child = Context::default();
         body(&mut child);
-        self.tests.push(Testable::Describe(String::from(name), child))
+        self.tests.push(Testable::Describe(name.into(), child))
+    }
+
+    /// Interchangeable alternative name for [`describe`](struct.Context.html#method.describe).
+    ///
+    /// See [`describe`](struct.Context.html#method.describe) for more info.
+    pub fn specify<S, F>(&mut self, name: S, body: F)
+        where S: Into<String>,
+              F: 'a + Send + Sync + FnOnce(&mut Context<'a>) -> ()
+    {
+
+        self.describe(name, body)
+    }
+
+    /// Interchangeable alternative name for [`describe`](struct.Context.html#method.describe).
+    ///
+    /// See [`describe`](struct.Context.html#method.describe) for more info.
+    pub fn context<S, F>(&mut self, name: S, body: F)
+        where S: Into<String>,
+              F: 'a + Send + Sync + FnOnce(&mut Context<'a>) -> ()
+    {
+
+        self.describe(name, body)
+    }
+
+    /// Interchangeable alternative name for [`describe`](struct.Context.html#method.describe).
+    ///
+    /// See [`describe`](struct.Context.html#method.describe) for more info.
+    pub fn given<S, F>(&mut self, name: S, body: F)
+        where S: Into<String>,
+              F: 'a + Send + Sync + FnOnce(&mut Context<'a>) -> ()
+    {
+
+        let prefixed_name = format!("GIVEN: {:?}", name.into());
+        self.describe(prefixed_name, body)
+    }
+
+    /// Interchangeable alternative name for [`describe`](struct.Context.html#method.describe).
+    ///
+    /// See [`describe`](struct.Context.html#method.describe) for more info.
+    pub fn when<S, F>(&mut self, name: S, body: F)
+        where S: Into<String>,
+              F: 'a + Send + Sync + FnOnce(&mut Context<'a>) -> ()
+    {
+
+        let prefixed_name = format!("WHEN: {:?}", name.into());
+        self.describe(prefixed_name, body)
     }
 
     /// Register and name a closure as an example
@@ -138,13 +209,39 @@ impl<'a> Context<'a> {
     ///     });
     /// });
     /// ```
-    pub fn it<F, T>(&mut self, name: &'a str, mut body: F)
-        where F: 'a + Send + Sync + FnMut() -> T,
+    pub fn it<S, F, T>(&mut self, name: S, mut body: F)
+        where S: Into<String>,
+              F: 'a + Send + Sync + FnMut() -> T,
               T: Into<ExampleResult>
     {
 
         let f = move || { body().into() };
-        self.tests.push(Testable::Test(String::from(name), Box::new(f)))
+        self.tests.push(Testable::Test(name.into(), Box::new(f)))
+    }
+
+    /// Interchangeable alternative name for [`it`](struct.Context.html#method.it).
+    ///
+    /// See [`it`](struct.Context.html#method.it) for more info.
+    pub fn example<S, F, T>(&mut self, name: S, body: F)
+        where S: Into<String>,
+              F: 'a + Send + Sync + FnMut() -> T,
+              T: Into<ExampleResult>
+    {
+
+        self.it(name, body)
+    }
+
+    /// Interchangeable alternative name for [`it`](struct.Context.html#method.it).
+    ///
+    /// See [`it`](struct.Context.html#method.it) for more info.
+    pub fn then<S, F, T>(&mut self, name: S, body: F)
+        where S: Into<String>,
+              F: 'a + Send + Sync + FnMut() -> T,
+              T: Into<ExampleResult>
+    {
+
+        let prefixed_name = format!("THEN: {:?}", name.into());
+        self.it(prefixed_name, body)
     }
 
     /// Declares a closure that will be executed before each test of the current Context.
@@ -345,6 +442,27 @@ mod tests {
     mod describe {
         pub use super::*;
 
+        macro_rules! test_describe_alias {
+            ($alias: ident) => {
+                describe("A Root", |ctx| ctx.$alias("nested describe", |_ctx| {}));
+            }
+        }
+
+        #[test]
+        fn describe_has_alias_specify() {
+            test_describe_alias!(specify);
+        }
+
+        #[test]
+        fn describe_has_alias_context() {
+            test_describe_alias!(context);
+        }
+
+        #[test]
+        fn describe_has_alias_given() {
+            test_describe_alias!(given);
+        }
+
         #[test]
         fn it_has_a_root_describe_function() {
             describe("A Test", |_ctx| {});
@@ -356,13 +474,55 @@ mod tests {
         }
 
         #[test]
+        fn it_can_call_given_inside_describe_body() {
+            describe("A Root", |ctx| ctx.given("nested describe", |_ctx| {}));
+        }
+
+        #[test]
+        fn it_can_call_when_inside_describe_body() {
+            describe("A Root", |ctx| ctx.when("nested describe", |_ctx| {}));
+        }
+
+        #[test]
         fn it_can_call_it_inside_describe_body() {
             describe("A root", |ctx| ctx.it("is a test", || Ok(()) as Result<(),()>));
+        }
+
+        #[test]
+        fn it_can_call_example_inside_describe_body() {
+            describe("A root", |ctx| ctx.example("is a test", || Ok(()) as Result<(),()>));
+        }
+
+        #[test]
+        fn it_can_call_given_when_then_inside_describe_body() {
+            describe("A Root", |ctx| {
+                ctx.given("nested given", |ctx| {
+                    ctx.when("nested when", |ctx| {
+                        ctx.then("nested then", || Ok(()) as Result<(),()>)
+                    })
+                })
+            });
         }
     }
 
     mod it {
         pub use super::*;
+
+        macro_rules! test_it_alias {
+            ($alias: ident) => {
+                describe("A Root", |ctx| ctx.$alias("nested it", || {}));
+            }
+        }
+
+        #[test]
+        fn it_has_alias_example() {
+            test_it_alias!(example);
+        }
+
+        #[test]
+        fn it_has_alias_then() {
+            test_it_alias!(then);
+        }
 
         #[test]
         fn it_can_return_a_unit() {
