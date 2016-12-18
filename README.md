@@ -139,6 +139,7 @@ to help without knowing how. Some issues are mentored!
 - Thomas WICKHAM [@mackwic](https://github.com/mackwic)
 - Pascal HERTLEIF [@killercup](https://github.com/killercup)
 - Matthias BOURG [@pol0nium](https://github.com/pol0nium)
+- Vincent ESCHE [@regexident](https://github.com/regexident)
 
 ## Beginners
 
@@ -193,14 +194,14 @@ described. Thinking in term of behavior has two benefits:
 - When doing TDD, it helps to make incremential steps. Just write examples of
   how to use the functions, and make this example pass, then go to the next one.
   Your tests will naturally have one clear intent, and so will be easy to debug
-  / rely on when refactoring.   
+  / rely on when refactoring.
   This is the describe/it approach, which this crate hopes to fill.
 
 - By describing behavior, we are doing an _analysis_ of our program. This
   analysis can be very useful! Say... an User Story, for example. Given the
   formalism _As a X, When Y, I want Z_, you can assign scenarii describing the
   high-level behavior of your units. The Gherkin formalism is often employed for
-  this, it use a _Given X, When Y, Then Z_ structure.   
+  this, it use a _Given X, When Y, Then Z_ structure.
   This project does not aim to help on high-level BDD, see [the cucumber for
   Rust port](https://github.com/acmcarther/cucumbe://github.com/acmcarther/cucumber)
   for that.
@@ -227,5 +228,3 @@ In non legal terms it means that:
 
 This section DOES NOT REPLACE NOR COMPLETE the LICENCE files. The LICENCE file
 is the only place where the licence of tis project is defined.
-
-
