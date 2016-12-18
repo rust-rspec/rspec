@@ -45,11 +45,11 @@ fn test_add() {
     rdescribe("add", |ctx| {
         ctx.describe("0 <= x + y <= u32::MAX", |ctx| {
             ctx.it("2 + 4 = 6", || {
-                assert_eq!(6, add(2, 4)); Ok(())
+                assert_eq!(6, add(2, 4))
             });
 
             ctx.it("4 + 4 = 8", || {
-                assert_eq!(8, add(4, 4)); Ok(())
+                assert_eq!(8, add(4, 4))
             });
         });
 
@@ -58,7 +58,6 @@ fn test_add() {
             assert_eq!(add(4, 1), add(1, 4));
             assert_eq!(add(4, 5), add(5, 4));
             assert_eq!(add(12, 1), add(1, 12));
-            Ok(())
         });
     });
 }
@@ -108,6 +107,10 @@ pub fn main() {
 }
 
 ```
+
+*Note:*
+- `describe` has 4 aliases: `specify`, `context`, `given`, and `when`
+- `it` has 2 aliases: `example`, and `then`
 
 Again, you can see complete examples in the [`examples/`](https://github.com/mackwic/rspec/tree/master/examples) directory.
 

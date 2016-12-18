@@ -20,13 +20,13 @@
 //!     });
 //!
 //!     describe("Context::specify", |ctx| {
-//!         ctx.specify("can used as a drop-in alternative to `Context::describe`", |ctx| {
+//!         ctx.specify("can be used as a drop-in alternative to `Context::describe`", |ctx| {
 //!             // ...
 //!         });
 //!     });
 //!
 //!     describe("Context::context", |ctx| {
-//!         ctx.context("can used as a drop-in alternative to `Context::describe`", |ctx| {
+//!         ctx.context("can be used as a drop-in alternative to `Context::describe`", |ctx| {
 //!             // ...
 //!         });
 //!     });
@@ -136,7 +136,7 @@ impl<'a> Context<'a> {
         self.tests.push(Testable::Describe(name.into(), child))
     }
 
-    /// Interchangeable alternative name for [`describe`](struct.Context.html#method.describe).
+    /// Alias for [`describe`](struct.Context.html#method.describe).
     ///
     /// See [`describe`](struct.Context.html#method.describe) for more info.
     pub fn specify<S, F>(&mut self, name: S, body: F)
@@ -147,7 +147,7 @@ impl<'a> Context<'a> {
         self.describe(name, body)
     }
 
-    /// Interchangeable alternative name for [`describe`](struct.Context.html#method.describe).
+    /// Alias for [`describe`](struct.Context.html#method.describe).
     ///
     /// See [`describe`](struct.Context.html#method.describe) for more info.
     pub fn context<S, F>(&mut self, name: S, body: F)
@@ -158,7 +158,7 @@ impl<'a> Context<'a> {
         self.describe(name, body)
     }
 
-    /// Interchangeable alternative name for [`describe`](struct.Context.html#method.describe).
+    /// Alias for [`describe`](struct.Context.html#method.describe).
     ///
     /// See [`describe`](struct.Context.html#method.describe) for more info.
     pub fn given<S, F>(&mut self, name: S, body: F)
@@ -170,7 +170,7 @@ impl<'a> Context<'a> {
         self.describe(prefixed_name, body)
     }
 
-    /// Interchangeable alternative name for [`describe`](struct.Context.html#method.describe).
+    /// Alias for [`describe`](struct.Context.html#method.describe).
     ///
     /// See [`describe`](struct.Context.html#method.describe) for more info.
     pub fn when<S, F>(&mut self, name: S, body: F)
@@ -219,7 +219,7 @@ impl<'a> Context<'a> {
         self.tests.push(Testable::Test(name.into(), Box::new(f)))
     }
 
-    /// Interchangeable alternative name for [`it`](struct.Context.html#method.it).
+    /// Alias for [`it`](struct.Context.html#method.it).
     ///
     /// See [`it`](struct.Context.html#method.it) for more info.
     pub fn example<S, F, T>(&mut self, name: S, body: F)
@@ -231,7 +231,7 @@ impl<'a> Context<'a> {
         self.it(name, body)
     }
 
-    /// Interchangeable alternative name for [`it`](struct.Context.html#method.it).
+    /// Alias for [`it`](struct.Context.html#method.it).
     ///
     /// See [`it`](struct.Context.html#method.it) for more info.
     pub fn then<S, F, T>(&mut self, name: S, body: F)
