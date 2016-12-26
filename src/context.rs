@@ -1,5 +1,5 @@
 //! The Context module holds all the functionality for the test declaration, that is: `describe`,
-//! `before`, `after`, `it` and their variants.
+//! `before_each`, `before_all`, `after_each`, `after_all`, `it` and their variants.
 //!
 //! A Context can also holds reference to children Contextes, for whom the before closures will be
 //! executed after the before closures of the current context. The order of execution of tests
@@ -56,17 +56,19 @@
 use runner::*;
 use example_result::ExampleResult;
 
-/// This is the type used by the closure given as argument of a `Context::before()` call.
+/// This is the type used by the closure given as argument of a `Context::before_each()`
+/// or `Context::before_all()` call.
 ///
 /// It is Send and Sync for forward compatibility reasons.
 ///
-/// **Please Note** that `before` is effectively a `before each child of current context` function.
+/// **Please Note** that `before_each` is effectively a `before each child of current context` function.
 pub type BeforeFunction<'a> = FnMut() -> () + 'a + Send + Sync;
-/// This is the type used by the closure given as argument of a `Context::after()` call.
+/// This is the type used by the closure given as argument of a `Context::after_each()`
+/// or `Context::after_all()` call.
 ///
 /// This is Send and Sync for forward compatibility reasons.
 ///
-/// **Please Note** that `after` is effectively a `after each child of current context` function.
+/// **Please Note** that `after_each` is effectively an `after each child of current context` function.
 pub type AfterFunction<'a> = BeforeFunction<'a>;
 /// This is the type used by the closure given as argument of a `Context::it()` call.
 ///
@@ -83,15 +85,17 @@ pub enum Testable<'a> {
     Describe(String, Context<'a>),
 }
 
-/// A Context holds a collection of tests, a collection of closures to call before running any
+/// A Context holds a collection of tests, a collection of closures to call _before_ running any
 /// tests, and a collection of closure to call _after_ all the tests..
 ///
 /// This is effectively the struct we fill when calling `ctx.it()`
 #[derive(Default)]
 pub struct Context<'a> {
     pub tests: Vec<Testable<'a>>,
-    pub before_each: Vec<Box<BeforeFunction<'a>>>,
-    pub after_each: Vec<Box<AfterFunction<'a>>>,
+    pub before_each_test: Vec<Box<BeforeFunction<'a>>>,
+    pub after_each_test: Vec<Box<AfterFunction<'a>>>,
+    pub before_all_tests: Vec<Box<BeforeFunction<'a>>>,
+    pub after_all_tests: Vec<Box<AfterFunction<'a>>>,
 }
 
 impl<'a> Context<'a> {
@@ -261,9 +265,9 @@ impl<'a> Context<'a> {
     /// rdescribe("inside this describe, we use the context", |ctx| {
     ///
     ///     // This will increment the counter at each test
-    ///     ctx.before(|| { counter.fetch_add(1, Ordering::SeqCst); });
+    ///     ctx.before_each(|| { counter.fetch_add(1, Ordering::SeqCst); });
     ///
-    ///     ctx.it("should run after the before", || {
+    ///     ctx.it("should run after the before_each", || {
     ///         assert_eq!(1, counter.load(Ordering::SeqCst));
     ///         Ok(()) as Result<(),()>
     ///     });
@@ -275,24 +279,66 @@ impl<'a> Context<'a> {
     ///             Ok(()) as Result<(),()>
     ///         });
     ///
-    ///         // XXX - note that the before has not been applied another time
+    ///         // XXX - note that the before_each has not been applied another time
     ///         ctx.it("should NOT see another increment", || {
     ///             assert_eq!(2, counter.load(Ordering::SeqCst));
     ///             Ok(()) as Result<(),()>
     ///         });
     ///     });
     ///
-    ///     ctx.it("should run after the all the befores AND the previous it", || {
+    ///     ctx.it("should run after all the before_eachs AND the previous it", || {
     ///         assert_eq!(3, counter.load(Ordering::SeqCst));
     ///         Ok(()) as Result<(),()>
     ///     });
     /// });
     /// ```
-    pub fn before<F>(&mut self, body: F)
+    pub fn before_each<F>(&mut self, body: F)
         where F: 'a + Send + Sync + FnMut() -> ()
     {
 
-        self.before_each.push(Box::new(body))
+        self.before_each_test.push(Box::new(body))
+    }
+
+    /// Declares a closure that will be executed once before the tests of the current Context.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rspec::context::rdescribe;
+    /// use std::sync::atomic::{AtomicUsize, Ordering};
+    ///
+    /// let counter = &mut AtomicUsize::new(0);
+    ///
+    /// // `rdescribe` instanciate a runner and run it transparently
+    /// rdescribe("inside this describe, we use the context", |ctx| {
+    ///
+    ///     // This will increment the counter once before the tests:
+    ///     ctx.before_all(|| { counter.fetch_add(1, Ordering::SeqCst); });
+    ///
+    ///     ctx.it("should run after the before_all", || {
+    ///         assert_eq!(1, counter.load(Ordering::SeqCst));
+    ///         Ok(()) as Result<(),()>
+    ///     });
+    ///
+    ///     ctx.describe("a group of examples", |ctx| {
+    ///
+    ///         ctx.it("should see no further increment", || {
+    ///             assert_eq!(1, counter.load(Ordering::SeqCst));
+    ///             Ok(()) as Result<(),()>
+    ///         });
+    ///     });
+    ///
+    ///     ctx.it("should run after all the before_alls AND the previous it", || {
+    ///         assert_eq!(1, counter.load(Ordering::SeqCst));
+    ///         Ok(()) as Result<(),()>
+    ///     });
+    /// });
+    /// ```
+    pub fn before_all<F>(&mut self, body: F)
+        where F: 'a + Send + Sync + FnMut() -> ()
+    {
+
+        self.before_all_tests.push(Box::new(body))
     }
 
     /// Declares a closure that will be executed after each test of the current Context.
@@ -312,9 +358,9 @@ impl<'a> Context<'a> {
     /// rdescribe("inside this describe, we use the context", |ctx| {
     ///
     ///     // This will increment the counter at each test
-    ///     ctx.after(|| { counter.fetch_add(1, Ordering::SeqCst); });
+    ///     ctx.after_each(|| { counter.fetch_add(1, Ordering::SeqCst); });
     ///
-    ///     ctx.it("should run after the after", || {
+    ///     ctx.it("should run after the after_each", || {
     ///         assert_eq!(0, counter.load(Ordering::SeqCst));
     ///         Ok(()) as Result<(),()>
     ///     });
@@ -326,24 +372,66 @@ impl<'a> Context<'a> {
     ///             Ok(()) as Result<(),()>
     ///         });
     ///
-    ///         // XXX - note that the after has not been applied another time
+    ///         // XXX - note that the after_each has not been applied another time
     ///         ctx.it("should NOT see another increment", || {
     ///             assert_eq!(1, counter.load(Ordering::SeqCst));
     ///             Ok(()) as Result<(),()>
     ///         });
     ///     });
     ///
-    ///     ctx.it("should run after the all the afters AND the previous it", || {
+    ///     ctx.it("should run after all the after_eachs AND the previous it", || {
     ///         assert_eq!(2, counter.load(Ordering::SeqCst));
     ///         Ok(()) as Result<(),()>
     ///     });
     /// });
     /// ```
-    pub fn after<F>(&mut self, body: F)
+    pub fn after_each<F>(&mut self, body: F)
         where F: 'a + Send + Sync + FnMut() -> ()
     {
 
-        self.after_each.push(Box::new(body))
+        self.after_each_test.push(Box::new(body))
+    }
+
+    /// Declares a closure that will be executed once after all tests of the current Context.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rspec::context::rdescribe;
+    /// use std::sync::atomic::{AtomicUsize, Ordering};
+    ///
+    /// let counter = &mut AtomicUsize::new(0);
+    ///
+    /// // `rdescribe` instanciate a runner and run it transparently
+    /// rdescribe("inside this describe, we use the context", |ctx| {
+    ///
+    ///     // This will increment the counter once after the tests
+    ///     ctx.after_all(|| { counter.fetch_add(1, Ordering::SeqCst); });
+    ///
+    ///     ctx.it("should run after the after_each", || {
+    ///         assert_eq!(0, counter.load(Ordering::SeqCst));
+    ///         Ok(()) as Result<(),()>
+    ///     });
+    ///
+    ///     ctx.describe("a group of examples", |ctx| {
+    ///
+    ///         ctx.it("should see no further increment", || {
+    ///             assert_eq!(0, counter.load(Ordering::SeqCst));
+    ///             Ok(()) as Result<(),()>
+    ///         });
+    ///     });
+    ///
+    ///     ctx.it("should run after all the after_eachs AND the previous it", || {
+    ///         assert_eq!(0, counter.load(Ordering::SeqCst));
+    ///         Ok(()) as Result<(),()>
+    ///     });
+    /// });
+    /// ```
+    pub fn after_all<F>(&mut self, body: F)
+        where F: 'a + Send + Sync + FnMut() -> ()
+    {
+
+        self.after_all_tests.push(Box::new(body))
     }
 }
 
@@ -578,7 +666,7 @@ mod tests {
         //}
     }
 
-    mod before {
+    mod before_each {
         pub use super::*;
 
         #[test]
@@ -588,7 +676,7 @@ mod tests {
 
             {
                 let runner = describe("a root", |ctx| {
-                    ctx.before(|| {
+                    ctx.before_each(|| {
                         ran_counter.fetch_add(1, Ordering::Relaxed);
                     });
                     ctx.it("first", || Ok(()) as Result<(),()>);
@@ -607,13 +695,13 @@ mod tests {
             let ran_counter = &mut AtomicUsize::new(0);
 
             rdescribe("root", |ctx| {
-                ctx.it("shouldn't see the before hook",
+                ctx.it("shouldn't see the before_each hook",
                        || (0 == ran_counter.load(Ordering::SeqCst)));
                 ctx.describe("a sub-root", |ctx| {
-                    ctx.before(|| {
+                    ctx.before_each(|| {
                         ran_counter.fetch_add(1, Ordering::SeqCst);
                     });
-                    ctx.it("should see the before hook",
+                    ctx.it("should see the before_each hook",
                            || (1 == ran_counter.load(Ordering::SeqCst)));
                 })
 
@@ -621,7 +709,7 @@ mod tests {
         }
     }
 
-    mod after {
+    mod after_each {
         pub use super::*;
 
         #[test]
@@ -631,7 +719,7 @@ mod tests {
 
             {
                 let runner = describe("a root", |ctx| {
-                    ctx.after(|| {
+                    ctx.after_each(|| {
                         ran_counter.fetch_add(1, Ordering::Relaxed);
                     });
                     ctx.it("first", || Ok(()) as Result<(),()>);
@@ -651,7 +739,7 @@ mod tests {
 
             let report = {
                 let runner = describe("a root", |ctx| {
-                    ctx.after(|| {
+                    ctx.after_each(|| {
                         ran_counter.fetch_add(1, Ordering::SeqCst);
                     });
                     ctx.it("first",
@@ -660,6 +748,92 @@ mod tests {
                            || 1 == ran_counter.load(Ordering::SeqCst));
                     ctx.it("third",
                            || 2 == ran_counter.load(Ordering::SeqCst));
+                });
+                runner.run()
+            };
+
+            assert!(report.is_ok());
+        }
+    }
+
+    mod before_all {
+        pub use super::*;
+
+        #[test]
+        fn can_be_called_inside_describe() {
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let ran_counter = &mut AtomicUsize::new(0);
+
+            {
+                let runner = describe("a root", |ctx| {
+                    ctx.before_all(|| {
+                        ran_counter.fetch_add(1, Ordering::Relaxed);
+                    });
+                    ctx.it("first", || Ok(()) as Result<(),()>);
+                    ctx.it("second", || Ok(()) as Result<(),()>);
+                    ctx.it("third", || Ok(()) as Result<(),()>);
+                });
+                let _ = runner.run();
+            }
+
+            assert_eq!(1, ran_counter.load(Ordering::Relaxed));
+        }
+
+        #[test]
+        fn it_is_only_applied_to_childs_describe() {
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let ran_counter = &mut AtomicUsize::new(0);
+
+            rdescribe("root", |ctx| {
+                ctx.it("shouldn't see the before_all hook",
+                       || (0 == ran_counter.load(Ordering::SeqCst)));
+                ctx.describe("a sub-root", |ctx| {
+                    ctx.before_all(|| {
+                        ran_counter.fetch_add(1, Ordering::SeqCst);
+                    });
+                    ctx.it("should see the before_all hook",
+                           || (1 == ran_counter.load(Ordering::SeqCst)));
+                })
+
+            })
+        }
+    }
+
+    mod after_all {
+        pub use super::*;
+
+        #[test]
+        fn can_be_called_inside_describe() {
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let ran_counter = &mut AtomicUsize::new(0);
+
+            {
+                let runner = describe("a root", |ctx| {
+                    ctx.after_all(|| {
+                        ran_counter.fetch_add(1, Ordering::Relaxed);
+                    });
+                    ctx.it("first", || Ok(()) as Result<(),()>);
+                    ctx.it("second", || Ok(()) as Result<(),()>);
+                    ctx.it("third", || Ok(()) as Result<(),()>);
+                });
+                let _ = runner.run();
+            }
+
+            assert_eq!(1, ran_counter.load(Ordering::Relaxed));
+        }
+
+        #[test]
+        fn it_is_not_like_before() {
+            use std::sync::atomic::{AtomicUsize, Ordering};
+            let ran_counter = &mut AtomicUsize::new(0);
+
+            let report = {
+                let runner = describe("a root", |ctx| {
+                    ctx.after_all(|| {
+                        ran_counter.fetch_add(1, Ordering::SeqCst);
+                    });
+                    ctx.it("it",
+                           || 0 == ran_counter.load(Ordering::SeqCst));
                 });
                 runner.run()
             };
@@ -677,7 +851,7 @@ mod tests {
             let ran_counter = &mut AtomicUsize::new(0);
 
             rdescribe("allocates a runner", |ctx| {
-                ctx.before(|| {
+                ctx.before_each(|| {
                     ran_counter.fetch_add(1, Ordering::SeqCst);
                 });
                 ctx.it("should be runned (1)",
