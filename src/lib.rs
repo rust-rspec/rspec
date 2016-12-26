@@ -5,11 +5,20 @@
 
 #![allow(dead_code)]
 
+#[cfg(feature = "use_expectest")]
+extern crate expectest;
+
+extern crate colored;
+
 pub mod example_result;
 pub mod events;
 pub mod context;
 pub mod runner;
 pub mod formatter;
+
+pub use context::describe;
+pub use context::suite;
+pub use context::given;
 
 #[cfg(test)]
 mod tests {
@@ -20,7 +29,7 @@ mod tests {
     // x check that tests can call `assert_eq!`
     // x check that tests can return Err or Ok
     // x runner can count the tests
-    // x runner can count the success and failures
+    // x runner can count the success and failed
     // x check that we can use before in a describe
     // x check that we can use after in a describe
     // x check that after/before are run in all child contextes

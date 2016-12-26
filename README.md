@@ -12,7 +12,7 @@ The last stable documentation is available for consultation at
 [mackwic.github.io/rspec](https://mackwic.github.io/rspec).
 
 **All rspec releases are garanteed to compile against the latest stable rust and
-are tested on all rust versions from the 1.9**.
+are tested on all rust versions from the 1.16**.
 
 ## How to use
 
@@ -42,8 +42,8 @@ fn add(x: u32, y: u32) -> u64 {
 
 #[test]
 fn test_add() {
-    rdescribe("add", |ctx| {
-        ctx.describe("0 <= x + y <= u32::MAX", |ctx| {
+    rdescribe("add", (), |ctx, _| {
+        ctx.describe("0 <= x + y <= u32::MAX", (), |ctx, _| {
             ctx.it("2 + 4 = 6", || {
                 assert_eq!(6, add(2, 4))
             });
@@ -73,18 +73,18 @@ use std::io;
 pub fn main() {
     let stdout = &mut io::stdout();
     let mut formatter = rspec::formatter::Simple::new(stdout);
-    let mut runner = describe("rspec is a classic BDD testing", |ctx| {
+    let mut runner = describe("rspec is a classic BDD testing", (), |ctx, _| {
 
         ctx.it("can define tests", || true);
 
-        ctx.describe("rspec use results for tests results", |ctx| {
+        ctx.describe("rspec use results for tests results", (), |ctx, _| {
 
             ctx.it("passed if the return is_ok()", || Ok(()) as Result<(),()>);
 
             ctx.it("failed if the return is_err()", || Err(()) as Result<(),()>);
         });
 
-        ctx.describe("rspec can use bools", |ctx| {
+        ctx.describe("rspec can use bools", (), |ctx, _| {
 
             ctx.it("should pass if true", || true);
 
@@ -95,7 +95,7 @@ pub fn main() {
             })
         });
 
-        ctx.describe("rspec can use units", |ctx| {
+        ctx.describe("rspec can use units", (), |ctx, _| {
 
             ctx.it("should pass if the return is ()", || {});
 

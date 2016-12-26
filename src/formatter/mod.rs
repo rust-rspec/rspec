@@ -8,13 +8,24 @@
 //! use rspec::formatter::Simple;
 //! use std::io;
 //!
-//! let mut stdout = io::stdout();
-//! let mut formatter = Simple::new(&mut stdout);
+//! let stdout = &mut io::stdout();
+//! let mut formatter = rspec::formatter::Simple::new(stdout);
 //!
-//! let mut runner = describe("a test suite", |_| {});
+//! #[derive(Clone, Debug)]
+//! struct Environment {
+//!     // ...
+//! }
+//!
+//! let environment = Environment {
+//!     // ...
+//! };
+//! 
+//! let mut runner = rspec::given("Some title", environment, |ctx| {
+//!     // ...
+//! });
+//!
 //! runner.add_event_handler(&mut formatter);
-//! // use the formatter
-//! runner.run().unwrap();
+//! runner.run_or_exit();
 //! ```
 
 pub mod formatter;

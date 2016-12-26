@@ -1,40 +1,37 @@
-
 extern crate rspec;
-use rspec::context::describe;
+
 use std::io;
+use std::collections::BTreeSet;
 
 pub fn main() {
     let stdout = &mut io::stdout();
     let mut formatter = rspec::formatter::Simple::new(stdout);
-    let mut runner = describe("rspec is a classic BDD testing", |ctx| {
 
-        ctx.it("can define tests", || true);
+    #[derive(Clone, Debug)]
+    struct Environment {
+        set: BTreeSet<usize>,
+    }
 
-        ctx.describe("rspec use results for tests results", |ctx| {
+    let environment = Environment {
+        set: BTreeSet::new(),
+    };
 
-            ctx.it("passed if the return is_ok()", || Ok(()) as Result<(),()>);
+    let mut runner = rspec::given("a BTreeSet", environment, |ctx| {
+        ctx.when("not having added any items", |ctx| {
+            ctx.then("it is empty", |env| {
+                assert!(env.set.is_empty());
+            });
 
-            ctx.it("failed if the return is_err()", || Err(()) as Result<(),()>);
+            ctx.then("its len is zero", |env| {
+                assert_eq!(env.set.len(), 0);
+            });
         });
 
-        ctx.describe("rspec can use bools", |ctx| {
-
-            ctx.it("should pass if true", || true);
-
-            ctx.it("should fail if false", || false);
-
-            ctx.it("is convenient for comparisons", || {
-                (42 % 37 + 2) > 3
-            })
-        });
-
-        ctx.describe("rspec can use units", |ctx| {
-
-            ctx.it("should pass if the return is ()", || {});
-
-            ctx.it("is convenient for asserts", || assert_eq!(1, 1));
+        ctx.then("panic!(…) fails", move |_env| {
+            panic!("Some reason for failure.")
         });
     });
+
     runner.add_event_handler(&mut formatter);
-    runner.run().unwrap();
+    runner.run_or_exit();
 }

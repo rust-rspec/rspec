@@ -1,16 +1,37 @@
 [package]
-name = "rspec"
+authors = ["Thomas Wickham <mackwic@gmail.com>", "Vincent Esche <regexident@gmail.com>"]
 description = "Write Rspec-like tests with stable rust"
-version = "1.0.0-beta.3"
-authors = ["Thomas Wickham <mackwic@gmail.com>"]
-license = "MPL-2.0"
 homepage = "https://mackwic.github.io/rspec"
-repository = "https://github.com/mackwic/rspec"
-readme = "README.md"
 keywords = ["rspec", "test", "harness", "bdd"]
+license = "MPL-2.0"
+name = "rspec"
+readme = "README.md"
+repository = "https://github.com/mackwic/rspec"
+version = "1.0.0-beta.3"
 
 [dependencies]
-clippy = {version = "0.0", optional = true}
+colored = "1.4.0"
+
+# [dependencies.expectest]
+# optional = true
+# version = "0.8.0"
+
+[dependencies.expectest]
+optional = true
+git = "https://github.com/regexident/expectest"
+branch = "consistency"
+
+# [dev-dependencies]
+# expectest = "0.8.0"
+
+[dev-dependencies.expectest]
+git = "https://github.com/regexident/expectest"
+branch = "consistency"
+
+[build-dependencies.clippy]
+optional = true
+version = "0.0"
 
 [features]
 default = []
+use_expectest = ["expectest"]

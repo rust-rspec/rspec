@@ -15,4 +15,5 @@
 Cargo.lock
 target
 Cargo.lock
-*.bk
+*.rs.bk
+.DS_Store
