@@ -81,14 +81,19 @@ impl<'a> Runner<'a> {
         let ctx = mem::replace(child_ctx, Context::default());
 
         let tests = ctx.tests;
-        let mut before_functions = ctx.before_each;
-        let mut after_functions = ctx.after_each;
+        let mut before_each_functions = ctx.before_each_test;
+        let mut after_each_functions = ctx.after_each_test;
+        let mut before_all_functions = ctx.before_all_tests;
+        let mut after_all_functions = ctx.after_all_tests;
 
+        for before_all_function in before_all_functions.iter_mut() {
+            before_all_function()
+        }
 
         for mut test_function in tests {
             let test_res = {
-                for before_function in before_functions.iter_mut() {
-                    before_function()
+                for before_each_function in before_each_functions.iter_mut() {
+                    before_each_function()
                 }
                 let res = match test_function {
                     Testable::Test(name, test_function) => {
@@ -104,8 +109,8 @@ impl<'a> Runner<'a> {
                         res
                     }
                 };
-                for after_function in after_functions.iter_mut() {
-                    after_function()
+                for after_each_function in after_each_functions.iter_mut() {
+                    after_each_function()
                 }
                 res
             };
@@ -119,6 +124,10 @@ impl<'a> Runner<'a> {
             }
 
             result = test_res.or(result);
+        }
+
+        for after_all_function in after_all_functions.iter_mut() {
+            after_all_function()
         }
 
         result
