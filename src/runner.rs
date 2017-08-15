@@ -79,14 +79,16 @@ pub struct Runner<'a, T>
     where T: 'a
 {
     suite: Option<Suite<'a, T>>,
+    environments: Vec<T>,
     report: TestReport,
     handlers: Handlers<'a>,
 }
 
 impl<'a, T> Runner<'a, T> {
-    pub fn new(suite: Suite<'a, T>) -> Runner<'a, T> {
+    pub fn new(suite: Suite<'a, T>, environment: T) -> Runner<'a, T> {
         Runner {
             suite: Some(suite),
+            environments: vec![environment],
             report: TestReport::default(),
             handlers: Handlers::default(),
         }
@@ -118,6 +120,24 @@ impl<'a, T> Runner<'a, T>
 
     pub fn broadcast(&mut self, event: Event) {
         self.handlers.broadcast(&event)
+    }
+
+    pub fn push_environment(&mut self, environment: T) {
+        self.environments.push(environment);
+    }
+
+    pub fn pop_environment(&mut self) -> Option<T> {
+        self.environments.pop()
+    }
+
+    pub fn get_environment(&self) -> &T {
+        let index = self.environments.len() - 1;
+        &self.environments[index]
+    }
+
+    pub(crate) fn get_environment_mut(&mut self) -> &mut T {
+        let index = self.environments.len() - 1;
+        &mut self.environments[index]
     }
 }
 

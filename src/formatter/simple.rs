@@ -18,7 +18,6 @@ enum ScopeInfo {
 
 pub struct Simple<'a, Io: io::Write + 'a> {
     buf: &'a mut Io,
-    is_root: bool,
     name_stack: Vec<ScopeInfo>,
     failed: Vec<Vec<ScopeInfo>>,
 }
@@ -27,7 +26,6 @@ impl<'a, T: io::Write> Simple<'a, T> {
     pub fn new(buf: &mut T) -> Simple<T> {
         Simple {
             buf: buf,
-            is_root: true,
             name_stack: vec![],
             failed: vec![],
         }
@@ -39,7 +37,6 @@ impl<'a, T: io::Write> Simple<'a, T> {
 
     fn enter_suite(&mut self, info: &SuiteInfo) {
         self.name_stack.push(ScopeInfo::Suite(info.clone()));
-        self.is_root = true;
         let _ = writeln!(self.buf, "\nrunning tests");
         let label: &str = info.label.into();
         let _ = writeln!(self.buf, "{} {:?}:", label, info.name);
@@ -91,14 +88,9 @@ impl<'a, T: io::Write> Simple<'a, T> {
         if report.failed > 0 {
             let _ = writeln!(self.buf, "\n{}: test failed", "error".red().bold());
         }
-        self.is_root = true;
     }
 
     fn enter_context(&mut self, info: &ContextInfo) {
-        if self.is_root {
-            self.is_root = false;
-            return;
-        }
         self.name_stack.push(ScopeInfo::Context(info.clone()));
 
         let indent = self.name_stack.len() - 1;

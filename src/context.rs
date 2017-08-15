@@ -60,19 +60,17 @@ pub struct Test<'a, T>
     where T: 'a
 {
     pub info: TestInfo,
-    environment: T,
     function: Box<FnMut(&T) -> ExampleResult + 'a>,
 }
 
 impl<'a, T> Test<'a, T>
     where T: 'a
 {
-    pub fn new<F>(info: TestInfo, environment: T, f: F) -> Self
+    pub fn new<F>(info: TestInfo, f: F) -> Self
         where F: FnMut(&T) -> ExampleResult + 'a
     {
         Test {
             info: info,
-            environment: environment,
             function: Box::new(f),
         }
     }
@@ -84,8 +82,7 @@ impl<'a, T> Visitable<Runner<'a, T>> for Test<'a, T>
     fn accept(&mut self, runner: &mut Runner<'a, T>) -> TestReport {
         runner.broadcast(Event::EnterTest(self.info.clone()));
         let function = &mut self.function;
-        let environment = &mut self.environment;
-        let result = function(&environment);
+        let result = function(&runner.get_environment());
         runner.broadcast(Event::ExitTest(result.clone()));
         result.into()
     }
@@ -177,18 +174,16 @@ impl<'a, T> Visitable<Runner<'a, T>> for Suite<'a, T>
 pub struct Context<'a, T>
     where T: 'a
 {
-    info: ContextInfo,
-    environment: T,
+    info: Option<ContextInfo>,
     testables: Vec<Testable<'a, T>>,
 }
 
 impl<'a, T> Context<'a, T>
     where T: 'a
 {
-    pub fn new(info: ContextInfo, environment: T) -> Self {
+    pub fn new(info: Option<ContextInfo>) -> Self {
         Context {
             info: info,
-            environment: environment,
             testables: vec![],
         }
     }
@@ -199,26 +194,32 @@ impl<'a, T> Visitable<Runner<'a, T>> for Context<'a, T>
 {
     fn accept(&mut self, runner: &mut Runner<'a, T>) -> TestReport {
         let mut report = TestReport::default();
-        runner.broadcast(Event::EnterContext(self.info.clone()));
+        let is_anonymous = self.info.is_none();
+        if let Some(ref info) = self.info {
+            runner.broadcast(Event::EnterContext(info.clone()));
+        }
         for testable in self.testables.iter_mut() {
+            let environment = runner.get_environment().clone();
+            runner.push_environment(environment);
             let test_res = {
                 let result = match testable {
                     &mut Testable::Test(ref mut test) => {
-                        test.environment = self.environment.clone();
                         let result = test.accept(runner);
                         result.into()
                     }
                     &mut Testable::Context(ref mut ctx) => {
-                        ctx.environment = self.environment.clone();
                         let report = ctx.accept(runner);
                         report
                     }
                 };
                 result
             };
+            runner.pop_environment();
             report.add(test_res);
         }
-        runner.broadcast(Event::ExitContext(report.clone()));
+        if !is_anonymous {
+            runner.broadcast(Event::ExitContext(report.clone()));
+        }
         report
     }
 }
@@ -257,54 +258,66 @@ impl<'a, T> Context<'a, T>
     //    ///     ctx.it("should run last", |_| Ok(()) as Result<(),()>);
     //    /// });
     //    /// ```
-    pub fn context<S, F>(&mut self, name: S, body: F)
-        where S: Into<String>,
+    pub fn context<'b, S, F>(&mut self, name: S, body: F)
+        where S: Into<Option<&'b str>>,
               F: 'a + FnOnce(&mut Context<'a, T>) -> (),
               T: ::std::fmt::Debug
     {
-        let info = ContextInfo {
-            label: ContextLabel::Context,
-            name: name.into(),
-        };
+        let info = name.into().map(|name| {
+            ContextInfo {
+                label: ContextLabel::Context,
+                name: name.to_owned(),
+            }
+        });
         self.context_internal(info, body)
     }
 
     /// Alias for [`context`](struct.Context.html#method.context).
     ///
     /// See [`context`](struct.Context.html#method.context) for more info.
-    pub fn specify<S, F>(&mut self, name: S, body: F)
-        where S: Into<String>,
+    pub fn specify<'b, S, F>(&mut self, name: S, body: F)
+        where S: Into<Option<&'b str>>,
               F: 'a + FnOnce(&mut Context<'a, T>) -> (),
               T: ::std::fmt::Debug
     {
-        let info = ContextInfo {
-            label: ContextLabel::Specify,
-            name: name.into(),
-        };
+        let info = name.into().map(|name| {
+            ContextInfo {
+                label: ContextLabel::Specify,
+                name: name.to_owned(),
+            }
+        });
         self.context_internal(info, body)
     }
 
     /// Alias for [`context`](struct.Context.html#method.context).
     ///
     /// See [`context`](struct.Context.html#method.context) for more info.
-    pub fn when<S, F>(&mut self, name: S, body: F)
-        where S: Into<String>,
+    pub fn when<'b, S, F>(&mut self, name: S, body: F)
+        where S: Into<Option<&'b str>>,
               F: 'a + FnOnce(&mut Context<'a, T>) -> (),
               T: ::std::fmt::Debug
     {
-        let info = ContextInfo {
-            label: ContextLabel::When,
-            name: name.into(),
-        };
+        let info = name.into().map(|name| {
+            ContextInfo {
+                label: ContextLabel::When,
+                name: name.to_owned(),
+            }
+        });
         self.context_internal(info, body)
     }
 
-    fn context_internal<F>(&mut self, info: ContextInfo, body: F)
+    pub fn scope<F>(&mut self, body: F)
         where F: 'a + FnOnce(&mut Context<'a, T>) -> (),
               T: ::std::fmt::Debug
     {
-        let environment = self.environment.clone();
-        let mut child = Context::new(info, environment);
+        self.context_internal(None, body)
+    }
+
+    fn context_internal<F>(&mut self, info: Option<ContextInfo>, body: F)
+        where F: 'a + FnOnce(&mut Context<'a, T>) -> (),
+              T: ::std::fmt::Debug
+    {
+        let mut child = Context::new(info);
         body(&mut child);
         self.testables.push(Testable::Context(child))
     }
@@ -385,7 +398,7 @@ impl<'a, T> Context<'a, T>
         where F: 'a + FnMut(&T) -> U,
               U: Into<ExampleResult>
     {
-        let test = Test::new(info, self.environment.clone(), move |environment| {
+        let test = Test::new(info, move |environment| {
             let result = catch_unwind(AssertUnwindSafe(|| {
                 body(&environment).into()
             }));
@@ -479,14 +492,10 @@ fn suite_internal<'a, 'b, F, T>(info: SuiteInfo, environment: T, body: F) -> Run
           T: Clone + ::std::fmt::Debug
 {
     // Note: root context's info get's ignored.
-    let ctx_info = ContextInfo {
-        label: ContextLabel::Context,
-        name: "HANDS OFF!".into(),
-    };
-    let mut ctx = Context::new(ctx_info, environment);
+    let mut ctx = Context::new(None);
     body(&mut ctx);
     let suite = Suite::new(info, ctx);
-    Runner::new(suite)
+    Runner::new(suite, environment)
 }
 
 #[cfg(test)]
