@@ -1,5 +1,9 @@
 //! The Context module holds all the functionality for the test declaration, that is:
-//! `suite`, `context`, `it` and their variants.
+//! `before`, `after`, `suite`, `context`, `it` and their variants.
+//!
+//! A Context can also holds reference to children Contextes, for whom the before closures will be
+//! executed after the before closures of the current context. The order of execution of tests
+//! respect the order of declaration of theses tests.
 //!
 //! Running these tests and doing asserts is not the job of the Context, but the Runner, which is
 //! a struct returned by the root context declaration.
@@ -176,6 +180,10 @@ pub struct Context<'a, T>
 {
     info: Option<ContextInfo>,
     testables: Vec<Testable<'a, T>>,
+    before_all: Vec<Box<FnMut(&mut T) + 'a>>,
+    before_each: Vec<Box<FnMut(&mut T) + 'a>>,
+    after_all: Vec<Box<FnMut(&mut T) + 'a>>,
+    after_each: Vec<Box<FnMut(&mut T) + 'a>>,
 }
 
 impl<'a, T> Context<'a, T>
@@ -185,6 +193,10 @@ impl<'a, T> Context<'a, T>
         Context {
             info: info,
             testables: vec![],
+            before_all: vec![],
+            before_each: vec![],
+            after_all: vec![],
+            after_each: vec![],
         }
     }
 }
@@ -198,17 +210,32 @@ impl<'a, T> Visitable<Runner<'a, T>> for Context<'a, T>
         if let Some(ref info) = self.info {
             runner.broadcast(Event::EnterContext(info.clone()));
         }
+        for function in self.before_all.iter_mut() {
+            function(runner.get_environment_mut());
+        }
         for testable in self.testables.iter_mut() {
             let environment = runner.get_environment().clone();
             runner.push_environment(environment);
             let test_res = {
                 let result = match testable {
                     &mut Testable::Test(ref mut test) => {
+                        for function in self.before_each.iter_mut() {
+                            function(runner.get_environment_mut());
+                        }
                         let result = test.accept(runner);
+                        for function in self.after_each.iter_mut() {
+                            function(runner.get_environment_mut());
+                        }
                         result.into()
                     }
                     &mut Testable::Context(ref mut ctx) => {
+                        for function in self.before_each.iter_mut() {
+                            function(runner.get_environment_mut());
+                        }
                         let report = ctx.accept(runner);
+                        for function in self.after_each.iter_mut() {
+                            function(runner.get_environment_mut());
+                        }
                         report
                     }
                 };
@@ -216,6 +243,9 @@ impl<'a, T> Visitable<Runner<'a, T>> for Context<'a, T>
             };
             runner.pop_environment();
             report.add(test_res);
+        }
+        for function in self.after_all.iter_mut() {
+            function(runner.get_environment_mut());
         }
         if !is_anonymous {
             runner.broadcast(Event::ExitContext(report.clone()));
@@ -417,6 +447,113 @@ impl<'a, T> Context<'a, T>
             }
         });
         self.testables.push(Testable::Test(test))
+    }
+
+    //    /// Declares a closure that will be executed once before the tests of the current Context.
+    //    ///
+    //    /// # Examples
+    //    ///
+    //    /// ```no_run
+    //    /// use rspec::context::rdescribe;
+    //    /// use std::sync::atomic::{AtomicUsize, Ordering};
+    //    ///
+    //    /// let counter = &mut AtomicUsize::new(0);
+    //    ///
+    //    /// // `rdescribe` instanciate a runner and run it transparently
+    //    /// rdescribe("inside this describe, we use the context", counter, |ctx| {
+    //    ///
+    //    ///     // This will increment the counter once before the tests:
+    //    ///     ctx.before_all(|| { counter.fetch_add(1, Ordering::SeqCst); });
+    //    ///
+    //    ///     ctx.it("should run after the before_all", || {
+    //    ///         assert_eq!(1, counter.load(Ordering::SeqCst));
+    //    ///         Ok(()) as Result<(),()>
+    //    ///     });
+    //    ///
+    //    ///     ctx.describe("a group of examples", (), |ctx| {
+    //    ///
+    //    ///         ctx.it("should see no further increment", || {
+    //    ///             assert_eq!(1, counter.load(Ordering::SeqCst));
+    //    ///             Ok(()) as Result<(),()>
+    //    ///         });
+    //    ///     });
+    //    ///
+    //    ///     ctx.it("should run after all the before_alls AND the previous it", || {
+    //    ///         assert_eq!(1, counter.load(Ordering::SeqCst));
+    //    ///         Ok(()) as Result<(),()>
+    //    ///     });
+    //    /// });
+    //    /// ```
+    pub fn before_all<F>(&mut self, body: F)
+        where F: 'a + FnMut(&mut T)
+    {
+        self.before_all.push(Box::new(body))
+    }
+
+    pub fn before<F>(&mut self, body: F)
+        where F: 'a + FnMut(&mut T)
+    {
+        self.before_all(body)
+    }
+
+    pub fn before_each<F>(&mut self, body: F)
+        where F: 'a + FnMut(&mut T)
+    {
+        self.before_each.push(Box::new(body))
+    }
+
+    //    /// Declares a closure that will be executed once after all tests of the current Context.
+    //    ///
+    //    /// # Examples
+    //    ///
+    //    /// ```no_run
+    //    /// use rspec::context::rdescribe;
+    //    /// use std::sync::atomic::{AtomicUsize, Ordering};
+    //    ///
+    //    /// let counter = &mut AtomicUsize::new(0);
+    //    ///
+    //    /// // `rdescribe` instanciate a runner and run it transparently
+    //    /// rdescribe("inside this describe, we use the context", (), |ctx| {
+    //    ///
+    //    ///     // This will increment the counter once after the tests
+    //    ///     ctx.after_all(|counter| {
+    //    ///         counter.fetch_add(1, Ordering::SeqCst);
+    //    ///     });
+    //    ///
+    //    ///     ctx.it("should run after the after_each", || {
+    //    ///         assert_eq!(0, counter.load(Ordering::SeqCst));
+    //    ///         Ok(()) as Result<(),()>
+    //    ///     });
+    //    ///
+    //    ///     ctx.describe("a group of examples", (), |ctx| {
+    //    ///         ctx.it("should see no further increment", || {
+    //    ///             assert_eq!(0, counter.load(Ordering::SeqCst));
+    //    ///             Ok(()) as Result<(),()>
+    //    ///         });
+    //    ///     });
+    //    ///
+    //    ///     ctx.it("should run after all the after_eachs AND the previous it", || {
+    //    ///         assert_eq!(0, counter.load(Ordering::SeqCst));
+    //    ///         Ok(()) as Result<(),()>
+    //    ///     });
+    //    /// });
+    //    /// ```
+    pub fn after_all<F>(&mut self, body: F)
+        where F: 'a + FnMut(&mut T)
+    {
+        self.after_all.push(Box::new(body))
+    }
+
+    pub fn after<F>(&mut self, body: F)
+        where F: 'a + FnMut(&mut T)
+    {
+        self.after_all(body)
+    }
+
+    pub fn after_each<F>(&mut self, body: F)
+        where F: 'a + FnMut(&mut T)
+    {
+        self.after_each.push(Box::new(body))
     }
 }
 
