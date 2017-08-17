@@ -5,15 +5,18 @@ use colored::*;
 
 use events::{Event, EventHandler};
 use formatter::formatter::Formatter;
-use runner::TestReport;
-use example_result::ExampleResult;
-use context::{SuiteInfo, ContextInfo, TestInfo};
+use context_report::ContextReport;
+use example_report::ExampleReport;
+
+use suite::SuiteInfo;
+use context::ContextInfo;
+use example::ExampleInfo;
 
 #[derive(Clone, Debug)]
 enum ScopeInfo {
     Suite(SuiteInfo),
     Context(ContextInfo),
-    Test(TestInfo),
+    Example(ExampleInfo),
 }
 
 pub struct Simple<'a, Io: io::Write + 'a> {
@@ -42,7 +45,7 @@ impl<'a, T: io::Write> Simple<'a, T> {
         let _ = writeln!(self.buf, "{} {:?}:", label, info.name);
     }
 
-    fn exit_suite(&mut self, report: &TestReport) {
+    fn exit_suite(&mut self, report: &ContextReport) {
         let _ = writeln!(self.buf, "\nfailures:");
         let failed = mem::replace(&mut self.failed, vec![]);
         for scope_stack in failed {
@@ -58,7 +61,7 @@ impl<'a, T: io::Write> Simple<'a, T> {
                         let label: &str = info.label.into();
                         let _ = writeln!(self.buf, "{}{} {:?}:", padding, label, info.name);
                     }
-                    ScopeInfo::Test(info) => {
+                    ScopeInfo::Example(info) => {
                         let padding = Self::padding(indent);
                         let label: &str = info.label.into();
                         if let Some(failure) = info.failure {
@@ -100,12 +103,12 @@ impl<'a, T: io::Write> Simple<'a, T> {
         let _ = writeln!(self.buf, "{} {:?}:", label, info.name);
     }
 
-    fn exit_context(&mut self, _report: &TestReport) {
+    fn exit_context(&mut self, _report: &ContextReport) {
         self.name_stack.pop();
     }
 
-    fn enter_test(&mut self, info: &TestInfo) {
-        self.name_stack.push(ScopeInfo::Test(info.clone()));
+    fn enter_test(&mut self, info: &ExampleInfo) {
+        self.name_stack.push(ScopeInfo::Example(info.clone()));
 
         let indent = self.name_stack.len() - 1;
         let _ = write!(self.buf, "{}", Self::padding(indent));
@@ -115,9 +118,9 @@ impl<'a, T: io::Write> Simple<'a, T> {
         let _ = write!(self.buf, " ... ");
     }
 
-    fn exit_test(&mut self, result: &ExampleResult) {
-        if let &ExampleResult::Failure(ref failure) = result {
-            if let Some(&mut ScopeInfo::Test(ref mut test_info)) = self.name_stack.last_mut() {
+    fn exit_test(&mut self, result: &ExampleReport) {
+        if let &ExampleReport::Failure(ref failure) = result {
+            if let Some(&mut ScopeInfo::Example(ref mut test_info)) = self.name_stack.last_mut() {
                 test_info.failure = failure.message.clone();
             }
             if !self.name_stack.is_empty() {
@@ -149,10 +152,10 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
             Event::ExitContext(ref report) => {
                 self.exit_context(report);
             }
-            Event::EnterTest(ref name) => {
+            Event::EnterExample(ref name) => {
                 self.enter_test(name);
             }
-            Event::ExitTest(ref result) => {
+            Event::ExitExample(ref result) => {
                 self.exit_test(result);
             }
         };
@@ -166,7 +169,7 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //     pub use super::*;
 //     pub use formatter::formatter::Formatter;
 //     pub use events::{Event, EventHandler};
-//     pub use example_result::*;
+//     pub use example_report::*;
 //     pub use std::io;
 //     pub use std::str;
 //
@@ -197,7 +200,7 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //
 //     mod event_finished_runner {
 //         pub use super::*;
-//         use runner::TestReport;
+//         use runner::ContextReport;
 //
 //         macro_rules! test_and_compare_output {
 //             ($(
@@ -210,7 +213,7 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //                         let mut sink = io::sink();
 //                         let res = {
 //                             let mut s = Simple::new(&mut sink);
-//                             s.write_summary(TestReport {
+//                             s.write_summary(ContextReport {
 //                                 passed: $succ,
 //                                 failed: $fail,
 //                                 ignored: 0,
@@ -250,7 +253,7 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut v = vec![];
 //             {
 //                 let mut s = Simple::new(&mut v);
-//                 s.trigger(&Event::ExitTest(SUCCESS_RES))
+//                 s.trigger(&Event::ExitExample(SUCCESS_RES))
 //             }
 //
 //             assert_eq!(".", str::from_utf8(&v).unwrap());
@@ -262,7 +265,7 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut v = vec![];
 //             {
 //                 let mut s = Simple::new(&mut v);
-//                 s.trigger(&Event::ExitTest(FAILED_RES))
+//                 s.trigger(&Event::ExitExample(FAILED_RES))
 //             }
 //
 //             assert_eq!("F", str::from_utf8(&v).unwrap());
@@ -308,8 +311,8 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //         fn it_register_failures() {
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
-//             s.trigger(&Event::EnterTest("hola".into()));
-//             s.trigger(&Event::ExitTest(FAILED_RES));
+//             s.trigger(&Event::EnterExample("hola".into()));
+//             s.trigger(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(1, s.failed.len());
 //         }
 //
@@ -317,8 +320,8 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //         fn it_keep_track_of_the_failure_name() {
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
-//             s.trigger(&Event::EnterTest("hola".into()));
-//             s.trigger(&Event::ExitTest(FAILED_RES));
+//             s.trigger(&Event::EnterExample("hola".into()));
+//             s.trigger(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"hola".into()), s.failed.get(0));
 //         }
 //
@@ -327,13 +330,13 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
 //             s.trigger(&Event::EnterContext("hola".into()));
-//             s.trigger(&Event::EnterTest("holé".into()));
-//             s.trigger(&Event::ExitTest(FAILED_RES));
+//             s.trigger(&Event::EnterExample("holé".into()));
+//             s.trigger(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"hola | holé".into()), s.failed.get(0));
 //
 //             s.trigger(&Event::EnterContext("ohééé".into()));
-//             s.trigger(&Event::EnterTest("holé".into()));
-//             s.trigger(&Event::ExitTest(FAILED_RES));
+//             s.trigger(&Event::EnterExample("holé".into()));
+//             s.trigger(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"hola | ohééé | holé".into()), s.failed.get(1));
 //         }
 //
@@ -342,13 +345,13 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
 //             s.trigger(&Event::EnterContext("hola".into()));
-//             s.trigger(&Event::EnterTest("holé".into()));
-//             s.trigger(&Event::ExitTest(FAILED_RES));
+//             s.trigger(&Event::EnterExample("holé".into()));
+//             s.trigger(&Event::ExitExample(FAILED_RES));
 //
 //             s.trigger(&Event::ExitContext);
 //             s.trigger(&Event::EnterContext("ok".into()));
-//             s.trigger(&Event::EnterTest("cacao".into()));
-//             s.trigger(&Event::ExitTest(FAILED_RES));
+//             s.trigger(&Event::EnterExample("cacao".into()));
+//             s.trigger(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"ok | cacao".into()), s.failed.get(1));
 //         }
 //
@@ -357,8 +360,8 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
 //             s.trigger(&Event::EnterContext("hola".into()));
-//             s.trigger(&Event::EnterTest("holé".into()));
-//             s.trigger(&Event::ExitTest(SUCCESS_RES));
+//             s.trigger(&Event::EnterExample("holé".into()));
+//             s.trigger(&Event::ExitExample(SUCCESS_RES));
 //
 //             assert_eq!(None, s.failed.get(0));
 //         }
@@ -368,10 +371,10 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
 //             s.trigger(&Event::EnterContext("hola".into()));
-//             s.trigger(&Event::EnterTest("holé".into()));
-//             s.trigger(&Event::ExitTest(SUCCESS_RES));
-//             s.trigger(&Event::EnterTest("holé".into()));
-//             s.trigger(&Event::ExitTest(FAILED_RES));
+//             s.trigger(&Event::EnterExample("holé".into()));
+//             s.trigger(&Event::ExitExample(SUCCESS_RES));
+//             s.trigger(&Event::EnterExample("holé".into()));
+//             s.trigger(&Event::ExitExample(FAILED_RES));
 //
 //             // not "hola | holé | holé"
 //             assert_eq!(Some(&"hola | holé".into()), s.failed.get(0));
@@ -383,8 +386,8 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let res = {
 //                 let mut s = Simple::new(&mut sink);
 //                 s.trigger(&Event::EnterContext("hola".into()));
-//                 s.trigger(&Event::EnterTest("holé".into()));
-//                 s.trigger(&Event::ExitTest(FAILED_RES));
+//                 s.trigger(&Event::EnterExample("holé".into()));
+//                 s.trigger(&Event::ExitExample(FAILED_RES));
 //                 s.failures_summary()
 //             };
 //
@@ -397,10 +400,10 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let res = {
 //                 let mut s = Simple::new(&mut sink);
 //                 s.trigger(&Event::EnterContext("hola".into()));
-//                 s.trigger(&Event::EnterTest("holé".into()));
-//                 s.trigger(&Event::ExitTest(FAILED_RES));
-//                 s.trigger(&Event::EnterTest("hola".into()));
-//                 s.trigger(&Event::ExitTest(FAILED_RES));
+//                 s.trigger(&Event::EnterExample("holé".into()));
+//                 s.trigger(&Event::ExitExample(FAILED_RES));
+//                 s.trigger(&Event::EnterExample("hola".into()));
+//                 s.trigger(&Event::ExitExample(FAILED_RES));
 //                 s.failures_summary()
 //             };
 //
@@ -409,13 +412,13 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let res = {
 //                 let mut s = Simple::new(&mut sink);
 //                 s.trigger(&Event::EnterContext("hola".into()));
-//                 s.trigger(&Event::EnterTest("holé".into()));
-//                 s.trigger(&Event::ExitTest(FAILED_RES));
+//                 s.trigger(&Event::EnterExample("holé".into()));
+//                 s.trigger(&Event::ExitExample(FAILED_RES));
 //                 s.trigger(&Event::ExitContext);
 //                 s.trigger(&Event::EnterContext("second".into()));
 //                 s.trigger(&Event::EnterContext("third".into()));
-//                 s.trigger(&Event::EnterTest("hola".into()));
-//                 s.trigger(&Event::ExitTest(FAILED_RES));
+//                 s.trigger(&Event::EnterExample("hola".into()));
+//                 s.trigger(&Event::ExitExample(FAILED_RES));
 //                 s.failures_summary()
 //             };
 //

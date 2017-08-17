@@ -10,15 +10,18 @@ extern crate expectest;
 
 extern crate colored;
 
-pub mod example_result;
-pub mod events;
+pub mod suite;
 pub mod context;
+pub mod example;
+
+pub use context::{describe, suite, given};
+
+pub mod context_report;
+pub mod example_report;
+pub mod events;
 pub mod runner;
 pub mod formatter;
-
-pub use context::describe;
-pub use context::suite;
-pub use context::given;
+pub mod visitor;
 
 #[cfg(test)]
 mod tests {

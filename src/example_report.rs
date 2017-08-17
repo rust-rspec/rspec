@@ -19,55 +19,56 @@ impl Failure {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum ExampleResult {
+pub enum ExampleReport {
     Success,
+    Ignored,
     Failure(Failure),
 }
 
 // #[derive(Clone, PartialEq, Eq, Debug)]
-// pub struct ExampleResult(Result<(), String>);
+// pub struct ExampleReport(Result<(), String>);
 
-impl ExampleResult {
+impl ExampleReport {
     pub fn err<S>(message: Option<S>) -> Self
         where String: From<S>
     {
-        ExampleResult::Failure(Failure::new(message))
+        ExampleReport::Failure(Failure::new(message))
     }
 
     pub fn is_ok(&self) -> bool {
-        *self == ExampleResult::Success
+        *self == ExampleReport::Success
     }
 
     pub fn is_err(&self) -> bool {
-        *self != ExampleResult::Success
+        *self != ExampleReport::Success
     }
 }
 
-impl From<()> for ExampleResult {
-    fn from(_other: ()) -> ExampleResult {
-        ExampleResult::Success
+impl From<()> for ExampleReport {
+    fn from(_other: ()) -> ExampleReport {
+        ExampleReport::Success
     }
 }
 
-impl From<bool> for ExampleResult {
-    fn from(other: bool) -> ExampleResult {
+impl From<bool> for ExampleReport {
+    fn from(other: bool) -> ExampleReport {
         if other {
-            ExampleResult::Success
+            ExampleReport::Success
         } else {
-            ExampleResult::Failure(
+            ExampleReport::Failure(
                 Failure::new(Some("assertion failed: `expected true`"))
             )
         }
     }
 }
 
-impl<T1, T2> From<Result<T1, T2>> for ExampleResult
+impl<T1, T2> From<Result<T1, T2>> for ExampleReport
     where T2: ::std::fmt::Debug
 {
-    fn from(other: Result<T1, T2>) -> ExampleResult {
+    fn from(other: Result<T1, T2>) -> ExampleReport {
         match other {
-            Ok(_) => ExampleResult::Success,
-            Err(error) => ExampleResult::Failure(
+            Ok(_) => ExampleReport::Success,
+            Err(error) => ExampleReport::Failure(
                 Failure::new(Some(format!("{:?}", error)))
             )
         }
@@ -75,12 +76,12 @@ impl<T1, T2> From<Result<T1, T2>> for ExampleResult
 }
 
 #[cfg(feature = "use_expectest")]
-impl From<ExpectestResult> for ExampleResult {
-    fn from(other: ExpectestResult) -> ExampleResult {
+impl From<ExpectestResult> for ExampleReport {
+    fn from(other: ExpectestResult) -> ExampleReport {
         match other {
-            ExpectestResult::Success => ExampleResult::Success,
+            ExpectestResult::Success => ExampleReport::Success,
             ExpectestResult::Failure(failure) => {
-                ExampleResult::Failure(
+                ExampleReport::Failure(
                     Failure::new(Some(format!("{:?}", failure)))
                 )
             },

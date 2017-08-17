@@ -1,17 +1,20 @@
 //! Events are send by the Runner to signal the progression in the test suite, with the results
 
-use example_result::ExampleResult;
-use runner::TestReport;
-use context::{SuiteInfo, ContextInfo, TestInfo};
+use example_report::ExampleReport;
+use context_report::ContextReport;
+
+use suite::SuiteInfo;
+use context::ContextInfo;
+use example::ExampleInfo;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
     EnterSuite(SuiteInfo),
-    ExitSuite(TestReport),
+    ExitSuite(ContextReport),
     EnterContext(ContextInfo),
-    ExitContext(TestReport),
-    EnterTest(TestInfo),
-    ExitTest(ExampleResult),
+    ExitContext(ContextReport),
+    EnterExample(ExampleInfo),
+    ExitExample(ExampleReport),
 }
 
 pub trait EventHandler {
