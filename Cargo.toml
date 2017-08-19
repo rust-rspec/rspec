@@ -7,32 +7,19 @@ license = "MPL-2.0"
 name = "rspec"
 readme = "README.md"
 repository = "https://github.com/mackwic/rspec"
-version = "1.0.0-beta.3"
+version = "1.0.0-beta.4"
 
 [dependencies]
 colored = "1.4.0"
 rayon = "0.8.2"
 
-# [dependencies.expectest]
-# optional = true
-# version = "0.8.0"
-
 [dependencies.expectest]
 optional = true
-git = "https://github.com/regexident/expectest"
-branch = "consistency"
-
-# [dev-dependencies]
-# expectest = "0.8.0"
-
-[dev-dependencies.expectest]
-git = "https://github.com/regexident/expectest"
-branch = "consistency"
+version = "0.9.1"
 
 [build-dependencies.clippy]
 optional = true
-version = "0.0"
 
 [features]
 default = []
-use_expectest = ["expectest"]
+expectest_compat = ["expectest"]

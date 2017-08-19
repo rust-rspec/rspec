@@ -12,7 +12,7 @@ The last stable documentation is available for consultation at
 [mackwic.github.io/rspec](https://mackwic.github.io/rspec).
 
 **All rspec releases are garanteed to compile against the latest stable rust and
-are tested on all rust versions from the 1.16**.
+are tested on all rust versions from the 1.18**.
 
 ## How to use
 

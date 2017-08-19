@@ -9,24 +9,28 @@
 //! use std::io;
 //! use std::sync::{Arc, Mutex};
 //!
-//! let simple = rspec::formatter::Simple::new(io::stdout());
-//! let formatter = Arc::new(Mutex::new(simple));
+//! use rspec::prelude::*;
 //!
-//! #[derive(Clone, Debug)]
-//! struct Environment {
-//!     // ...
+//! pub fn main() {
+//!     #[derive(Clone, Debug)]
+//!     struct Environment {
+//!         // ...
+//!     }
+//!     
+//!     let environment = Environment {
+//!         // ...
+//!     };
+//!     let simple = rspec::formatter::Simple::new(io::stdout());
+//!     let formatter = Arc::new(Mutex::new(simple));
+//!     let configuration = Configuration::default().parallel(false);
+//!     let runner = Runner::new(configuration, vec![formatter]);
+//!
+//!     runner.run_or_exit(rspec::suite("a test suite", environment, |ctx| {
+//!         ctx.context("opens a context labeled 'context'", |ctx| {
+//!             // …
+//!         });
+//!     }));
 //! }
-//!
-//! let environment = Environment {
-//!     // ...
-//! };
-//!
-//! let mut runner = rspec::given("Some title", environment, |ctx| {
-//!     // ...
-//! });
-//!
-//! runner.add_event_handler(formatter);
-//! runner.run_or_exit();
 //! ```
 
 pub mod formatter;

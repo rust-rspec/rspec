@@ -5,7 +5,7 @@
 
 #![allow(dead_code)]
 
-#[cfg(feature = "use_expectest")]
+#[cfg(feature = "expectest_compat")]
 extern crate expectest;
 
 extern crate colored;
@@ -15,15 +15,23 @@ pub mod suite;
 pub mod context;
 pub mod example;
 
-pub use context::{describe, suite, given};
+pub use suite::{describe, suite, given};
+
+pub mod report;
 
 mod context_member;
-pub mod context_report;
-pub mod example_report;
+
 pub mod events;
 pub mod runner;
 pub mod formatter;
 pub mod visitor;
+
+pub mod prelude {
+    pub use runner::{Configuration, Runner};
+    pub use suite::Suite;
+    pub use context::Context;
+    pub use example::Example;
+}
 
 #[cfg(test)]
 mod tests {

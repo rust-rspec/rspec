@@ -6,7 +6,6 @@
 //!
 //! The main methods are `Runner::run` and `Runner::result`.
 
-use std::mem;
 use std::panic;
 use std::sync::{Arc, Mutex};
 
@@ -14,8 +13,11 @@ use rayon;
 use rayon::prelude::*;
 
 use context_member::ContextMember;
-use example_report::ExampleReport;
-use context_report::ContextReport;
+
+use report::context::ContextReport;
+use report::suite::SuiteReport;
+use report::example::ExampleReport;
+
 use visitor::Visitor;
 use events::{Event, EventHandler};
 
@@ -27,6 +29,14 @@ pub struct Configuration {
     parallel: bool
 }
 
+impl Configuration {
+    pub fn parallel(self, parallel: bool) -> Self {
+        Configuration {
+            parallel: parallel
+        }
+    }
+}
+
 impl Default for Configuration {
     fn default() -> Self {
         Configuration {
@@ -35,56 +45,62 @@ impl Default for Configuration {
     }
 }
 
-pub struct Runner<'a, T>
-    where T: 'a
-{
-    suite: Option<Suite<'a, T>>,
-    environment: T,
+pub struct Runner {
+    configuration: Configuration,
     handlers: Vec<Arc<Mutex<EventHandler>>>,
 }
 
-impl<'a, T> Runner<'a, T> {
-    pub fn new(suite: Suite<'a, T>, environment: T) -> Runner<'a, T> {
+impl Runner {
+    pub fn new(configuration: Configuration, handlers: Vec<Arc<Mutex<EventHandler>>>) -> Runner {
         Runner {
-            suite: Some(suite),
-            environment: environment,
-            handlers: vec![],
+            configuration: configuration,
+            handlers: handlers,
         }
     }
 }
 
-impl<'a, T> Runner<'a, T>
-    where T: 'a + Clone + Send + Sync + ::std::fmt::Debug
-{
-    pub fn run(self) -> ContextReport {
-        self.run_with(&Configuration::default())
+impl Runner {
+    pub fn run<T>(self, suite: (Suite<T>, T)) -> SuiteReport
+        where T: Clone + Send + Sync + ::std::fmt::Debug
+    {
+        self.run_with(suite)
     }
 
-    pub fn run_with(mut self, config: &Configuration) -> ContextReport {
-        let suite = mem::replace(&mut self.suite, None).expect("Expected context");
+    pub fn run_with<T>(self, suite: (Suite<T>, T)) -> SuiteReport
+        where T: Clone + Send + Sync + ::std::fmt::Debug
+    {
+        let (suite, mut environment) = suite;
         panic::set_hook(Box::new(|_panic_info| {
-            // silently swallows panics
+            // XXX panics already catched at the test call site, don't output the trace in stdout
         }));
-        let mut environment = self.environment.clone();
-        let threads = if config.parallel { 0 } else  { 1 };
+        let threads = if self.configuration.parallel { 0 } else  { 1 };
         let _ = rayon::initialize(rayon::Configuration::new().num_threads(threads));
         let report = self.visit(&suite, &mut environment);
+        // XXX reset panic hook back to default hook:
         let _ = panic::take_hook();
         report
     }
 
-    pub fn run_or_exit(self) {
-        self.run_or_exit_with(&Configuration::default())
+    pub fn run_or_exit<T>(self, suite: (Suite<T>, T))
+        where T: Clone + Send + Sync + ::std::fmt::Debug
+    {
+        self.run_or_exit_with(suite)
     }
 
-    pub fn run_or_exit_with(self, config: &Configuration) {
-        if self.run_with(config).failed > 0 {
+    pub fn run_or_exit_with<T>(self, suite: (Suite<T>, T))
+        where T: Clone + Send + Sync + ::std::fmt::Debug
+    {
+        if self.run_with(suite).failed > 0 {
+            // XXX Cargo test failure returns 101.
+            //
+            // > "We use 101 as the standard failure exit code because it's something unique
+            // > that the test runner can check for in run-fail tests (as opposed to something
+            // > like 1, which everybody uses). I don't expect this behavior can ever change.
+            // > This behavior probably dates to before 2013,
+            // > all the way back to the creation of compiletest." – @brson
+
             ::std::process::exit(101);
         }
-    }
-
-    pub fn add_event_handler(&mut self, handler: Arc<Mutex<EventHandler>>) {
-        self.handlers.push(handler)
     }
 
     fn broadcast(&self, event: Event) {
@@ -98,13 +114,13 @@ impl<'a, T> Runner<'a, T>
     }
 }
 
-impl<'a, T> Visitor<Suite<'a, T>> for Runner<'a, T>
-    where T: 'a + Clone + Send + Sync + ::std::fmt::Debug
+impl<T> Visitor<Suite<T>> for Runner
+    where T: Clone + Send + Sync + ::std::fmt::Debug
 {
     type Environment = T;
     type Output = ContextReport;
 
-    fn visit(&self, suite: &Suite<'a, T>, environment: &mut Self::Environment) -> Self::Output {
+    fn visit(&self, suite: &Suite<T>, environment: &mut Self::Environment) -> Self::Output {
         self.broadcast(Event::EnterSuite(suite.info.clone()));
         let report = self.visit(&suite.context, environment);
         self.broadcast(Event::ExitSuite(report.clone()));
@@ -112,13 +128,13 @@ impl<'a, T> Visitor<Suite<'a, T>> for Runner<'a, T>
     }
 }
 
-impl<'a, T> Visitor<Context<'a, T>> for Runner<'a, T>
-    where T: 'a + Clone + Send + Sync + ::std::fmt::Debug
+impl<T> Visitor<Context<T>> for Runner
+    where T: Clone + Send + Sync + ::std::fmt::Debug
 {
     type Environment = T;
     type Output = ContextReport;
 
-    fn visit(&self, context: &Context<'a, T>, environment: &mut Self::Environment) -> Self::Output {
+    fn visit(&self, context: &Context<T>, environment: &mut Self::Environment) -> Self::Output {
         if let Some(ref info) = context.info {
             self.broadcast(Event::EnterContext(info.clone()));
         }
@@ -153,13 +169,13 @@ impl<'a, T> Visitor<Context<'a, T>> for Runner<'a, T>
     }
 }
 
-impl<'a, T> Visitor<Example<'a, T>> for Runner<'a, T>
-    where T: 'a + Clone + Send + Sync + ::std::fmt::Debug
+impl<T> Visitor<Example<T>> for Runner
+    where T: Clone + Send + Sync + ::std::fmt::Debug
 {
     type Environment = T;
     type Output = ExampleReport;
 
-    fn visit(&self, example: &Example<'a, T>, environment: &mut Self::Environment) -> Self::Output {
+    fn visit(&self, example: &Example<T>, environment: &mut Self::Environment) -> Self::Output {
         self.broadcast(Event::EnterExample(example.info.clone()));
         let function = &example.function;
         let report = function(environment);

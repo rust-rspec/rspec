@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign};
 use std::iter::Sum;
 
-use example_report::ExampleReport;
+use report::example::ExampleReport;
 
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
 pub struct ContextReport {

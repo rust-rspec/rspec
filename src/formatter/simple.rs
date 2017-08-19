@@ -5,8 +5,9 @@ use colored::*;
 
 use events::{Event, EventHandler};
 use formatter::formatter::Formatter;
-use context_report::ContextReport;
-use example_report::ExampleReport;
+use report::suite::SuiteReport;
+use report::context::ContextReport;
+use report::example::ExampleReport;
 
 use suite::SuiteInfo;
 use context::ContextInfo;
@@ -45,7 +46,7 @@ impl<T: io::Write> Simple<T> {
         let _ = writeln!(self.buffer, "{} {:?}:", label, info.name);
     }
 
-    fn exit_suite(&mut self, report: &ContextReport) {
+    fn exit_suite(&mut self, report: &SuiteReport) {
         let _ = writeln!(self.buffer, "\nfailures:");
         let failed = mem::replace(&mut self.failed, vec![]);
         for scope_stack in failed {

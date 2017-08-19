@@ -1,4 +1,4 @@
-use example_report::ExampleReport;
+use report::example::ExampleReport;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ExampleLabel {
@@ -24,18 +24,14 @@ pub struct ExampleInfo {
     pub failure: Option<String>,
 }
 
-pub struct Example<'a, T>
-    where T: 'a
-{
+pub struct Example<T> {
     pub(crate) info: ExampleInfo,
-    pub(crate) function: Box<Fn(&T) -> ExampleReport + 'a>,
+    pub(crate) function: Box<Fn(&T) -> ExampleReport>,
 }
 
-impl<'a, T> Example<'a, T>
-    where T: 'a
-{
+impl<T> Example<T> {
     pub(crate) fn new<F>(info: ExampleInfo, f: F) -> Self
-        where F: Fn(&T) -> ExampleReport + 'a
+        where F: 'static + Fn(&T) -> ExampleReport
     {
         Example {
             info: info,
@@ -44,5 +40,5 @@ impl<'a, T> Example<'a, T>
     }
 }
 
-unsafe impl<'a, T> Send for Example<'a, T> where T: 'a + Send {}
-unsafe impl<'a, T> Sync for Example<'a, T> where T: 'a + Sync {}
+unsafe impl<T> Send for Example<T> where T: Send {}
+unsafe impl<T> Sync for Example<T> where T: Sync {}

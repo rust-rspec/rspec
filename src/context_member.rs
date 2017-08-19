@@ -2,12 +2,10 @@ use context::Context;
 use example::Example;
 
 /// This enum is used to build a tree of named tests and contextes.
-pub enum ContextMember<'a, T>
-    where T: 'a
-{
-    Example(Example<'a, T>),
-    Context(Context<'a, T>),
+pub enum ContextMember<T> {
+    Example(Example<T>),
+    Context(Context<T>),
 }
 
-unsafe impl<'a, T> Send for ContextMember<'a, T> where T: 'a + Send {}
-unsafe impl<'a, T> Sync for ContextMember<'a, T> where T: 'a + Sync {}
+unsafe impl<T> Send for ContextMember<T> where T: Send {}
+unsafe impl<T> Sync for ContextMember<T> where T: Sync {}

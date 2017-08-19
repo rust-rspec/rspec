@@ -11,9 +11,7 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use context_member::ContextMember;
-use example_report::{ExampleReport, Failure};
-use runner::Runner;
-use suite::{Suite, SuiteInfo, SuiteLabel};
+use report::example::{ExampleReport, Failure};
 use example::{Example, ExampleInfo, ExampleLabel};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -45,20 +43,16 @@ pub struct ContextInfo {
 
 /// Contexts are a powerful method to make your tests clear and well organized.
 /// In the long term this practice will keep tests easy to read.
-pub struct Context<'a, T>
-    where T: 'a
-{
+pub struct Context<T> {
     pub(crate) info: Option<ContextInfo>,
-    pub(crate) members: Vec<ContextMember<'a, T>>,
-    pub(crate) before_all: Vec<Box<Fn(&mut T) + 'a>>,
-    pub(crate) before_each: Vec<Box<Fn(&mut T) + 'a>>,
-    pub(crate) after_all: Vec<Box<Fn(&mut T) + 'a>>,
-    pub(crate) after_each: Vec<Box<Fn(&mut T) + 'a>>,
+    pub(crate) members: Vec<ContextMember<T>>,
+    pub(crate) before_all: Vec<Box<Fn(&mut T)>>,
+    pub(crate) before_each: Vec<Box<Fn(&mut T)>>,
+    pub(crate) after_all: Vec<Box<Fn(&mut T)>>,
+    pub(crate) after_each: Vec<Box<Fn(&mut T)>>,
 }
 
-impl<'a, T> Context<'a, T>
-    where T: 'a
-{
+impl<T> Context<T> {
     pub(crate) fn new(info: Option<ContextInfo>) -> Self {
         Context {
             info: info,
@@ -71,102 +65,10 @@ impl<'a, T> Context<'a, T>
     }
 }
 
-unsafe impl<'a, T> Send for Context<'a, T> where T: 'a + Send {}
-unsafe impl<'a, T> Sync for Context<'a, T> where T: 'a + Sync {}
+unsafe impl<T> Send for Context<T> where T: Send {}
+unsafe impl<T> Sync for Context<T> where T: Sync {}
 
-/// This creates a test suite's root context and returns a [Runner](../runner/struct.Runner.html) ready to run the test suite.
-///
-/// # Examples
-///
-/// ```
-/// # extern crate rspec;
-/// #
-/// # use std::io;
-/// # use std::sync::{Arc, Mutex};
-/// #
-/// # pub fn main() {
-/// #     let simple = rspec::formatter::Simple::new(io::stdout());
-/// #     let formatter = Arc::new(Mutex::new(simple));
-/// #
-/// let mut runner = rspec::suite("a test suite", (), |ctx| {
-///     // …
-/// });
-/// #
-/// #     runner.add_event_handler(formatter);
-/// #     runner.run_or_exit();
-/// # }
-/// ```
-///
-/// Corresponding console output:
-///
-/// ```no-run
-/// running tests
-/// Suite "a test suite":
-///     …
-/// ```
-///
-/// Available aliases:
-///
-/// - [`describe`](fn.describe.html).
-/// - [`given`](fn.given.html).
-pub fn suite<'a, 'b, S, F, T>(name: S, environment: T, body: F) -> Runner<'a, T>
-    where S: Into<String>,
-          F: 'a + FnOnce(&mut Context<'a, T>) -> (),
-          T: Clone + ::std::fmt::Debug
-{
-    let info = SuiteInfo {
-        label: SuiteLabel::Suite,
-        name: name.into(),
-    };
-    suite_internal(info, environment, body)
-}
-
-/// Alias for [`suite`](fn.suite.html), see for more info.
-///
-/// Available further aliases:
-///
-/// - [`given`](fn.describe.html).
-pub fn describe<'a, 'b, S, F, T>(name: S, environment: T, body: F) -> Runner<'a, T>
-    where S: Into<String>,
-          F: 'a + FnOnce(&mut Context<'a, T>) -> (),
-          T: Clone + ::std::fmt::Debug
-{
-    let info = SuiteInfo {
-        label: SuiteLabel::Describe,
-        name: name.into(),
-    };
-    suite_internal(info, environment, body)
-}
-
-/// Alias for [`suite`](fn.suite.html), see for more info.
-///
-/// Available further aliases:
-///
-/// - [`describe`](fn.describe.html).
-pub fn given<'a, 'b, S, F, T>(name: S, environment: T, body: F) -> Runner<'a, T>
-    where S: Into<String>,
-          F: 'a + FnOnce(&mut Context<'a, T>) -> (),
-          T: Clone + ::std::fmt::Debug
-{
-    let info = SuiteInfo {
-        label: SuiteLabel::Given,
-        name: name.into(),
-    };
-    suite_internal(info, environment, body)
-}
-
-fn suite_internal<'a, 'b, F, T>(info: SuiteInfo, environment: T, body: F) -> Runner<'a, T>
-    where F: 'a + FnOnce(&mut Context<'a, T>) -> (),
-          T: Clone + ::std::fmt::Debug
-{
-    // Note: root context's info get's ignored.
-    let mut ctx = Context::new(None);
-    body(&mut ctx);
-    let suite = Suite::new(info, ctx);
-    Runner::new(suite, environment)
-}
-
-impl<'a, T> Context<'a, T>
+impl<T> Context<T>
     where T: Clone
 {
     /// Open and name a new context within the current context.
@@ -181,18 +83,19 @@ impl<'a, T> Context<'a, T>
     /// # use std::io;
     /// # use std::sync::{Arc, Mutex};
     /// #
+    /// # use rspec::prelude::*;
+    /// #
     /// # pub fn main() {
     /// #     let simple = rspec::formatter::Simple::new(io::stdout());
     /// #     let formatter = Arc::new(Mutex::new(simple));
+    /// #     let configuration = Configuration::default().parallel(false);
+    /// #     let runner = Runner::new(configuration, vec![formatter]);
     /// #
-    /// let mut runner = rspec::suite("a test suite", (), |ctx| {
+    /// runner.run_or_exit(rspec::suite("a test suite", (), |ctx| {
     ///     ctx.context("opens a context labeled 'context'", |ctx| {
     ///         // …
     ///     });
-    /// });
-    /// #
-    /// #     runner.add_event_handler(formatter);
-    /// #     runner.run_or_exit();
+    /// }));
     /// # }
     /// ```
     ///
@@ -209,9 +112,9 @@ impl<'a, T> Context<'a, T>
     ///
     /// - [`specify`](struct.Context.html#method.specify).
     /// - [`when`](struct.Context.html#method.when).
-    pub fn context<'b, S, F>(&mut self, name: S, body: F)
-        where S: Into<Option<&'b str>>,
-              F: 'a + FnOnce(&mut Context<'a, T>) -> (),
+    pub fn context<'a, S, F>(&mut self, name: S, body: F)
+        where S: Into<Option<&'a str>>,
+              F: FnOnce(&mut Context<T>) -> (),
               T: ::std::fmt::Debug
     {
         let info = name.into().map(|name| {
@@ -228,9 +131,9 @@ impl<'a, T> Context<'a, T>
     /// Available further aliases:
     ///
     /// - [`when`](struct.Context.html#method.when).
-    pub fn specify<'b, S, F>(&mut self, name: S, body: F)
-        where S: Into<Option<&'b str>>,
-              F: 'a + FnOnce(&mut Context<'a, T>) -> (),
+    pub fn specify<'a, S, F>(&mut self, name: S, body: F)
+        where S: Into<Option<&'a str>>,
+              F: FnOnce(&mut Context<T>) -> (),
               T: ::std::fmt::Debug
     {
         let info = name.into().map(|name| {
@@ -249,7 +152,7 @@ impl<'a, T> Context<'a, T>
     /// - [`specify`](struct.Context.html#method.specify).
     pub fn when<'b, S, F>(&mut self, name: S, body: F)
         where S: Into<Option<&'b str>>,
-              F: 'a + FnOnce(&mut Context<'a, T>) -> (),
+              F: FnOnce(&mut Context<T>) -> (),
               T: ::std::fmt::Debug
     {
         let info = name.into().map(|name| {
@@ -271,11 +174,15 @@ impl<'a, T> Context<'a, T>
     /// # use std::io;
     /// # use std::sync::{Arc, Mutex};
     /// #
+    /// # use rspec::prelude::*;
+    /// #
     /// # pub fn main() {
     /// #     let simple = rspec::formatter::Simple::new(io::stdout());
     /// #     let formatter = Arc::new(Mutex::new(simple));
+    /// #     let configuration = Configuration::default().parallel(false);
+    /// #     let runner = Runner::new(configuration, vec![formatter]);
     /// #
-    /// let mut runner = rspec::suite("a suite",(), |ctx| {
+    /// runner.run_or_exit(rspec::suite("a suite",(), |ctx| {
     ///     ctx.context("a context", |ctx| {
     ///         ctx.scope(|ctx| {
     ///             ctx.example("an example", |env| {
@@ -283,10 +190,7 @@ impl<'a, T> Context<'a, T>
     ///             });
     ///         });
     ///     });
-    /// });
-    /// #
-    /// #     runner.add_event_handler(formatter);
-    /// #     runner.run_or_exit();
+    /// }));
     /// # }
     /// ```
     ///
@@ -302,14 +206,14 @@ impl<'a, T> Context<'a, T>
     /// The `before_each(…)` block gets executed before `'It "tests a"'` and `'It "tests a"'`,
     /// but not before `'It "tests c"'`.
     pub fn scope<F>(&mut self, body: F)
-        where F: 'a + FnOnce(&mut Context<'a, T>) -> (),
+        where F: FnOnce(&mut Context<T>) -> (),
               T: ::std::fmt::Debug
     {
         self.context_internal(None, body)
     }
 
     fn context_internal<F>(&mut self, info: Option<ContextInfo>, body: F)
-        where F: 'a + FnOnce(&mut Context<'a, T>) -> (),
+        where F: FnOnce(&mut Context<T>) -> (),
               T: ::std::fmt::Debug
     {
         let mut child = Context::new(info);
@@ -329,18 +233,19 @@ impl<'a, T> Context<'a, T>
     /// # use std::io;
     /// # use std::sync::{Arc, Mutex};
     /// #
+    /// # use rspec::prelude::*;
+    /// #
     /// # pub fn main() {
     /// #     let simple = rspec::formatter::Simple::new(io::stdout());
     /// #     let formatter = Arc::new(Mutex::new(simple));
+    /// #     let configuration = Configuration::default().parallel(false);
+    /// #     let runner = Runner::new(configuration, vec![formatter]);
     /// #
-    /// let mut runner = rspec::suite("a test suite", (), |ctx| {
+    /// runner.run_or_exit(rspec::suite("a test suite", (), |ctx| {
     ///     ctx.example("an example", |env| {
     ///         // …
     ///     });
-    /// });
-    /// #
-    /// #     runner.add_event_handler(formatter);
-    /// #     runner.run_or_exit();
+    /// }));
     /// # }
     /// ```
     ///
@@ -359,7 +264,7 @@ impl<'a, T> Context<'a, T>
     /// - [`then`](struct.Context.html#method.then).
     pub fn example<S, F, U>(&mut self, name: S, body: F)
         where S: Into<String>,
-              F: 'a + Fn(&T) -> U,
+              F: 'static + Fn(&T) -> U,
               U: Into<ExampleReport>
     {
         let info = ExampleInfo {
@@ -377,7 +282,7 @@ impl<'a, T> Context<'a, T>
     /// - [`it`](struct.Context.html#method.it).
     pub fn it<S, F, U>(&mut self, name: S, body: F)
         where S: Into<String>,
-              F: 'a + Fn(&T) -> U,
+              F: 'static + Fn(&T) -> U,
               U: Into<ExampleReport>
     {
         let info = ExampleInfo {
@@ -395,7 +300,7 @@ impl<'a, T> Context<'a, T>
     /// - [`it`](struct.Context.html#method.it).
     pub fn then<S, F, U>(&mut self, name: S, body: F)
         where S: Into<String>,
-              F: 'a + Fn(&T) -> U,
+              F: 'static + Fn(&T) -> U,
               U: Into<ExampleReport>
     {
         let info = ExampleInfo {
@@ -407,7 +312,7 @@ impl<'a, T> Context<'a, T>
     }
 
     fn example_internal<F, U>(&mut self, info: ExampleInfo, body: F)
-        where F: 'a + Fn(&T) -> U,
+        where F: 'static + Fn(&T) -> U,
               U: Into<ExampleReport>
     {
         let test = Example::new(info, move |environment| {
@@ -444,11 +349,15 @@ impl<'a, T> Context<'a, T>
     /// # use std::io;
     /// # use std::sync::{Arc, Mutex};
     /// #
+    /// # use rspec::prelude::*;
+    /// #
     /// # pub fn main() {
     /// #     let simple = rspec::formatter::Simple::new(io::stdout());
     /// #     let formatter = Arc::new(Mutex::new(simple));
+    /// #     let configuration = Configuration::default().parallel(false);
+    /// #     let runner = Runner::new(configuration, vec![formatter]);
     /// #
-    /// let mut runner = rspec::suite("a test suite", (), |ctx| {
+    /// runner.run_or_exit(rspec::suite("a test suite", (), |ctx| {
     ///     ctx.before_all(|env| {
     ///         // …
     ///     });
@@ -460,10 +369,7 @@ impl<'a, T> Context<'a, T>
     ///     ctx.example("another example", |env| {
     ///         // …
     ///     });
-    /// });
-    /// #
-    /// #     runner.add_event_handler(formatter);
-    /// #     runner.run_or_exit();
+    /// }));
     /// # }
     /// ```
     ///
@@ -482,14 +388,14 @@ impl<'a, T> Context<'a, T>
     ///
     /// - [`before`](struct.Context.html#method.before).
     pub fn before_all<F>(&mut self, body: F)
-        where F: 'a + Fn(&mut T)
+        where F: 'static + Fn(&mut T)
     {
         self.before_all.push(Box::new(body))
     }
 
     /// Alias for [`before_all`](struct.Context.html#method.before_all), see for more info.
     pub fn before<F>(&mut self, body: F)
-        where F: 'a + Fn(&mut T)
+        where F: 'static + Fn(&mut T)
     {
         self.before_all(body)
     }
@@ -507,11 +413,15 @@ impl<'a, T> Context<'a, T>
     /// # use std::io;
     /// # use std::sync::{Arc, Mutex};
     /// #
+    /// # use rspec::prelude::*;
+    /// #
     /// # pub fn main() {
     /// #     let simple = rspec::formatter::Simple::new(io::stdout());
     /// #     let formatter = Arc::new(Mutex::new(simple));
+    /// #     let configuration = Configuration::default().parallel(false);
+    /// #     let runner = Runner::new(configuration, vec![formatter]);
     /// #
-    /// let mut runner = rspec::suite("a test suite", (), |ctx| {
+    /// runner.run_or_exit(rspec::suite("a test suite", (), |ctx| {
     ///     ctx.before_each(|env| {
     ///         // …
     ///     });
@@ -523,10 +433,7 @@ impl<'a, T> Context<'a, T>
     ///     ctx.example("another example", |env| {
     ///         // …
     ///     });
-    /// });
-    /// #
-    /// #     runner.add_event_handler(formatter);
-    /// #     runner.run_or_exit();
+    /// }));
     /// # }
     /// ```
     ///
@@ -541,7 +448,7 @@ impl<'a, T> Context<'a, T>
     ///         …
     /// ```
     pub fn before_each<F>(&mut self, body: F)
-        where F: 'a + Fn(&mut T)
+        where F: 'static + Fn(&mut T)
     {
         self.before_each.push(Box::new(body))
     }
@@ -559,11 +466,15 @@ impl<'a, T> Context<'a, T>
     /// # use std::io;
     /// # use std::sync::{Arc, Mutex};
     /// #
+    /// # use rspec::prelude::*;
+    /// #
     /// # pub fn main() {
     /// #     let simple = rspec::formatter::Simple::new(io::stdout());
     /// #     let formatter = Arc::new(Mutex::new(simple));
+    /// #     let configuration = Configuration::default().parallel(false);
+    /// #     let runner = Runner::new(configuration, vec![formatter]);
     /// #
-    /// let mut runner = rspec::suite("a test suite", (), |ctx| {
+    /// runner.run_or_exit(rspec::suite("a test suite", (), |ctx| {
     ///     ctx.after_all(|env| {
     ///         // …
     ///     });
@@ -575,10 +486,7 @@ impl<'a, T> Context<'a, T>
     ///     ctx.example("another example", |env| {
     ///         // …
     ///     });
-    /// });
-    /// #
-    /// #     runner.add_event_handler(formatter);
-    /// #     runner.run_or_exit();
+    /// }));
     /// # }
     /// ```
     ///
@@ -597,14 +505,14 @@ impl<'a, T> Context<'a, T>
     ///
     /// - [`after`](struct.Context.html#method.after).
     pub fn after_all<F>(&mut self, body: F)
-        where F: 'a + Fn(&mut T)
+        where F: 'static + Fn(&mut T)
     {
         self.after_all.push(Box::new(body))
     }
 
     /// Alias for [`after_all`](struct.Context.html#method.after_all), see for more info.
     pub fn after<F>(&mut self, body: F)
-        where F: 'a + Fn(&mut T)
+        where F: 'static + Fn(&mut T)
     {
         self.after_all(body)
     }
@@ -622,11 +530,15 @@ impl<'a, T> Context<'a, T>
     /// # use std::io;
     /// # use std::sync::{Arc, Mutex};
     /// #
+    /// # use rspec::prelude::*;
+    /// #
     /// # pub fn main() {
     /// #     let simple = rspec::formatter::Simple::new(io::stdout());
     /// #     let formatter = Arc::new(Mutex::new(simple));
+    /// #     let configuration = Configuration::default().parallel(false);
+    /// #     let runner = Runner::new(configuration, vec![formatter]);
     /// #
-    /// let mut runner = rspec::suite("a test suite", (), |ctx| {
+    /// runner.run_or_exit(rspec::suite("a test suite", (), |ctx| {
     ///     ctx.after_each(|env| {
     ///         // …
     ///     });
@@ -638,10 +550,7 @@ impl<'a, T> Context<'a, T>
     ///     ctx.example("another example", |env| {
     ///         // …
     ///     });
-    /// });
-    /// #
-    /// #     runner.add_event_handler(formatter);
-    /// #     runner.run_or_exit();
+    /// }));
     /// # }
     /// ```
     ///
@@ -656,7 +565,7 @@ impl<'a, T> Context<'a, T>
     ///         …
     /// ```
     pub fn after_each<F>(&mut self, body: F)
-        where F: 'a + Fn(&mut T)
+        where F: 'static + Fn(&mut T)
     {
         self.after_each.push(Box::new(body))
     }
@@ -664,8 +573,7 @@ impl<'a, T> Context<'a, T>
 
 #[cfg(test)]
 mod tests {
-    pub use super::*;
-    pub use example_report::ExampleReport;
+    use suite::{suite, describe, given};
 
     mod describe {
         pub use super::*;

@@ -1,6 +1,6 @@
 use std::convert::From;
 
-#[cfg(feature = "use_expectest")]
+#[cfg(feature = "expectest_compat")]
 use expectest::core::TestResult as ExpectestResult;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -24,9 +24,6 @@ pub enum ExampleReport {
     Ignored,
     Failure(Failure),
 }
-
-// #[derive(Clone, PartialEq, Eq, Debug)]
-// pub struct ExampleReport(Result<(), String>);
 
 impl ExampleReport {
     pub fn err<S>(message: Option<S>) -> Self
@@ -75,7 +72,7 @@ impl<T1, T2> From<Result<T1, T2>> for ExampleReport
     }
 }
 
-#[cfg(feature = "use_expectest")]
+#[cfg(feature = "expectest_compat")]
 impl From<ExpectestResult> for ExampleReport {
     fn from(other: ExpectestResult) -> ExampleReport {
         match other {
