@@ -43,3 +43,6 @@ impl<'a, T> Example<'a, T>
         }
     }
 }
+
+unsafe impl<'a, T> Send for Example<'a, T> where T: 'a + Send {}
+unsafe impl<'a, T> Sync for Example<'a, T> where T: 'a + Sync {}

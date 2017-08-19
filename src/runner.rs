@@ -8,7 +8,12 @@
 
 use std::mem;
 use std::panic;
+use std::sync::{Arc, Mutex};
 
+use rayon;
+use rayon::prelude::*;
+
+use context_member::ContextMember;
 use example_report::ExampleReport;
 use context_report::ContextReport;
 use visitor::Visitor;
@@ -17,19 +22,15 @@ use events::{Event, EventHandler};
 use suite::Suite;
 use context::Context;
 use example::Example;
-use context::ContextMember;
 
-/// Handlers is a separate struct which only holds the registered handlers.
-/// This is useful to Runner so that its recursive call doesn't have to keep a refernce to `self`
-#[derive(Default)]
-struct Handlers<'a> {
-    handlers: Vec<&'a mut EventHandler>,
+pub struct Configuration {
+    parallel: bool
 }
 
-impl<'a> Handlers<'a> {
-    fn broadcast(&mut self, event: &Event) {
-        for h in &mut self.handlers {
-            h.trigger(event)
+impl Default for Configuration {
+    fn default() -> Self {
+        Configuration {
+            parallel: true
         }
     }
 }
@@ -38,116 +39,112 @@ pub struct Runner<'a, T>
     where T: 'a
 {
     suite: Option<Suite<'a, T>>,
-    environments: Vec<T>,
-    report: ContextReport,
-    handlers: Handlers<'a>,
+    environment: T,
+    handlers: Vec<Arc<Mutex<EventHandler>>>,
 }
 
 impl<'a, T> Runner<'a, T> {
     pub fn new(suite: Suite<'a, T>, environment: T) -> Runner<'a, T> {
         Runner {
             suite: Some(suite),
-            environments: vec![environment],
-            report: ContextReport::default(),
-            handlers: Handlers::default(),
+            environment: environment,
+            handlers: vec![],
         }
     }
 }
 
 impl<'a, T> Runner<'a, T>
-    where T: 'a + Clone + ::std::fmt::Debug
+    where T: 'a + Clone + Send + Sync + ::std::fmt::Debug
 {
-    pub fn run(mut self) -> ContextReport {
+    pub fn run(self) -> ContextReport {
+        self.run_with(&Configuration::default())
+    }
+
+    pub fn run_with(mut self, config: &Configuration) -> ContextReport {
         let suite = mem::replace(&mut self.suite, None).expect("Expected context");
         panic::set_hook(Box::new(|_panic_info| {
             // silently swallows panics
         }));
-        self.visit(&suite);
+        let mut environment = self.environment.clone();
+        let threads = if config.parallel { 0 } else  { 1 };
+        let _ = rayon::initialize(rayon::Configuration::new().num_threads(threads));
+        let report = self.visit(&suite, &mut environment);
         let _ = panic::take_hook();
-        self.report
+        report
     }
 
     pub fn run_or_exit(self) {
-        if self.run().failed > 0 {
+        self.run_or_exit_with(&Configuration::default())
+    }
+
+    pub fn run_or_exit_with(self, config: &Configuration) {
+        if self.run_with(config).failed > 0 {
             ::std::process::exit(101);
         }
     }
 
-    pub fn add_event_handler<H: EventHandler>(&mut self, handler: &'a mut H) {
-        self.handlers.handlers.push(handler)
+    pub fn add_event_handler(&mut self, handler: Arc<Mutex<EventHandler>>) {
+        self.handlers.push(handler)
     }
 
-    pub fn broadcast(&mut self, event: Event) {
-        self.handlers.broadcast(&event)
-    }
-
-    pub fn push_environment(&mut self, environment: T) {
-        self.environments.push(environment);
-    }
-
-    pub fn pop_environment(&mut self) -> Option<T> {
-        self.environments.pop()
-    }
-
-    pub fn get_environment(&self) -> &T {
-        let index = self.environments.len() - 1;
-        &self.environments[index]
-    }
-
-    pub(crate) fn get_environment_mut(&mut self) -> &mut T {
-        let index = self.environments.len() - 1;
-        &mut self.environments[index]
+    fn broadcast(&self, event: Event) {
+        for mutex in &self.handlers {
+            if let Ok(ref mut handler) = mutex.lock() {
+                handler.handle(&event);
+            } else {
+                println!("Error: lock failed");
+            }
+        }
     }
 }
 
 impl<'a, T> Visitor<Suite<'a, T>> for Runner<'a, T>
-    where T: 'a + Clone + ::std::fmt::Debug
+    where T: 'a + Clone + Send + Sync + ::std::fmt::Debug
 {
+    type Environment = T;
     type Output = ContextReport;
 
-    fn visit(&mut self, suite: &Suite<'a, T>) -> Self::Output {
+    fn visit(&self, suite: &Suite<'a, T>, environment: &mut Self::Environment) -> Self::Output {
         self.broadcast(Event::EnterSuite(suite.info.clone()));
-        let report = self.visit(&suite.context);
+        let report = self.visit(&suite.context, environment);
         self.broadcast(Event::ExitSuite(report.clone()));
         report
     }
 }
 
 impl<'a, T> Visitor<Context<'a, T>> for Runner<'a, T>
-    where T: 'a + Clone + ::std::fmt::Debug
+    where T: 'a + Clone + Send + Sync + ::std::fmt::Debug
 {
+    type Environment = T;
     type Output = ContextReport;
 
-    fn visit(&mut self, context: &Context<'a, T>) -> Self::Output {
-        let mut report = ContextReport::default();
+    fn visit(&self, context: &Context<'a, T>, environment: &mut Self::Environment) -> Self::Output {
         if let Some(ref info) = context.info {
             self.broadcast(Event::EnterContext(info.clone()));
         }
-        if let Some(environment) = self.environments.last_mut() {
-            for function in context.before_all.iter() {
-                function(environment);
-            }
+        for function in context.before_all.iter() {
+            function(environment);
         }
-        for member in context.members.iter() {
-            let environment = self.environments.last().unwrap().clone();
-            self.push_environment(environment);
-            if let Some(environment) = self.environments.last_mut() {
-                for function in context.before_each.iter() {
-                    function(environment);
+        let report: ContextReport = context.members.par_iter().map(|member| {
+            let mut environment = environment.clone();
+            for function in context.before_each.iter() {
+                function(&mut environment);
+            }
+            let report = match member {
+                &ContextMember::Example(ref example) => {
+                    self.visit(example, &mut environment).into()
                 }
-            }
-            report.add(self.visit(member));
-            if let Some(environment) = self.environments.last_mut() {
-                for function in context.after_each.iter() {
-                    function(environment);
+                &ContextMember::Context(ref context) => {
+                    self.visit(context, &mut environment.clone())
                 }
+            };
+            for function in context.after_each.iter() {
+                function(&mut environment);
             }
-            self.pop_environment();
-        }
-        if let Some(environment) = self.environments.last_mut() {
-            for function in context.after_all.iter() {
-                function(environment);
-            }
+            report
+        }).sum();
+        for function in context.after_all.iter() {
+            function(environment);
         }
         if let Some(_) = context.info {
             self.broadcast(Event::ExitContext(report.clone()));
@@ -156,32 +153,16 @@ impl<'a, T> Visitor<Context<'a, T>> for Runner<'a, T>
     }
 }
 
-impl<'a, T> Visitor<ContextMember<'a, T>> for Runner<'a, T>
-    where T: 'a + Clone + ::std::fmt::Debug
-{
-    type Output = ContextReport;
-
-    fn visit(&mut self, member: &ContextMember<'a, T>) -> Self::Output {
-        match member {
-            &ContextMember::Example(ref example) => {
-                self.visit(example).into()
-            }
-            &ContextMember::Context(ref context) => {
-                self.visit(context)
-            }
-        }
-    }
-}
-
 impl<'a, T> Visitor<Example<'a, T>> for Runner<'a, T>
-    where T: 'a + Clone + ::std::fmt::Debug
+    where T: 'a + Clone + Send + Sync + ::std::fmt::Debug
 {
+    type Environment = T;
     type Output = ExampleReport;
 
-    fn visit(&mut self, example: &Example<'a, T>) -> Self::Output {
+    fn visit(&self, example: &Example<'a, T>, environment: &mut Self::Environment) -> Self::Output {
         self.broadcast(Event::EnterExample(example.info.clone()));
         let function = &example.function;
-        let report = function(&self.get_environment());
+        let report = function(environment);
         self.broadcast(Event::ExitExample(report.clone()));
         report
     }

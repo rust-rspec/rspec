@@ -1,5 +1,6 @@
 pub trait Visitor<T> {
+    type Environment;
     type Output;
 
-    fn visit(&mut self, visitable: &T) -> Self::Output;
+    fn visit(&self, visitable: &T, environment: &mut Self::Environment) -> Self::Output;
 }

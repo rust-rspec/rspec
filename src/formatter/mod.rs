@@ -4,12 +4,13 @@
 //! # Examples
 //!
 //! ```
-//! use rspec::context::describe;
-//! use rspec::formatter::Simple;
-//! use std::io;
+//! extern crate rspec;
 //!
-//! let stdout = &mut io::stdout();
-//! let mut formatter = rspec::formatter::Simple::new(stdout);
+//! use std::io;
+//! use std::sync::{Arc, Mutex};
+//!
+//! let simple = rspec::formatter::Simple::new(io::stdout());
+//! let formatter = Arc::new(Mutex::new(simple));
 //!
 //! #[derive(Clone, Debug)]
 //! struct Environment {
@@ -19,12 +20,12 @@
 //! let environment = Environment {
 //!     // ...
 //! };
-//! 
+//!
 //! let mut runner = rspec::given("Some title", environment, |ctx| {
 //!     // ...
 //! });
 //!
-//! runner.add_event_handler(&mut formatter);
+//! runner.add_event_handler(formatter);
 //! runner.run_or_exit();
 //! ```
 

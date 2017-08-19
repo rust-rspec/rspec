@@ -1,11 +1,12 @@
 extern crate rspec;
 
 use std::io;
+use std::sync::{Arc, Mutex};
 use std::collections::BTreeSet;
 
 pub fn main() {
-    let stdout = &mut io::stdout();
-    let mut formatter = rspec::formatter::Simple::new(stdout);
+    let simple = rspec::formatter::Simple::new(io::stdout());
+    let formatter = Arc::new(Mutex::new(simple));
 
     #[derive(Clone, Debug)]
     struct Environment {
@@ -32,10 +33,22 @@ pub fn main() {
             });
 
             ctx.then("it is not empty any more", |env| {
+                // println!("\n👉  it is not empty any more");
+                // use std::time::Duration;
+                // use std::thread;
+                // thread::sleep(Duration::from_millis(4000));
+                // println!("it is not empty any more  👈");
+
                 assert!(!env.set.is_empty());
             });
 
             ctx.then("its len increases by 1", move |env| {
+                // println!("\n👉  its len increases by 1");
+                // use std::time::Duration;
+                // use std::thread;
+                // thread::sleep(Duration::from_millis(4000));
+                // println!("its len increases by 1  👈");
+
                 assert_eq!(env.set.len(), env.len_before + 1);
             });
 
@@ -62,6 +75,6 @@ pub fn main() {
         });
     });
 
-    runner.add_event_handler(&mut formatter);
+    runner.add_event_handler(formatter);
     runner.run_or_exit();
 }

@@ -17,6 +17,6 @@ pub enum Event {
     ExitExample(ExampleReport),
 }
 
-pub trait EventHandler {
-    fn trigger(&mut self, event: &Event);
+pub trait EventHandler: Send + Sync {
+    fn handle(&mut self, event: &Event);
 }

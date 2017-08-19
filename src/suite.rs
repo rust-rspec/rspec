@@ -40,3 +40,6 @@ impl<'a, T> Suite<'a, T>
         }
     }
 }
+
+unsafe impl<'a, T> Send for Suite<'a, T> where T: 'a + Send {}
+unsafe impl<'a, T> Sync for Suite<'a, T> where T: 'a + Sync {}

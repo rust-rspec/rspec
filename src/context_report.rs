@@ -1,3 +1,6 @@
+use std::ops::{Add, AddAssign};
+use std::iter::Sum;
+
 use example_report::ExampleReport;
 
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
@@ -38,5 +41,37 @@ impl From<ExampleReport> for ContextReport {
             ignored: 0,
             measured: 0,
         }
+    }
+}
+
+impl Add<Self> for ContextReport {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        ContextReport {
+            passed: self.passed + other.passed,
+            failed: self.failed + other.failed,
+            ignored: self.ignored + other.ignored,
+            measured: self.measured + other.measured,
+        }
+    }
+}
+
+impl AddAssign<Self> for ContextReport {
+    fn add_assign(&mut self, rhs: Self) {
+        self.passed += rhs.passed;
+        self.failed += rhs.failed;
+        self.ignored += rhs.ignored;
+        self.measured += rhs.measured;
+    }
+}
+
+impl Sum<Self> for ContextReport {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        let mut report = ContextReport::default();
+        for sub_report in iter {
+            report += sub_report;
+        }
+        report
     }
 }

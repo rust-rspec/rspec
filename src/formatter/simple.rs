@@ -19,16 +19,16 @@ enum ScopeInfo {
     Example(ExampleInfo),
 }
 
-pub struct Simple<'a, Io: io::Write + 'a> {
-    buf: &'a mut Io,
+pub struct Simple<T: io::Write> {
+    buffer: T,
     name_stack: Vec<ScopeInfo>,
     failed: Vec<Vec<ScopeInfo>>,
 }
 
-impl<'a, T: io::Write> Simple<'a, T> {
-    pub fn new(buf: &mut T) -> Simple<T> {
+impl<T: io::Write> Simple<T> {
+    pub fn new(buffer: T) -> Simple<T> {
         Simple {
-            buf: buf,
+            buffer: buffer,
             name_stack: vec![],
             failed: vec![],
         }
@@ -40,13 +40,13 @@ impl<'a, T: io::Write> Simple<'a, T> {
 
     fn enter_suite(&mut self, info: &SuiteInfo) {
         self.name_stack.push(ScopeInfo::Suite(info.clone()));
-        let _ = writeln!(self.buf, "\nrunning tests");
+        let _ = writeln!(self.buffer, "\nrunning tests");
         let label: &str = info.label.into();
-        let _ = writeln!(self.buf, "{} {:?}:", label, info.name);
+        let _ = writeln!(self.buffer, "{} {:?}:", label, info.name);
     }
 
     fn exit_suite(&mut self, report: &ContextReport) {
-        let _ = writeln!(self.buf, "\nfailures:");
+        let _ = writeln!(self.buffer, "\nfailures:");
         let failed = mem::replace(&mut self.failed, vec![]);
         for scope_stack in failed {
             for (indent, scope) in scope_stack.into_iter().enumerate() {
@@ -54,22 +54,22 @@ impl<'a, T: io::Write> Simple<'a, T> {
                     ScopeInfo::Suite(info) => {
                         let padding = Self::padding(indent);
                         let label: &str = info.label.into();
-                        let _ = writeln!(self.buf, "{}{} {:?}:", padding, label, info.name);
+                        let _ = writeln!(self.buffer, "{}{} {:?}:", padding, label, info.name);
                     }
                     ScopeInfo::Context(info) => {
                         let padding = Self::padding(indent);
                         let label: &str = info.label.into();
-                        let _ = writeln!(self.buf, "{}{} {:?}:", padding, label, info.name);
+                        let _ = writeln!(self.buffer, "{}{} {:?}:", padding, label, info.name);
                     }
                     ScopeInfo::Example(info) => {
                         let padding = Self::padding(indent);
                         let label: &str = info.label.into();
                         if let Some(failure) = info.failure {
-                            let _ = writeln!(self.buf, "{}{} {:?}:", padding, label, info.name);
+                            let _ = writeln!(self.buffer, "{}{} {:?}:", padding, label, info.name);
                             let padding = Self::padding(indent + 1);
-                            let _ = writeln!(self.buf, "{}{}", padding, failure);
+                            let _ = writeln!(self.buffer, "{}{}", padding, failure);
                         } else {
-                            let _ = writeln!(self.buf, "{}{} {:?}", padding, label, info.name);
+                            let _ = writeln!(self.buffer, "{}{} {:?}", padding, label, info.name);
                         }
                     }
                 }
@@ -81,15 +81,15 @@ impl<'a, T: io::Write> Simple<'a, T> {
         } else {
             "FAILED".red()
         };
-        let _ = write!(self.buf, "\ntest result: {}.", label);
-        let _ = write!(self.buf, " {} passed", report.passed);
-        let _ = write!(self.buf, "; {} failed", report.failed);
-        let _ = write!(self.buf, "; {} ignored", report.ignored);
-        let _ = write!(self.buf, "; {} measured", report.measured);
-        let _ = writeln!(self.buf, "");
+        let _ = write!(self.buffer, "\ntest result: {}.", label);
+        let _ = write!(self.buffer, " {} passed", report.passed);
+        let _ = write!(self.buffer, "; {} failed", report.failed);
+        let _ = write!(self.buffer, "; {} ignored", report.ignored);
+        let _ = write!(self.buffer, "; {} measured", report.measured);
+        let _ = writeln!(self.buffer, "");
 
         if report.failed > 0 {
-            let _ = writeln!(self.buf, "\n{}: test failed", "error".red().bold());
+            let _ = writeln!(self.buffer, "\n{}: test failed", "error".red().bold());
         }
     }
 
@@ -97,28 +97,28 @@ impl<'a, T: io::Write> Simple<'a, T> {
         self.name_stack.push(ScopeInfo::Context(info.clone()));
 
         let indent = self.name_stack.len() - 1;
-        let _ = write!(self.buf, "{}", Self::padding(indent));
+        let _ = write!(self.buffer, "{}", Self::padding(indent));
 
         let label: &str = info.label.into();
-        let _ = writeln!(self.buf, "{} {:?}:", label, info.name);
+        let _ = writeln!(self.buffer, "{} {:?}:", label, info.name);
     }
 
     fn exit_context(&mut self, _report: &ContextReport) {
         self.name_stack.pop();
     }
 
-    fn enter_test(&mut self, info: &ExampleInfo) {
+    fn enter_example(&mut self, info: &ExampleInfo) {
         self.name_stack.push(ScopeInfo::Example(info.clone()));
 
         let indent = self.name_stack.len() - 1;
-        let _ = write!(self.buf, "{}", Self::padding(indent));
+        let _ = write!(self.buffer, "{}", Self::padding(indent));
 
         let label: &str = info.label.into();
-        let _ = write!(self.buf, "{} {:?}", label, info.name);
-        let _ = write!(self.buf, " ... ");
+        let _ = write!(self.buffer, "{} {:?}", label, info.name);
+        let _ = write!(self.buffer, " ... ");
     }
 
-    fn exit_test(&mut self, result: &ExampleReport) {
+    fn exit_example(&mut self, result: &ExampleReport) {
         if let &ExampleReport::Failure(ref failure) = result {
             if let Some(&mut ScopeInfo::Example(ref mut test_info)) = self.name_stack.last_mut() {
                 test_info.failure = failure.message.clone();
@@ -132,13 +132,15 @@ impl<'a, T: io::Write> Simple<'a, T> {
         } else {
             "FAILED".red()
         };
-        let _ = writeln!(self.buf, "{}", label);
+        let _ = writeln!(self.buffer, "{}", label);
         self.name_stack.pop();
     }
 }
 
-impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
-    fn trigger(&mut self, event: &Event) {
+impl<T: io::Write> EventHandler for Simple<T>
+    where T: Send + Sync
+{
+    fn handle(&mut self, event: &Event) {
         match *event {
             Event::EnterSuite(ref name) => {
                 self.enter_suite(name);
@@ -153,16 +155,18 @@ impl<'a, T: io::Write> EventHandler for Simple<'a, T> {
                 self.exit_context(report);
             }
             Event::EnterExample(ref name) => {
-                self.enter_test(name);
+                self.enter_example(name);
             }
             Event::ExitExample(ref result) => {
-                self.exit_test(result);
+                self.exit_example(result);
             }
         };
     }
 }
 
-impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
+impl<T: io::Write> Formatter for Simple<T>
+    where T: Send + Sync
+{}
 
 // #[cfg(test)]
 // mod tests {
@@ -187,11 +191,11 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //         pub use super::*;
 //
 //         #[test]
-//         fn it_display_that_tests_started() {
+//         fn it_display_that_examples_started() {
 //             let mut v = vec![];
 //             {
 //                 let mut s = Simple::new(&mut v);
-//                 s.trigger(&Event::EnterSuite);
+//                 s.handle(&Event::EnterSuite);
 //             }
 //
 //             assert_eq!("\nrunning tests", str::from_utf8(&v).unwrap());
@@ -228,9 +232,9 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //         }
 //
 //         test_and_compare_output! {
-//             no_test_is_ok: (passed: 0, failed: 0) =>
+//             no_example_is_ok: (passed: 0, failed: 0) =>
 //                 "\n\ntest result: ok. 0 examples; 0 passed; 0 failed;",
-//             one_test: (passed: 1, failed: 0) =>
+//             one_example: (passed: 1, failed: 0) =>
 //                 "\n\ntest result: ok. 1 examples; 1 passed; 0 failed;",
 //             multiple_ok: (passed: 42, failed: 0) =>
 //                 "\n\ntest result: ok. 42 examples; 42 passed; 0 failed;",
@@ -245,7 +249,7 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //         }
 //     }
 //
-//     mod event_end_test {
+//     mod event_end_example {
 //         pub use super::*;
 //
 //         #[test]
@@ -253,7 +257,7 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut v = vec![];
 //             {
 //                 let mut s = Simple::new(&mut v);
-//                 s.trigger(&Event::ExitExample(SUCCESS_RES))
+//                 s.handle(&Event::ExitExample(SUCCESS_RES))
 //             }
 //
 //             assert_eq!(".", str::from_utf8(&v).unwrap());
@@ -265,7 +269,7 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut v = vec![];
 //             {
 //                 let mut s = Simple::new(&mut v);
-//                 s.trigger(&Event::ExitExample(FAILED_RES))
+//                 s.handle(&Event::ExitExample(FAILED_RES))
 //             }
 //
 //             assert_eq!("F", str::from_utf8(&v).unwrap());
@@ -280,10 +284,10 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
 //
-//             s.trigger(&Event::EnterContext(String::from("Hey !")));
+//             s.handle(&Event::EnterContext(String::from("Hey !")));
 //             assert_eq!(vec![String::from("Hey !")], s.name_stack);
 //
-//             s.trigger(&Event::EnterContext(String::from("Ho !")));
+//             s.handle(&Event::EnterContext(String::from("Ho !")));
 //             assert_eq!(vec![String::from("Hey !"), String::from("Ho !")],
 //                        s.name_stack)
 //         }
@@ -293,13 +297,13 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
 //
-//             s.trigger(&Event::EnterContext(String::from("Hey !")));
-//             s.trigger(&Event::EnterContext(String::from("Ho !")));
+//             s.handle(&Event::EnterContext(String::from("Hey !")));
+//             s.handle(&Event::EnterContext(String::from("Ho !")));
 //
-//             s.trigger(&Event::ExitContext);
+//             s.handle(&Event::ExitContext);
 //             assert_eq!(vec![String::from("Hey !")], s.name_stack);
 //
-//             s.trigger(&Event::ExitContext);
+//             s.handle(&Event::ExitContext);
 //             assert_eq!(0, s.name_stack.len());
 //         }
 //     }
@@ -311,8 +315,8 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //         fn it_register_failures() {
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
-//             s.trigger(&Event::EnterExample("hola".into()));
-//             s.trigger(&Event::ExitExample(FAILED_RES));
+//             s.handle(&Event::EnterExample("hola".into()));
+//             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(1, s.failed.len());
 //         }
 //
@@ -320,8 +324,8 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //         fn it_keep_track_of_the_failure_name() {
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
-//             s.trigger(&Event::EnterExample("hola".into()));
-//             s.trigger(&Event::ExitExample(FAILED_RES));
+//             s.handle(&Event::EnterExample("hola".into()));
+//             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"hola".into()), s.failed.get(0));
 //         }
 //
@@ -329,14 +333,14 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //         fn it_has_a_nice_diplay_for_describes() {
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
-//             s.trigger(&Event::EnterContext("hola".into()));
-//             s.trigger(&Event::EnterExample("holé".into()));
-//             s.trigger(&Event::ExitExample(FAILED_RES));
+//             s.handle(&Event::EnterContext("hola".into()));
+//             s.handle(&Event::EnterExample("holé".into()));
+//             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"hola | holé".into()), s.failed.get(0));
 //
-//             s.trigger(&Event::EnterContext("ohééé".into()));
-//             s.trigger(&Event::EnterExample("holé".into()));
-//             s.trigger(&Event::ExitExample(FAILED_RES));
+//             s.handle(&Event::EnterContext("ohééé".into()));
+//             s.handle(&Event::EnterExample("holé".into()));
+//             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"hola | ohééé | holé".into()), s.failed.get(1));
 //         }
 //
@@ -344,14 +348,14 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //         fn it_works_with_multiple_describes() {
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
-//             s.trigger(&Event::EnterContext("hola".into()));
-//             s.trigger(&Event::EnterExample("holé".into()));
-//             s.trigger(&Event::ExitExample(FAILED_RES));
+//             s.handle(&Event::EnterContext("hola".into()));
+//             s.handle(&Event::EnterExample("holé".into()));
+//             s.handle(&Event::ExitExample(FAILED_RES));
 //
-//             s.trigger(&Event::ExitContext);
-//             s.trigger(&Event::EnterContext("ok".into()));
-//             s.trigger(&Event::EnterExample("cacao".into()));
-//             s.trigger(&Event::ExitExample(FAILED_RES));
+//             s.handle(&Event::ExitContext);
+//             s.handle(&Event::EnterContext("ok".into()));
+//             s.handle(&Event::EnterExample("cacao".into()));
+//             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"ok | cacao".into()), s.failed.get(1));
 //         }
 //
@@ -359,22 +363,22 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //         fn it_doesnt_includes_success() {
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
-//             s.trigger(&Event::EnterContext("hola".into()));
-//             s.trigger(&Event::EnterExample("holé".into()));
-//             s.trigger(&Event::ExitExample(SUCCESS_RES));
+//             s.handle(&Event::EnterContext("hola".into()));
+//             s.handle(&Event::EnterExample("holé".into()));
+//             s.handle(&Event::ExitExample(SUCCESS_RES));
 //
 //             assert_eq!(None, s.failed.get(0));
 //         }
 //
 //         #[test]
-//         fn is_doesnt_keep_tests_in_name_stack() {
+//         fn is_doesnt_keep_examples_in_name_stack() {
 //             let mut sink = &mut io::sink();
 //             let mut s = Simple::new(&mut sink);
-//             s.trigger(&Event::EnterContext("hola".into()));
-//             s.trigger(&Event::EnterExample("holé".into()));
-//             s.trigger(&Event::ExitExample(SUCCESS_RES));
-//             s.trigger(&Event::EnterExample("holé".into()));
-//             s.trigger(&Event::ExitExample(FAILED_RES));
+//             s.handle(&Event::EnterContext("hola".into()));
+//             s.handle(&Event::EnterExample("holé".into()));
+//             s.handle(&Event::ExitExample(SUCCESS_RES));
+//             s.handle(&Event::EnterExample("holé".into()));
+//             s.handle(&Event::ExitExample(FAILED_RES));
 //
 //             // not "hola | holé | holé"
 //             assert_eq!(Some(&"hola | holé".into()), s.failed.get(0));
@@ -385,9 +389,9 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut sink = &mut io::sink();
 //             let res = {
 //                 let mut s = Simple::new(&mut sink);
-//                 s.trigger(&Event::EnterContext("hola".into()));
-//                 s.trigger(&Event::EnterExample("holé".into()));
-//                 s.trigger(&Event::ExitExample(FAILED_RES));
+//                 s.handle(&Event::EnterContext("hola".into()));
+//                 s.handle(&Event::EnterExample("holé".into()));
+//                 s.handle(&Event::ExitExample(FAILED_RES));
 //                 s.failures_summary()
 //             };
 //
@@ -399,11 +403,11 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //             let mut sink = &mut io::sink();
 //             let res = {
 //                 let mut s = Simple::new(&mut sink);
-//                 s.trigger(&Event::EnterContext("hola".into()));
-//                 s.trigger(&Event::EnterExample("holé".into()));
-//                 s.trigger(&Event::ExitExample(FAILED_RES));
-//                 s.trigger(&Event::EnterExample("hola".into()));
-//                 s.trigger(&Event::ExitExample(FAILED_RES));
+//                 s.handle(&Event::EnterContext("hola".into()));
+//                 s.handle(&Event::EnterExample("holé".into()));
+//                 s.handle(&Event::ExitExample(FAILED_RES));
+//                 s.handle(&Event::EnterExample("hola".into()));
+//                 s.handle(&Event::ExitExample(FAILED_RES));
 //                 s.failures_summary()
 //             };
 //
@@ -411,14 +415,14 @@ impl<'a, T: io::Write> Formatter for Simple<'a, T> {}
 //
 //             let res = {
 //                 let mut s = Simple::new(&mut sink);
-//                 s.trigger(&Event::EnterContext("hola".into()));
-//                 s.trigger(&Event::EnterExample("holé".into()));
-//                 s.trigger(&Event::ExitExample(FAILED_RES));
-//                 s.trigger(&Event::ExitContext);
-//                 s.trigger(&Event::EnterContext("second".into()));
-//                 s.trigger(&Event::EnterContext("third".into()));
-//                 s.trigger(&Event::EnterExample("hola".into()));
-//                 s.trigger(&Event::ExitExample(FAILED_RES));
+//                 s.handle(&Event::EnterContext("hola".into()));
+//                 s.handle(&Event::EnterExample("holé".into()));
+//                 s.handle(&Event::ExitExample(FAILED_RES));
+//                 s.handle(&Event::ExitContext);
+//                 s.handle(&Event::EnterContext("second".into()));
+//                 s.handle(&Event::EnterContext("third".into()));
+//                 s.handle(&Event::EnterExample("hola".into()));
+//                 s.handle(&Event::ExitExample(FAILED_RES));
 //                 s.failures_summary()
 //             };
 //

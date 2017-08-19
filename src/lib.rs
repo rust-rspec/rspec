@@ -9,6 +9,7 @@
 extern crate expectest;
 
 extern crate colored;
+extern crate rayon;
 
 pub mod suite;
 pub mod context;
@@ -16,6 +17,7 @@ pub mod example;
 
 pub use context::{describe, suite, given};
 
+mod context_member;
 pub mod context_report;
 pub mod example_report;
 pub mod events;

@@ -67,12 +67,14 @@ You can also use rspec in integration tests, this example uses the rspec runner:
 
 ```rust
 extern crate rspec;
-use rspec::context::describe;
+
 use std::io;
+use std::sync::{Arc, Mutex};
 
 pub fn main() {
-    let stdout = &mut io::stdout();
-    let mut formatter = rspec::formatter::Simple::new(stdout);
+    let simple = rspec::formatter::Simple::new(io::stdout());
+    let formatter = Arc::new(Mutex::new(simple));
+
     let mut runner = describe("rspec is a classic BDD testing", (), |ctx, _| {
 
         ctx.it("can define tests", || true);
@@ -102,10 +104,9 @@ pub fn main() {
             ctx.it("is convenient for asserts", || assert_eq!(1, 1));
         });
     });
-    runner.add_event_handler(&mut formatter);
+    runner.add_event_handler(formatter);
     runner.run().unwrap();
 }
-
 ```
 
 *Note:*

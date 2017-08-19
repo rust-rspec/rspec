@@ -10,18 +10,11 @@
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
+use context_member::ContextMember;
 use example_report::{ExampleReport, Failure};
 use runner::Runner;
 use suite::{Suite, SuiteInfo, SuiteLabel};
 use example::{Example, ExampleInfo, ExampleLabel};
-
-/// This enum is used to build a tree of named tests and contextes.
-pub enum ContextMember<'a, T>
-    where T: 'a
-{
-    Example(Example<'a, T>),
-    Context(Context<'a, T>),
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ContextLabel {
@@ -78,6 +71,9 @@ impl<'a, T> Context<'a, T>
     }
 }
 
+unsafe impl<'a, T> Send for Context<'a, T> where T: 'a + Send {}
+unsafe impl<'a, T> Sync for Context<'a, T> where T: 'a + Sync {}
+
 /// This creates a test suite's root context and returns a [Runner](../runner/struct.Runner.html) ready to run the test suite.
 ///
 /// # Examples
@@ -86,17 +82,18 @@ impl<'a, T> Context<'a, T>
 /// # extern crate rspec;
 /// #
 /// # use std::io;
+/// # use std::sync::{Arc, Mutex};
 /// #
 /// # pub fn main() {
-/// #    let stdout = &mut io::stdout();
-/// #    let mut formatter = rspec::formatter::Simple::new(stdout);
+/// #     let simple = rspec::formatter::Simple::new(io::stdout());
+/// #     let formatter = Arc::new(Mutex::new(simple));
 /// #
 /// let mut runner = rspec::suite("a test suite", (), |ctx| {
 ///     // …
 /// });
 /// #
-/// #    runner.add_event_handler(&mut formatter);
-/// #    runner.run_or_exit();
+/// #     runner.add_event_handler(formatter);
+/// #     runner.run_or_exit();
 /// # }
 /// ```
 ///
@@ -182,10 +179,11 @@ impl<'a, T> Context<'a, T>
     /// # extern crate rspec;
     /// #
     /// # use std::io;
+    /// # use std::sync::{Arc, Mutex};
     /// #
     /// # pub fn main() {
-    /// #    let stdout = &mut io::stdout();
-    /// #    let mut formatter = rspec::formatter::Simple::new(stdout);
+    /// #     let simple = rspec::formatter::Simple::new(io::stdout());
+    /// #     let formatter = Arc::new(Mutex::new(simple));
     /// #
     /// let mut runner = rspec::suite("a test suite", (), |ctx| {
     ///     ctx.context("opens a context labeled 'context'", |ctx| {
@@ -193,8 +191,8 @@ impl<'a, T> Context<'a, T>
     ///     });
     /// });
     /// #
-    /// #    runner.add_event_handler(&mut formatter);
-    /// #    runner.run_or_exit();
+    /// #     runner.add_event_handler(formatter);
+    /// #     runner.run_or_exit();
     /// # }
     /// ```
     ///
@@ -271,10 +269,11 @@ impl<'a, T> Context<'a, T>
     /// # extern crate rspec;
     /// #
     /// # use std::io;
+    /// # use std::sync::{Arc, Mutex};
     /// #
     /// # pub fn main() {
-    /// #    let stdout = &mut io::stdout();
-    /// #    let mut formatter = rspec::formatter::Simple::new(stdout);
+    /// #     let simple = rspec::formatter::Simple::new(io::stdout());
+    /// #     let formatter = Arc::new(Mutex::new(simple));
     /// #
     /// let mut runner = rspec::suite("a suite",(), |ctx| {
     ///     ctx.context("a context", |ctx| {
@@ -286,8 +285,8 @@ impl<'a, T> Context<'a, T>
     ///     });
     /// });
     /// #
-    /// #    runner.add_event_handler(&mut formatter);
-    /// #    runner.run_or_exit();
+    /// #     runner.add_event_handler(formatter);
+    /// #     runner.run_or_exit();
     /// # }
     /// ```
     ///
@@ -328,10 +327,11 @@ impl<'a, T> Context<'a, T>
     /// # extern crate rspec;
     /// #
     /// # use std::io;
+    /// # use std::sync::{Arc, Mutex};
     /// #
     /// # pub fn main() {
-    /// #    let stdout = &mut io::stdout();
-    /// #    let mut formatter = rspec::formatter::Simple::new(stdout);
+    /// #     let simple = rspec::formatter::Simple::new(io::stdout());
+    /// #     let formatter = Arc::new(Mutex::new(simple));
     /// #
     /// let mut runner = rspec::suite("a test suite", (), |ctx| {
     ///     ctx.example("an example", |env| {
@@ -339,8 +339,8 @@ impl<'a, T> Context<'a, T>
     ///     });
     /// });
     /// #
-    /// #    runner.add_event_handler(&mut formatter);
-    /// #    runner.run_or_exit();
+    /// #     runner.add_event_handler(formatter);
+    /// #     runner.run_or_exit();
     /// # }
     /// ```
     ///
@@ -442,10 +442,11 @@ impl<'a, T> Context<'a, T>
     /// # extern crate rspec;
     /// #
     /// # use std::io;
+    /// # use std::sync::{Arc, Mutex};
     /// #
     /// # pub fn main() {
-    /// #    let stdout = &mut io::stdout();
-    /// #    let mut formatter = rspec::formatter::Simple::new(stdout);
+    /// #     let simple = rspec::formatter::Simple::new(io::stdout());
+    /// #     let formatter = Arc::new(Mutex::new(simple));
     /// #
     /// let mut runner = rspec::suite("a test suite", (), |ctx| {
     ///     ctx.before_all(|env| {
@@ -461,8 +462,8 @@ impl<'a, T> Context<'a, T>
     ///     });
     /// });
     /// #
-    /// #    runner.add_event_handler(&mut formatter);
-    /// #    runner.run_or_exit();
+    /// #     runner.add_event_handler(formatter);
+    /// #     runner.run_or_exit();
     /// # }
     /// ```
     ///
@@ -504,10 +505,11 @@ impl<'a, T> Context<'a, T>
     /// # extern crate rspec;
     /// #
     /// # use std::io;
+    /// # use std::sync::{Arc, Mutex};
     /// #
     /// # pub fn main() {
-    /// #    let stdout = &mut io::stdout();
-    /// #    let mut formatter = rspec::formatter::Simple::new(stdout);
+    /// #     let simple = rspec::formatter::Simple::new(io::stdout());
+    /// #     let formatter = Arc::new(Mutex::new(simple));
     /// #
     /// let mut runner = rspec::suite("a test suite", (), |ctx| {
     ///     ctx.before_each(|env| {
@@ -523,8 +525,8 @@ impl<'a, T> Context<'a, T>
     ///     });
     /// });
     /// #
-    /// #    runner.add_event_handler(&mut formatter);
-    /// #    runner.run_or_exit();
+    /// #     runner.add_event_handler(formatter);
+    /// #     runner.run_or_exit();
     /// # }
     /// ```
     ///
@@ -555,10 +557,11 @@ impl<'a, T> Context<'a, T>
     /// # extern crate rspec;
     /// #
     /// # use std::io;
+    /// # use std::sync::{Arc, Mutex};
     /// #
     /// # pub fn main() {
-    /// #    let stdout = &mut io::stdout();
-    /// #    let mut formatter = rspec::formatter::Simple::new(stdout);
+    /// #     let simple = rspec::formatter::Simple::new(io::stdout());
+    /// #     let formatter = Arc::new(Mutex::new(simple));
     /// #
     /// let mut runner = rspec::suite("a test suite", (), |ctx| {
     ///     ctx.after_all(|env| {
@@ -574,8 +577,8 @@ impl<'a, T> Context<'a, T>
     ///     });
     /// });
     /// #
-    /// #    runner.add_event_handler(&mut formatter);
-    /// #    runner.run_or_exit();
+    /// #     runner.add_event_handler(formatter);
+    /// #     runner.run_or_exit();
     /// # }
     /// ```
     ///
@@ -617,10 +620,11 @@ impl<'a, T> Context<'a, T>
     /// # extern crate rspec;
     /// #
     /// # use std::io;
+    /// # use std::sync::{Arc, Mutex};
     /// #
     /// # pub fn main() {
-    /// #    let stdout = &mut io::stdout();
-    /// #    let mut formatter = rspec::formatter::Simple::new(stdout);
+    /// #     let simple = rspec::formatter::Simple::new(io::stdout());
+    /// #     let formatter = Arc::new(Mutex::new(simple));
     /// #
     /// let mut runner = rspec::suite("a test suite", (), |ctx| {
     ///     ctx.after_each(|env| {
@@ -636,8 +640,8 @@ impl<'a, T> Context<'a, T>
     ///     });
     /// });
     /// #
-    /// #    runner.add_event_handler(&mut formatter);
-    /// #    runner.run_or_exit();
+    /// #     runner.add_event_handler(formatter);
+    /// #     runner.run_or_exit();
     /// # }
     /// ```
     ///
