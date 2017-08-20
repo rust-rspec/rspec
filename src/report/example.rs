@@ -10,11 +10,10 @@ pub struct Failure {
 
 impl Failure {
     pub fn new<S>(message: Option<S>) -> Self
-        where String: From<S>
+    where
+        String: From<S>,
     {
-        Failure {
-            message: message.map(|s| s.into())
-        }
+        Failure { message: message.map(|s| s.into()) }
     }
 }
 
@@ -27,7 +26,8 @@ pub enum ExampleReport {
 
 impl ExampleReport {
     pub fn err<S>(message: Option<S>) -> Self
-        where String: From<S>
+    where
+        String: From<S>,
     {
         ExampleReport::Failure(Failure::new(message))
     }
@@ -52,22 +52,19 @@ impl From<bool> for ExampleReport {
         if other {
             ExampleReport::Success
         } else {
-            ExampleReport::Failure(
-                Failure::new(Some("assertion failed: `expected true`"))
-            )
+            ExampleReport::Failure(Failure::new(Some("assertion failed: `expected true`")))
         }
     }
 }
 
 impl<T1, T2> From<Result<T1, T2>> for ExampleReport
-    where T2: ::std::fmt::Debug
+where
+    T2: ::std::fmt::Debug,
 {
     fn from(other: Result<T1, T2>) -> ExampleReport {
         match other {
             Ok(_) => ExampleReport::Success,
-            Err(error) => ExampleReport::Failure(
-                Failure::new(Some(format!("{:?}", error)))
-            )
+            Err(error) => ExampleReport::Failure(Failure::new(Some(format!("{:?}", error)))),
         }
     }
 }
@@ -78,10 +75,8 @@ impl From<ExpectestResult> for ExampleReport {
         match other {
             ExpectestResult::Success => ExampleReport::Success,
             ExpectestResult::Failure(failure) => {
-                ExampleReport::Failure(
-                    Failure::new(Some(format!("{:?}", failure)))
-                )
-            },
+                ExampleReport::Failure(Failure::new(Some(format!("{:?}", failure))))
+            }
         }
     }
 }

@@ -31,7 +31,8 @@ pub struct Example<T> {
 
 impl<T> Example<T> {
     pub(crate) fn new<F>(info: ExampleInfo, f: F) -> Self
-        where F: 'static + Fn(&T) -> ExampleReport
+    where
+        F: 'static + Fn(&T) -> ExampleReport,
     {
         Example {
             info: info,
@@ -40,5 +41,13 @@ impl<T> Example<T> {
     }
 }
 
-unsafe impl<T> Send for Example<T> where T: Send {}
-unsafe impl<T> Sync for Example<T> where T: Sync {}
+unsafe impl<T> Send for Example<T>
+where
+    T: Send,
+{
+}
+unsafe impl<T> Sync for Example<T>
+where
+    T: Sync,
+{
+}

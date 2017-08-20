@@ -22,7 +22,8 @@ impl ContextReport {
     }
 
     pub fn add<T>(&mut self, report: T)
-        where T: Into<ContextReport>
+    where
+        T: Into<ContextReport>,
     {
         let report: ContextReport = report.into();
         self.passed += report.passed;

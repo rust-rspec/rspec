@@ -16,7 +16,7 @@
 //!     struct Environment {
 //!         // ...
 //!     }
-//!     
+//!
 //!     let environment = Environment {
 //!         // ...
 //!     };

@@ -25,9 +25,7 @@ pub fn main() {
 
     runner.run_or_exit(rspec::given("a BTreeSet", environment, |ctx| {
         ctx.when("not having added any items", |ctx| {
-            ctx.then("it is empty", |env| {
-                assert!(env.set.is_empty())
-            });
+            ctx.then("it is empty", |env| assert!(env.set.is_empty()));
         });
 
         ctx.when("adding an new item", |ctx| {
@@ -69,9 +67,7 @@ pub fn main() {
         });
 
         ctx.when("returning to outer context", |ctx| {
-            ctx.then("it is still empty", |env| {
-                assert!(env.set.is_empty())
-            });
+            ctx.then("it is still empty", |env| assert!(env.set.is_empty()));
         });
 
         ctx.then("panic!(…) fails", move |_env| {

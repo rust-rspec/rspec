@@ -37,8 +37,16 @@ impl<T> Suite<T> {
     }
 }
 
-unsafe impl<T> Send for Suite<T> where T: Send {}
-unsafe impl<T> Sync for Suite<T> where T: Sync {}
+unsafe impl<T> Send for Suite<T>
+where
+    T: Send,
+{
+}
+unsafe impl<T> Sync for Suite<T>
+where
+    T: Sync,
+{
+}
 
 /// This creates a test suite's root context and returns a [Runner](../runner/struct.Runner.html) ready to run the test suite.
 ///
@@ -77,9 +85,10 @@ unsafe impl<T> Sync for Suite<T> where T: Sync {}
 /// - [`describe`](fn.describe.html).
 /// - [`given`](fn.given.html).
 pub fn suite<S, F, T>(name: S, environment: T, body: F) -> (Suite<T>, T)
-    where S: Into<String>,
-          F: FnOnce(&mut Context<T>) -> (),
-          T: Clone + ::std::fmt::Debug
+where
+    S: Into<String>,
+    F: FnOnce(&mut Context<T>) -> (),
+    T: Clone + ::std::fmt::Debug,
 {
     let info = SuiteInfo {
         label: SuiteLabel::Suite,
@@ -94,9 +103,10 @@ pub fn suite<S, F, T>(name: S, environment: T, body: F) -> (Suite<T>, T)
 ///
 /// - [`given`](fn.describe.html).
 pub fn describe<S, F, T>(name: S, environment: T, body: F) -> (Suite<T>, T)
-    where S: Into<String>,
-          F: FnOnce(&mut Context<T>) -> (),
-          T: Clone + ::std::fmt::Debug
+where
+    S: Into<String>,
+    F: FnOnce(&mut Context<T>) -> (),
+    T: Clone + ::std::fmt::Debug,
 {
     let info = SuiteInfo {
         label: SuiteLabel::Describe,
@@ -111,9 +121,10 @@ pub fn describe<S, F, T>(name: S, environment: T, body: F) -> (Suite<T>, T)
 ///
 /// - [`describe`](fn.describe.html).
 pub fn given<S, F, T>(name: S, environment: T, body: F) -> (Suite<T>, T)
-    where S: Into<String>,
-          F: FnOnce(&mut Context<T>) -> (),
-          T: Clone + ::std::fmt::Debug
+where
+    S: Into<String>,
+    F: FnOnce(&mut Context<T>) -> (),
+    T: Clone + ::std::fmt::Debug,
 {
     let info = SuiteInfo {
         label: SuiteLabel::Given,
@@ -123,8 +134,9 @@ pub fn given<S, F, T>(name: S, environment: T, body: F) -> (Suite<T>, T)
 }
 
 fn suite_internal<'a, F, T>(info: SuiteInfo, environment: T, body: F) -> (Suite<T>, T)
-    where F: FnOnce(&mut Context<T>) -> (),
-          T: Clone + ::std::fmt::Debug
+where
+    F: FnOnce(&mut Context<T>) -> (),
+    T: Clone + ::std::fmt::Debug,
 {
     // Note: root context's info get's ignored.
     let mut ctx = Context::new(None);

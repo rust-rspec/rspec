@@ -7,5 +7,13 @@ pub enum ContextMember<T> {
     Context(Context<T>),
 }
 
-unsafe impl<T> Send for ContextMember<T> where T: Send {}
-unsafe impl<T> Sync for ContextMember<T> where T: Sync {}
+unsafe impl<T> Send for ContextMember<T>
+where
+    T: Send,
+{
+}
+unsafe impl<T> Sync for ContextMember<T>
+where
+    T: Sync,
+{
+}

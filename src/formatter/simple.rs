@@ -139,7 +139,8 @@ impl<T: io::Write> Simple<T> {
 }
 
 impl<T: io::Write> EventHandler for Simple<T>
-    where T: Send + Sync
+where
+    T: Send + Sync,
 {
     fn handle(&mut self, event: &Event) {
         match *event {
@@ -166,8 +167,10 @@ impl<T: io::Write> EventHandler for Simple<T>
 }
 
 impl<T: io::Write> Formatter for Simple<T>
-    where T: Send + Sync
-{}
+where
+    T: Send + Sync,
+{
+}
 
 // #[cfg(test)]
 // mod tests {
