@@ -38,14 +38,8 @@ impl Runner {
 }
 
 impl Runner {
-    pub fn run<T>(self, suite: (Suite<T>, T)) -> SuiteReport
-    where
-        T: Clone + Send + Sync + ::std::fmt::Debug,
-    {
-        self.run_with(suite)
-    }
 
-    pub fn run_with<T>(self, suite: (Suite<T>, T)) -> SuiteReport
+    pub fn run<T>(self, suite: (Suite<T>, T)) -> SuiteReport
     where
         T: Clone + Send + Sync + ::std::fmt::Debug,
     {
@@ -60,14 +54,7 @@ impl Runner {
     where
         T: Clone + Send + Sync + ::std::fmt::Debug,
     {
-        self.run_or_exit_with(suite)
-    }
-
-    pub fn run_or_exit_with<T>(self, suite: (Suite<T>, T))
-    where
-        T: Clone + Send + Sync + ::std::fmt::Debug,
-    {
-        if self.run_with(suite).failed > 0 {
+        if self.run(suite).failed > 0 {
             // XXX Cargo test failure returns 101.
             //
             // > "We use 101 as the standard failure exit code because it's something unique
