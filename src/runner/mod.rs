@@ -50,14 +50,9 @@ impl Runner {
         T: Clone + Send + Sync + ::std::fmt::Debug,
     {
         let (suite, mut environment) = suite;
-        panic::set_hook(Box::new(|_panic_info| {
-            // XXX panics already catched at the test call site, don't output the trace in stdout
-        }));
-        let threads = if self.configuration.parallel { 0 } else { 1 };
-        let _ = rayon::initialize(rayon::Configuration::new().num_threads(threads));
+        self.prepare_before_run();
         let report = self.visit(&suite, &mut environment);
-        // XXX reset panic hook back to default hook:
-        let _ = panic::take_hook();
+        self.clean_after_run();
         report
     }
 
@@ -94,6 +89,20 @@ impl Runner {
             }
         }
     }
+
+    fn prepare_before_run(&self) {
+        panic::set_hook(Box::new(|_panic_info| {
+            // XXX panics already catched at the test call site, don't output the trace in stdout
+        }));
+        let threads = if self.configuration.parallel { 0 } else { 1 }; // 0 is rayon default
+        let rayon_config = rayon::Configuration::new().num_threads(threads);
+        let _ = rayon::initialize(rayon_config);
+    }
+
+    fn clean_after_run(&self) {
+        // XXX reset panic hook back to default hook:
+        let _ = panic::take_hook();
+    }
 }
 
 impl<T> Visitor<Suite<T>> for Runner
@@ -122,16 +131,16 @@ where
         if let Some(ref info) = context.info {
             self.broadcast(Event::EnterContext(info.clone()));
         }
-        for function in context.before_all.iter() {
-            function(environment);
+        for before_function in context.before_all.iter() {
+            before_function(environment);
         }
         let report: ContextReport = context
             .members
             .par_iter()
             .map(|member| {
                 let mut environment = environment.clone();
-                for function in context.before_each.iter() {
-                    function(&mut environment);
+                for before_each_function in context.before_each.iter() {
+                    before_each_function(&mut environment);
                 }
                 let report = match member {
                     &ContextMember::Example(ref example) => {
@@ -141,14 +150,14 @@ where
                         self.visit(context, &mut environment.clone())
                     }
                 };
-                for function in context.after_each.iter() {
-                    function(&mut environment);
+                for after_each_function in context.after_each.iter() {
+                    after_each_function(&mut environment);
                 }
                 report
             })
             .sum();
-        for function in context.after_all.iter() {
-            function(environment);
+        for after_function in context.after_all.iter() {
+            after_function(environment);
         }
         if let Some(_) = context.info {
             self.broadcast(Event::ExitContext(report.clone()));
