@@ -27,19 +27,19 @@ impl<T> Context<T> {
 }
 
 unsafe impl<T> Send for Context<T>
-    where
-        T: Send,
+where
+    T: Send,
 {
 }
 unsafe impl<T> Sync for Context<T>
-    where
-        T: Sync,
+where
+    T: Sync,
 {
 }
 
 impl<T> Context<T>
-    where
-        T: Clone,
+where
+    T: Clone,
 {
     /// Open and name a new context within the current context.
     ///
@@ -83,10 +83,10 @@ impl<T> Context<T>
     /// - [`specify`](struct.Context.html#method.specify).
     /// - [`when`](struct.Context.html#method.when).
     pub fn context<'a, S, F>(&mut self, name: S, body: F)
-        where
-            S: Into<Option<&'a str>>,
-            F: FnOnce(&mut Context<T>) -> (),
-            T: ::std::fmt::Debug,
+    where
+        S: Into<Option<&'a str>>,
+        F: FnOnce(&mut Context<T>) -> (),
+        T: ::std::fmt::Debug,
     {
         let info = name.into().map(|name| {
             ContextInfo {
@@ -103,10 +103,10 @@ impl<T> Context<T>
     ///
     /// - [`when`](struct.Context.html#method.when).
     pub fn specify<'a, S, F>(&mut self, name: S, body: F)
-        where
-            S: Into<Option<&'a str>>,
-            F: FnOnce(&mut Context<T>) -> (),
-            T: ::std::fmt::Debug,
+    where
+        S: Into<Option<&'a str>>,
+        F: FnOnce(&mut Context<T>) -> (),
+        T: ::std::fmt::Debug,
     {
         let info = name.into().map(|name| {
             ContextInfo {
@@ -123,10 +123,10 @@ impl<T> Context<T>
     ///
     /// - [`specify`](struct.Context.html#method.specify).
     pub fn when<'b, S, F>(&mut self, name: S, body: F)
-        where
-            S: Into<Option<&'b str>>,
-            F: FnOnce(&mut Context<T>) -> (),
-            T: ::std::fmt::Debug,
+    where
+        S: Into<Option<&'b str>>,
+        F: FnOnce(&mut Context<T>) -> (),
+        T: ::std::fmt::Debug,
     {
         let info = name.into().map(|name| {
             ContextInfo {
@@ -179,17 +179,17 @@ impl<T> Context<T>
     /// The `before_each(…)` block gets executed before `'It "tests a"'` and `'It "tests a"'`,
     /// but not before `'It "tests c"'`.
     pub fn scope<F>(&mut self, body: F)
-        where
-            F: FnOnce(&mut Context<T>) -> (),
-            T: ::std::fmt::Debug,
+    where
+        F: FnOnce(&mut Context<T>) -> (),
+        T: ::std::fmt::Debug,
     {
         self.context_internal(None, body)
     }
 
     fn context_internal<F>(&mut self, info: Option<ContextInfo>, body: F)
-        where
-            F: FnOnce(&mut Context<T>) -> (),
-            T: ::std::fmt::Debug,
+    where
+        F: FnOnce(&mut Context<T>) -> (),
+        T: ::std::fmt::Debug,
     {
         let mut child = Context::new(info);
         body(&mut child);
@@ -238,10 +238,10 @@ impl<T> Context<T>
     /// - [`it`](struct.Context.html#method.it).
     /// - [`then`](struct.Context.html#method.then).
     pub fn example<S, F, U>(&mut self, name: S, body: F)
-        where
-            S: Into<String>,
-            F: 'static + Fn(&T) -> U,
-            U: Into<ExampleReport>,
+    where
+        S: Into<String>,
+        F: 'static + Fn(&T) -> U,
+        U: Into<ExampleReport>,
     {
         let info = ExampleInfo {
             label: ExampleLabel::Example,
@@ -257,10 +257,10 @@ impl<T> Context<T>
     ///
     /// - [`it`](struct.Context.html#method.it).
     pub fn it<S, F, U>(&mut self, name: S, body: F)
-        where
-            S: Into<String>,
-            F: 'static + Fn(&T) -> U,
-            U: Into<ExampleReport>,
+    where
+        S: Into<String>,
+        F: 'static + Fn(&T) -> U,
+        U: Into<ExampleReport>,
     {
         let info = ExampleInfo {
             label: ExampleLabel::It,
@@ -276,10 +276,10 @@ impl<T> Context<T>
     ///
     /// - [`it`](struct.Context.html#method.it).
     pub fn then<S, F, U>(&mut self, name: S, body: F)
-        where
-            S: Into<String>,
-            F: 'static + Fn(&T) -> U,
-            U: Into<ExampleReport>,
+    where
+        S: Into<String>,
+        F: 'static + Fn(&T) -> U,
+        U: Into<ExampleReport>,
     {
         let info = ExampleInfo {
             label: ExampleLabel::Then,
@@ -290,9 +290,9 @@ impl<T> Context<T>
     }
 
     fn example_internal<F, U>(&mut self, info: ExampleInfo, body: F)
-        where
-            F: 'static + Fn(&T) -> U,
-            U: Into<ExampleReport>,
+    where
+        F: 'static + Fn(&T) -> U,
+        U: Into<ExampleReport>,
     {
         use std::panic::{catch_unwind, AssertUnwindSafe};
 
@@ -368,16 +368,16 @@ impl<T> Context<T>
     ///
     /// - [`before`](struct.Context.html#method.before).
     pub fn before_all<F>(&mut self, body: F)
-        where
-            F: 'static + Fn(&mut T),
+    where
+        F: 'static + Fn(&mut T),
     {
         self.before_all.push(Box::new(body))
     }
 
     /// Alias for [`before_all`](struct.Context.html#method.before_all), see for more info.
     pub fn before<F>(&mut self, body: F)
-        where
-            F: 'static + Fn(&mut T),
+    where
+        F: 'static + Fn(&mut T),
     {
         self.before_all(body)
     }
@@ -430,8 +430,8 @@ impl<T> Context<T>
     ///         …
     /// ```
     pub fn before_each<F>(&mut self, body: F)
-        where
-            F: 'static + Fn(&mut T),
+    where
+        F: 'static + Fn(&mut T),
     {
         self.before_each.push(Box::new(body))
     }
@@ -488,16 +488,16 @@ impl<T> Context<T>
     ///
     /// - [`after`](struct.Context.html#method.after).
     pub fn after_all<F>(&mut self, body: F)
-        where
-            F: 'static + Fn(&mut T),
+    where
+        F: 'static + Fn(&mut T),
     {
         self.after_all.push(Box::new(body))
     }
 
     /// Alias for [`after_all`](struct.Context.html#method.after_all), see for more info.
     pub fn after<F>(&mut self, body: F)
-        where
-            F: 'static + Fn(&mut T),
+    where
+        F: 'static + Fn(&mut T),
     {
         self.after_all(body)
     }
@@ -550,8 +550,8 @@ impl<T> Context<T>
     ///         …
     /// ```
     pub fn after_each<F>(&mut self, body: F)
-        where
-            F: 'static + Fn(&mut T),
+    where
+        F: 'static + Fn(&mut T),
     {
         self.after_each.push(Box::new(body))
     }

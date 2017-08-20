@@ -46,4 +46,3 @@ pub struct ContextInfo {
     pub label: ContextLabel,
     pub name: String,
 }
-
