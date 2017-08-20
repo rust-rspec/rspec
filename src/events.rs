@@ -1,12 +1,10 @@
 //! Events are send by the Runner to signal the progression in the test suite, with the results
 
+use context::{ContextInfo, ExampleInfo};
 use report::suite::SuiteReport;
 use report::context::ContextReport;
 use report::example::ExampleReport;
-
 use suite::SuiteInfo;
-use context::ContextInfo;
-use example::ExampleInfo;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {

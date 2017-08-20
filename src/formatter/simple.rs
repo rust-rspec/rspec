@@ -2,16 +2,13 @@ use std::io;
 use std::mem;
 
 use colored::*;
-
+use context::{ContextInfo, ExampleInfo};
 use events::{Event, EventHandler};
 use formatter::formatter::Formatter;
 use report::suite::SuiteReport;
 use report::context::ContextReport;
 use report::example::ExampleReport;
-
 use suite::SuiteInfo;
-use context::ContextInfo;
-use example::ExampleInfo;
 
 #[derive(Clone, Debug)]
 enum ScopeInfo {

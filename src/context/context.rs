@@ -1,45 +1,6 @@
-//! The Context module holds all the functionality for the test declaration, that is:
-//! `before`, `after`, `suite`, `context`, `it` and their variants.
-//!
-//! A Context can also holds reference to children Contextes, for whom the before closures will be
-//! executed after the before closures of the current context. The order of execution of tests
-//! respect the order of declaration of theses tests.
-//!
-//! Running these tests and doing asserts is not the job of the Context, but the Runner, which is
-//! a struct returned by the root context declaration.
 
-use std::panic::{catch_unwind, AssertUnwindSafe};
-
-use context_member::ContextMember;
+use context::*;
 use report::example::{ExampleReport, Failure};
-use example::{Example, ExampleInfo, ExampleLabel};
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum ContextLabel {
-    Describe,
-    Context,
-    Specify,
-    Given,
-    When,
-}
-
-impl From<ContextLabel> for &'static str {
-    fn from(label: ContextLabel) -> Self {
-        match label {
-            ContextLabel::Describe => "Describe",
-            ContextLabel::Context => "Context",
-            ContextLabel::Specify => "Specify",
-            ContextLabel::Given => "Given",
-            ContextLabel::When => "When",
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct ContextInfo {
-    pub label: ContextLabel,
-    pub name: String,
-}
 
 /// Contexts are a powerful method to make your tests clear and well organized.
 /// In the long term this practice will keep tests easy to read.
@@ -333,6 +294,8 @@ where
         F: 'static + Fn(&T) -> U,
         U: Into<ExampleReport>,
     {
+        use std::panic::{catch_unwind, AssertUnwindSafe};
+
         let test = Example::new(info, move |environment| {
             let result = catch_unwind(AssertUnwindSafe(|| body(&environment).into()));
             match result {
@@ -591,113 +554,5 @@ where
         F: 'static + Fn(&mut T),
     {
         self.after_each.push(Box::new(body))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use suite::{suite, describe, given};
-
-    mod describe {
-        pub use super::*;
-
-        macro_rules! test_suite_alias {
-            ($suite: ident) => {
-                $suite("suite (or alias)", (), |_| {});
-            }
-        }
-
-        #[test]
-        fn it_has_root_functions() {
-            test_suite_alias!(suite);
-            test_suite_alias!(describe);
-            test_suite_alias!(given);
-        }
-
-        macro_rules! test_context_alias {
-            ($suite: ident, $context: ident) => {
-                $suite("suite (or alias)", (), |ctx| {
-                    ctx.$context("context (or alias)", |_| {})
-                });
-            }
-        }
-
-        #[test]
-        fn it_has_contextual_function_context() {
-            test_context_alias!(suite, context);
-            test_context_alias!(describe, context);
-            test_context_alias!(given, context);
-        }
-
-        #[test]
-        fn it_has_contexual_function_specify() {
-            test_context_alias!(suite, specify);
-            test_context_alias!(describe, specify);
-            test_context_alias!(given, specify);
-        }
-
-        #[test]
-        fn it_has_contexual_function_when() {
-            test_context_alias!(suite, when);
-            test_context_alias!(describe, when);
-            test_context_alias!(given, when);
-        }
-
-        macro_rules! test_example_alias {
-            ($suite: ident, $context: ident, $example: ident) => {
-                $suite("suite (or alias)", (), |ctx| {
-                    ctx.$context("context (or alias)", |ctx| {
-                        ctx.$example("example (or alias)", |_| {
-
-                        })
-                    })
-                });
-            }
-        }
-
-        #[test]
-        fn it_has_check_function_example() {
-            test_example_alias!(suite, context, example);
-            test_example_alias!(suite, specify, example);
-            test_example_alias!(suite, when, example);
-
-            test_example_alias!(describe, context, example);
-            test_example_alias!(describe, specify, example);
-            test_example_alias!(describe, when, example);
-
-            test_example_alias!(given, context, example);
-            test_example_alias!(given, specify, example);
-            test_example_alias!(given, when, example);
-        }
-
-        #[test]
-        fn it_has_check_function_it() {
-            test_example_alias!(suite, context, it);
-            test_example_alias!(suite, specify, it);
-            test_example_alias!(suite, when, it);
-
-            test_example_alias!(describe, context, it);
-            test_example_alias!(describe, specify, it);
-            test_example_alias!(describe, when, it);
-
-            test_example_alias!(given, context, it);
-            test_example_alias!(given, specify, it);
-            test_example_alias!(given, when, it);
-        }
-
-        #[test]
-        fn it_has_check_function_then() {
-            test_example_alias!(suite, context, then);
-            test_example_alias!(suite, specify, then);
-            test_example_alias!(suite, when, then);
-
-            test_example_alias!(describe, context, then);
-            test_example_alias!(describe, specify, then);
-            test_example_alias!(describe, when, then);
-
-            test_example_alias!(given, context, then);
-            test_example_alias!(given, specify, then);
-            test_example_alias!(given, when, then);
-        }
     }
 }
