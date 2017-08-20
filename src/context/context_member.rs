@@ -1,5 +1,5 @@
 use context::Context;
-use example::Example;
+use context::example::Example;
 
 /// This enum is used to build a tree of named tests and contextes.
 pub enum ContextMember<T> {

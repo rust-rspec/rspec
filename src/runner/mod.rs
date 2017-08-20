@@ -10,10 +10,8 @@ mod configuration;
 
 pub use runner::configuration::Configuration;
 
-use context::Context;
-use context_member::ContextMember;
+use context::{Context, ContextMember, Example};
 use events::{Event, EventHandler};
-use example::Example;
 use rayon;
 use rayon::prelude::*;
 use report::context::ContextReport;

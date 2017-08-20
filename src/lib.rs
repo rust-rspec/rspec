@@ -13,13 +13,11 @@ extern crate rayon;
 
 pub mod suite;
 pub mod context;
-pub mod example;
 
 pub use suite::{describe, suite, given};
 
 pub mod report;
 
-mod context_member;
 
 pub mod events;
 pub mod runner;
@@ -29,12 +27,13 @@ pub mod visitor;
 pub mod prelude {
     pub use runner::{Configuration, Runner};
     pub use suite::Suite;
-    pub use context::Context;
-    pub use example::Example;
+    pub use context::{Context, Example};
 }
+
 
 #[cfg(test)]
 mod tests {
+
     pub use super::*;
     pub use context::*;
 
