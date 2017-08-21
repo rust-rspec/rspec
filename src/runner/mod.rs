@@ -10,10 +10,10 @@ mod configuration;
 
 pub use runner::configuration::Configuration;
 
+use rayon::prelude::*;
+
 use context::{Context, ContextMember, Example};
 use events::{Event, EventHandler};
-use rayon;
-use rayon::prelude::*;
 use report::context::ContextReport;
 use report::suite::SuiteReport;
 use report::example::ExampleReport;
@@ -38,7 +38,6 @@ impl Runner {
 }
 
 impl Runner {
-
     pub fn run<T>(self, suite: (Suite<T>, T)) -> SuiteReport
     where
         T: Clone + Send + Sync + ::std::fmt::Debug,
@@ -81,9 +80,6 @@ impl Runner {
         panic::set_hook(Box::new(|_panic_info| {
             // XXX panics already catched at the test call site, don't output the trace in stdout
         }));
-        let threads = if self.configuration.parallel { 0 } else { 1 }; // 0 is rayon default
-        let rayon_config = rayon::Configuration::new().num_threads(threads);
-        let _ = rayon::initialize(rayon_config);
     }
 
     fn clean_after_run(&self) {
@@ -107,6 +103,25 @@ where
     }
 }
 
+impl<T> Visitor<ContextMember<T>> for Runner
+where
+    T: Clone + Send + Sync + ::std::fmt::Debug,
+{
+    type Environment = T;
+    type Output = ContextReport;
+
+    fn visit(&self, member: &ContextMember<T>, environment: &mut Self::Environment) -> Self::Output {
+        match member {
+            &ContextMember::Example(ref example) => {
+                self.visit(example, environment).into()
+            }
+            &ContextMember::Context(ref context) => {
+                self.visit(context, &mut environment.clone())
+            }
+        }
+    }
+}
+
 impl<T> Visitor<Context<T>> for Runner
 where
     T: Clone + Send + Sync + ::std::fmt::Debug,
@@ -121,28 +136,33 @@ where
         for before_function in context.before_all.iter() {
             before_function(environment);
         }
-        let report: ContextReport = context
-            .members
-            .par_iter()
-            .map(|member| {
-                let mut environment = environment.clone();
+        let process_member = |runner: &Runner, member: &ContextMember<T>, mut environment: T| {
                 for before_each_function in context.before_each.iter() {
                     before_each_function(&mut environment);
                 }
-                let report = match member {
-                    &ContextMember::Example(ref example) => {
-                        self.visit(example, &mut environment).into()
-                    }
-                    &ContextMember::Context(ref context) => {
-                        self.visit(context, &mut environment.clone())
-                    }
-                };
+            let report = runner.visit(member, &mut environment);
                 for after_each_function in context.after_each.iter() {
                     after_each_function(&mut environment);
                 }
                 report
+        };
+        let report: ContextReport = if self.configuration.parallel {
+            context
+                .members
+                .par_iter()
+                .map(|member| {
+                    process_member(self, member, environment.clone())
             })
-            .sum();
+                .sum()
+        } else {
+            context
+                .members
+                .iter()
+                .map(|member| {
+                    process_member(self, member, environment.clone())
+                })
+                .sum()
+        };
         for after_function in context.after_all.iter() {
             after_function(environment);
         }
