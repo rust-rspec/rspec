@@ -35,22 +35,10 @@ pub fn main() {
             });
 
             ctx.then("it is not empty any more", |env| {
-                // println!("\n👉  it is not empty any more");
-                // use std::time::Duration;
-                // use std::thread;
-                // thread::sleep(Duration::from_millis(4000));
-                // println!("it is not empty any more  👈");
-
                 assert!(!env.set.is_empty());
             });
 
             ctx.then("its len increases by 1", move |env| {
-                // println!("\n👉  its len increases by 1");
-                // use std::time::Duration;
-                // use std::thread;
-                // thread::sleep(Duration::from_millis(4000));
-                // println!("its len increases by 1  👈");
-
                 assert_eq!(env.set.len(), env.len_before + 1);
             });
 
