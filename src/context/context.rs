@@ -82,16 +82,15 @@ where
     ///
     /// - [`specify`](struct.Context.html#method.specify).
     /// - [`when`](struct.Context.html#method.when).
-    pub fn context<'a, S, F>(&mut self, name: S, body: F)
+    pub fn context<'a, F>(&mut self, name: Option<&'static str>, body: F)
     where
-        S: Into<Option<&'a str>>,
         F: FnOnce(&mut Context<T>) -> (),
         T: ::std::fmt::Debug,
     {
-        let info = name.into().map(|name| {
+        let info = name.map(|name| {
             ContextInfo {
                 label: ContextLabel::Context,
-                name: name.to_owned(),
+                name: name,
             }
         });
         self.context_internal(info, body)
@@ -102,16 +101,15 @@ where
     /// Available further aliases:
     ///
     /// - [`when`](struct.Context.html#method.when).
-    pub fn specify<'a, S, F>(&mut self, name: S, body: F)
+    pub fn specify<'a, F>(&mut self, name: Option<&'static str>, body: F)
     where
-        S: Into<Option<&'a str>>,
         F: FnOnce(&mut Context<T>) -> (),
         T: ::std::fmt::Debug,
     {
-        let info = name.into().map(|name| {
+        let info = name.map(|name| {
             ContextInfo {
                 label: ContextLabel::Specify,
-                name: name.to_owned(),
+                name: name,
             }
         });
         self.context_internal(info, body)
@@ -122,16 +120,15 @@ where
     /// Available further aliases:
     ///
     /// - [`specify`](struct.Context.html#method.specify).
-    pub fn when<'b, S, F>(&mut self, name: S, body: F)
+    pub fn when<'b, F>(&mut self, name: Option<&'static str>, body: F)
     where
-        S: Into<Option<&'b str>>,
         F: FnOnce(&mut Context<T>) -> (),
         T: ::std::fmt::Debug,
     {
-        let info = name.into().map(|name| {
+        let info = name.map(|name| {
             ContextInfo {
                 label: ContextLabel::When,
-                name: name.to_owned(),
+                name: name,
             }
         });
         self.context_internal(info, body)
@@ -237,15 +234,14 @@ where
     ///
     /// - [`it`](struct.Context.html#method.it).
     /// - [`then`](struct.Context.html#method.then).
-    pub fn example<S, F, U>(&mut self, name: S, body: F)
+    pub fn example<F, U>(&mut self, name: &'static str, body: F)
     where
-        S: Into<String>,
         F: 'static + Fn(&T) -> U,
         U: Into<ExampleReport>,
     {
         let info = ExampleInfo {
             label: ExampleLabel::Example,
-            name: name.into(),
+            name: name,
             failure: None,
         };
         self.example_internal(info, body)
@@ -256,15 +252,14 @@ where
     /// Available further aliases:
     ///
     /// - [`it`](struct.Context.html#method.it).
-    pub fn it<S, F, U>(&mut self, name: S, body: F)
+    pub fn it<F, U>(&mut self, name: &'static str, body: F)
     where
-        S: Into<String>,
         F: 'static + Fn(&T) -> U,
         U: Into<ExampleReport>,
     {
         let info = ExampleInfo {
             label: ExampleLabel::It,
-            name: name.into(),
+            name: name,
             failure: None,
         };
         self.example_internal(info, body)
@@ -275,15 +270,14 @@ where
     /// Available further aliases:
     ///
     /// - [`it`](struct.Context.html#method.it).
-    pub fn then<S, F, U>(&mut self, name: S, body: F)
+    pub fn then<F, U>(&mut self, name: &'static str, body: F)
     where
-        S: Into<String>,
         F: 'static + Fn(&T) -> U,
         U: Into<ExampleReport>,
     {
         let info = ExampleInfo {
             label: ExampleLabel::Then,
-            name: name.into(),
+            name: name,
             failure: None,
         };
         self.example_internal(info, body)

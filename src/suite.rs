@@ -20,7 +20,7 @@ impl From<SuiteLabel> for &'static str {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SuiteInfo {
     pub label: SuiteLabel,
-    pub name: String,
+    pub name: &'static str,
 }
 
 pub struct Suite<T> {
@@ -84,15 +84,14 @@ where
 ///
 /// - [`describe`](fn.describe.html).
 /// - [`given`](fn.given.html).
-pub fn suite<S, F, T>(name: S, environment: T, body: F) -> (Suite<T>, T)
+pub fn suite<F, T>(name: &'static str, environment: T, body: F) -> (Suite<T>, T)
 where
-    S: Into<String>,
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
 {
     let info = SuiteInfo {
         label: SuiteLabel::Suite,
-        name: name.into(),
+        name: name,
     };
     suite_internal(info, environment, body)
 }
@@ -102,15 +101,14 @@ where
 /// Available further aliases:
 ///
 /// - [`given`](fn.describe.html).
-pub fn describe<S, F, T>(name: S, environment: T, body: F) -> (Suite<T>, T)
+pub fn describe<F, T>(name: &'static str, environment: T, body: F) -> (Suite<T>, T)
 where
-    S: Into<String>,
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
 {
     let info = SuiteInfo {
         label: SuiteLabel::Describe,
-        name: name.into(),
+        name: name,
     };
     suite_internal(info, environment, body)
 }
@@ -120,15 +118,14 @@ where
 /// Available further aliases:
 ///
 /// - [`describe`](fn.describe.html).
-pub fn given<S, F, T>(name: S, environment: T, body: F) -> (Suite<T>, T)
+pub fn given<F, T>(name: &'static str, environment: T, body: F) -> (Suite<T>, T)
 where
-    S: Into<String>,
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
 {
     let info = SuiteInfo {
         label: SuiteLabel::Given,
-        name: name.into(),
+        name: name,
     };
     suite_internal(info, environment, body)
 }

@@ -20,7 +20,7 @@ impl From<ExampleLabel> for &'static str {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ExampleInfo {
     pub label: ExampleLabel,
-    pub name: String,
+    pub name: &'static str,
     pub failure: Option<String>,
 }
 

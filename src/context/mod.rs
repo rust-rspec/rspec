@@ -44,5 +44,5 @@ impl From<ContextLabel> for &'static str {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ContextInfo {
     pub label: ContextLabel,
-    pub name: String,
+    pub name: &'static str,
 }
