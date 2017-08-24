@@ -34,6 +34,20 @@ pub mod prelude {
     pub use runner::{Configuration, Runner};
 }
 
+#[macro_export]
+macro_rules! rspec_run {
+    ($label:ident $name:expr, $env:ident, |$ctx:ident| $block:block) => ({
+        use std::io;
+        use std::sync::Arc;
+
+        let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+        let configuration = rspec::Configuration::default();
+        let runner = rspec::Runner::new(configuration, vec![formatter]);
+
+        runner.run(rspec::$label($name, $env, |$ctx| $block))
+    })
+}
+
 #[cfg(test)]
 mod tests {
 
