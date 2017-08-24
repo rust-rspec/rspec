@@ -1,16 +1,30 @@
+// derive_builder emits warnings otherwise:
+#![allow(unused_mut)]
 
+/// A Runner's configuration.
+#[derive(Builder, Default)]
 pub struct Configuration {
+    /// Whether the runner executes tests in parallel
+    #[builder(default="false")]
     pub parallel: bool,
 }
 
-impl Configuration {
-    pub fn parallel(self, parallel: bool) -> Self {
-        Configuration { parallel: parallel }
-    }
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-impl Default for Configuration {
-    fn default() -> Self {
-        Configuration { parallel: true }
+    #[test]
+    fn default() {
+        let config = Configuration::default();
+        assert_eq!(config.parallel, false);
+    }
+
+    #[test]
+    fn builder() {
+        let config = ConfigurationBuilder::default().build().unwrap();
+        assert_eq!(config.parallel, false);
+
+        let config = ConfigurationBuilder::default().parallel(true).build().unwrap();
+        assert_eq!(config.parallel, true);
     }
 }

@@ -7,7 +7,7 @@
 //! extern crate rspec;
 //!
 //! use std::io;
-//! use std::sync::{Arc, Mutex};
+//! use std::sync::Arc;
 //!
 //! use rspec::prelude::*;
 //!
@@ -20,21 +20,21 @@
 //!     let environment = Environment {
 //!         // ...
 //!     };
-//!     let simple = rspec::formatter::Simple::new(io::stdout());
-//!     let formatter = Arc::new(Mutex::new(simple));
-//!     let configuration = Configuration::default().parallel(false);
-//!     let runner = Runner::new(configuration, vec![formatter]);
+//!     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+//!     let configuration = rspec::Configuration::default();
+//!     let runner = rspec::Runner::new(configuration, vec![formatter]);
 //!
-//!     runner.run_or_exit(rspec::suite("a test suite", environment, |ctx| {
-//!         ctx.context("opens a context labeled 'context'", |ctx| {
+//!     runner.run(rspec::suite("a test suite", environment, |ctx| {
+//!         ctx.context("opens a context labeled 'context'", |_ctx| {
 //!             // …
 //!         });
-//!     }));
+//!     })).or_exit();
 //! }
 //! ```
 
-pub mod formatter;
-pub mod simple;
+pub mod serial;
+pub mod parallel;
 
 /// The Simple formatter is similar to the default Rspec formatter
-pub use formatter::simple::Simple;
+// pub use formatter::serial::Formatter;
+pub use formatter::parallel::Formatter;

@@ -12,7 +12,7 @@ The last stable documentation is available for consultation at
 [mackwic.github.io/rspec](https://mackwic.github.io/rspec).
 
 **All rspec releases are garanteed to compile against the latest stable rust and
-are tested on all rust versions from the 1.18**.
+are tested on all rust versions from the 1.19**.
 
 ## How to use
 
@@ -69,11 +69,10 @@ You can also use rspec in integration tests, this example uses the rspec runner:
 extern crate rspec;
 
 use std::io;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 pub fn main() {
-    let simple = rspec::formatter::Simple::new(io::stdout());
-    let formatter = Arc::new(Mutex::new(simple));
+    let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
 
     let mut runner = describe("rspec is a classic BDD testing", (), |ctx, _| {
 

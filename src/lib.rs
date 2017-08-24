@@ -5,37 +5,40 @@
 
 #![allow(dead_code)]
 
+#[macro_use]
+extern crate derive_builder;
+
 #[cfg(feature = "expectest_compat")]
 extern crate expectest;
 
 extern crate colored;
 extern crate rayon;
 
-pub mod suite;
-pub mod context;
+pub mod block;
 
-pub use suite::{describe, suite, given};
-
+pub mod header;
 pub mod report;
 
-
-pub mod events;
+pub mod event_handler;
 pub mod runner;
 pub mod formatter;
 pub mod visitor;
 
-pub mod prelude {
-    pub use runner::{Configuration, Runner};
-    pub use suite::Suite;
-    pub use context::{Context, Example};
-}
+pub use block::suite::{suite, describe, given};
+pub use formatter::Formatter;
+pub use runner::{Configuration, Runner};
 
+pub mod prelude {
+    pub use block::suite::{suite, describe, given};
+    pub use formatter::Formatter;
+    pub use runner::{Configuration, Runner};
+}
 
 #[cfg(test)]
 mod tests {
 
     pub use super::*;
-    pub use context::*;
+    pub use block::context::*;
 
     // Test list:
     // x check that tests can call `assert_eq!`

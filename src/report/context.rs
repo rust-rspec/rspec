@@ -1,78 +1,56 @@
-use std::ops::{Add, AddAssign};
-use std::iter::Sum;
+use report::{Report, BlockReport};
 
-use report::example::ExampleReport;
-
+/// The runner assembles a `ContextReport` for each context during test execution.
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
 pub struct ContextReport {
-    pub passed: u32,
-    pub failed: u32,
-    pub ignored: u32,
-    pub measured: u32,
+    sub_reports: Vec<BlockReport>,
 }
 
 impl ContextReport {
-    pub fn new(passed: u32, failed: u32) -> Self {
+    pub fn new(sub_reports: Vec<BlockReport>) -> Self {
         ContextReport {
-            passed: passed,
-            failed: failed,
-            ignored: 0,
-            measured: 0,
+            sub_reports: sub_reports,
         }
     }
 
-    pub fn add<T>(&mut self, report: T)
-    where
-        T: Into<ContextReport>,
-    {
-        let report: ContextReport = report.into();
-        self.passed += report.passed;
-        self.failed += report.failed;
-        self.ignored += report.ignored;
-        self.measured += report.measured;
+    pub fn get_blocks(&self) -> &[BlockReport] {
+        &self.sub_reports[..]
     }
 }
 
-impl From<ExampleReport> for ContextReport {
-    fn from(result: ExampleReport) -> Self {
-        let (passed, failed) = if result.is_ok() { (1, 0) } else { (0, 1) };
-        ContextReport {
-            passed: passed,
-            failed: failed,
-            ignored: 0,
-            measured: 0,
-        }
+impl Report for ContextReport {
+    fn is_success(&self) -> bool {
+        self.sub_reports.iter().fold(true, |success, report| {
+            success & report.is_success()
+        })
+    }
+
+    fn is_failure(&self) -> bool {
+        self.sub_reports.iter().fold(false, |failure, report| {
+            failure | report.is_failure()
+        })
+    }
+
+    fn get_passed(&self) -> u32 {
+        self.sub_reports.iter().fold(0, |count, report| {
+            count + report.get_passed()
+        })
+    }
+
+    fn get_failed(&self) -> u32 {
+        self.sub_reports.iter().fold(0, |count, report| {
+            count + report.get_failed()
+        })
+    }
+
+    fn get_ignored(&self) -> u32 {
+        self.sub_reports.iter().fold(0, |count, report| {
+            count + report.get_ignored()
+        })
     }
 }
 
-impl Add<Self> for ContextReport {
-    type Output = Self;
-
-    fn add(self, other: Self) -> Self {
-        ContextReport {
-            passed: self.passed + other.passed,
-            failed: self.failed + other.failed,
-            ignored: self.ignored + other.ignored,
-            measured: self.measured + other.measured,
-        }
-    }
-}
-
-impl AddAssign<Self> for ContextReport {
-    fn add_assign(&mut self, rhs: Self) {
-        self.passed += rhs.passed;
-        self.failed += rhs.failed;
-        self.ignored += rhs.ignored;
-        self.measured += rhs.measured;
-    }
-}
-
-impl Sum<Self> for ContextReport {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        let mut report = ContextReport::default();
-        for sub_report in iter {
-            report += sub_report;
-        }
-        report
-    }
+#[cfg(test)]
+mod tests {
+    // use super::*;
 }

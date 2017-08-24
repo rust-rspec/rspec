@@ -7,29 +7,37 @@
 //! The main methods are `Runner::run` and `Runner::result`.
 
 mod configuration;
+mod failure;
+
+use colored::*;
 
 pub use runner::configuration::Configuration;
 
+use std::fmt;
+use std::panic;
+use std::sync::Arc;
+use std::borrow::Borrow;
+
 use rayon::prelude::*;
 
-use context::{Context, ContextMember, Example};
-use events::{Event, EventHandler};
+use block::Block;
+use block::suite::Suite;
+use block::context::Context;
+use block::example::Example;
+use event_handler::EventHandler;
+use report::BlockReport;
 use report::context::ContextReport;
 use report::suite::SuiteReport;
 use report::example::ExampleReport;
-use std::panic;
-use std::sync::{Arc, Mutex};
-use suite::Suite;
-use visitor::Visitor;
-
+use visitor::TestSuiteVisitor;
 
 pub struct Runner {
     configuration: configuration::Configuration,
-    handlers: Vec<Arc<Mutex<EventHandler>>>,
+    handlers: Vec<Arc<EventHandler>>,
 }
 
 impl Runner {
-    pub fn new(configuration: Configuration, handlers: Vec<Arc<Mutex<EventHandler>>>) -> Runner {
+    pub fn new(configuration: Configuration, handlers: Vec<Arc<EventHandler>>) -> Runner {
         Runner {
             configuration: configuration,
             handlers: handlers,
@@ -38,7 +46,7 @@ impl Runner {
 }
 
 impl Runner {
-    pub fn run<T>(self, suite: (Suite<T>, T)) -> SuiteReport
+    pub fn run<T>(&self, suite: (Suite<T>, T)) -> SuiteReport
     where
         T: Clone + Send + Sync + ::std::fmt::Debug,
     {
@@ -49,29 +57,15 @@ impl Runner {
         report
     }
 
-    pub fn run_or_exit<T>(self, suite: (Suite<T>, T))
+    fn broadcast<F, U, V>(&self, mut f: F)
     where
-        T: Clone + Send + Sync + ::std::fmt::Debug,
+        F: FnMut(&EventHandler) -> Result<U, V>,
+        U: fmt::Debug,
+        V: fmt::Debug
     {
-        if self.run(suite).failed > 0 {
-            // XXX Cargo test failure returns 101.
-            //
-            // > "We use 101 as the standard failure exit code because it's something unique
-            // > that the test runner can check for in run-fail tests (as opposed to something
-            // > like 1, which everybody uses). I don't expect this behavior can ever change.
-            // > This behavior probably dates to before 2013,
-            // > all the way back to the creation of compiletest." – @brson
-
-            ::std::process::exit(101);
-        }
-    }
-
-    fn broadcast(&self, event: Event) {
-        for mutex in &self.handlers {
-            if let Ok(ref mut handler) = mutex.lock() {
-                handler.handle(&event);
-            } else {
-                println!("Error: lock failed");
+        for event_handler in &self.handlers {
+            if let Err(error) = f(event_handler.borrow()) {
+                eprintln!("\n{}: {:?}", "error".red().bold(), error);
             }
         }
     }
@@ -88,41 +82,45 @@ impl Runner {
     }
 }
 
-impl<T> Visitor<Suite<T>> for Runner
+impl<T> TestSuiteVisitor<Suite<T>> for Runner
 where
     T: Clone + Send + Sync + ::std::fmt::Debug,
 {
     type Environment = T;
-    type Output = ContextReport;
+    type Output = SuiteReport;
 
     fn visit(&self, suite: &Suite<T>, environment: &mut Self::Environment) -> Self::Output {
-        self.broadcast(Event::EnterSuite(suite.info.clone()));
-        let report = self.visit(&suite.context, environment);
-        self.broadcast(Event::ExitSuite(report.clone()));
+        self.broadcast(|handler| handler.enter_suite(&suite.header));
+        let report = SuiteReport::new(suite.header.clone(), self.visit(&suite.context, environment));
+        self.broadcast(|handler| handler.exit_suite(&suite.header, &report));
         report
     }
 }
 
-impl<T> Visitor<ContextMember<T>> for Runner
+impl<T> TestSuiteVisitor<Block<T>> for Runner
 where
     T: Clone + Send + Sync + ::std::fmt::Debug,
 {
     type Environment = T;
-    type Output = ContextReport;
+    type Output = BlockReport;
 
-    fn visit(&self, member: &ContextMember<T>, environment: &mut Self::Environment) -> Self::Output {
+    fn visit(&self, member: &Block<T>, environment: &mut Self::Environment) -> Self::Output {
         match member {
-            &ContextMember::Example(ref example) => {
-                self.visit(example, environment).into()
+            &Block::Example(ref example) => {
+                let header = example.header.clone();
+                let report = self.visit(example, environment);
+                BlockReport::Example(header, report)
             }
-            &ContextMember::Context(ref context) => {
-                self.visit(context, &mut environment.clone())
+            &Block::Context(ref context) => {
+                let header = context.header.clone();
+                let report = self.visit(context, &mut environment.clone());
+                BlockReport::Context(header, report)
             }
         }
     }
 }
 
-impl<T> Visitor<Context<T>> for Runner
+impl<T> TestSuiteVisitor<Context<T>> for Runner
 where
     T: Clone + Send + Sync + ::std::fmt::Debug,
 {
@@ -130,13 +128,13 @@ where
     type Output = ContextReport;
 
     fn visit(&self, context: &Context<T>, environment: &mut Self::Environment) -> Self::Output {
-        if let Some(ref info) = context.info {
-            self.broadcast(Event::EnterContext(info.clone()));
+        if let Some(ref header) = context.header {
+            self.broadcast(|handler| handler.enter_context(&header));
         }
         for before_function in context.before_all.iter() {
             before_function(environment);
         }
-        let process_member = |runner: &Runner, member: &ContextMember<T>, mut environment: T| {
+        let process_member = |runner: &Runner, member: &Block<T>, mut environment: T| {
                 for before_each_function in context.before_each.iter() {
                     before_each_function(&mut environment);
                 }
@@ -146,34 +144,34 @@ where
                 }
                 report
         };
-        let report: ContextReport = if self.configuration.parallel {
+        let reports: Vec<_> = if self.configuration.parallel {
             context
-                .members
+                .blocks
                 .par_iter()
                 .map(|member| {
                     process_member(self, member, environment.clone())
-            })
-                .sum()
+            }).collect()
         } else {
             context
-                .members
+                .blocks
                 .iter()
                 .map(|member| {
                     process_member(self, member, environment.clone())
                 })
-                .sum()
+                .collect()
         };
         for after_function in context.after_all.iter() {
             after_function(environment);
         }
-        if let Some(_) = context.info {
-            self.broadcast(Event::ExitContext(report.clone()));
+        let report = ContextReport::new(reports);
+        if let Some(ref header) = context.header {
+            self.broadcast(|handler| handler.exit_context(&header, &report));
         }
         report
     }
 }
 
-impl<T> Visitor<Example<T>> for Runner
+impl<T> TestSuiteVisitor<Example<T>> for Runner
 where
     T: Clone + Send + Sync + ::std::fmt::Debug,
 {
@@ -181,10 +179,10 @@ where
     type Output = ExampleReport;
 
     fn visit(&self, example: &Example<T>, environment: &mut Self::Environment) -> Self::Output {
-        self.broadcast(Event::EnterExample(example.info.clone()));
+        self.broadcast(|handler| handler.enter_example(&example.header));
         let function = &example.function;
         let report = function(environment);
-        self.broadcast(Event::ExitExample(report.clone()));
+        self.broadcast(|handler| handler.exit_example(&example.header, &report));
         report
     }
 }

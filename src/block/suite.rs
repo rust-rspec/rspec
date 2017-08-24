@@ -1,39 +1,21 @@
-use context::Context;
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum SuiteLabel {
-    Suite,
-    Describe,
-    Given,
-}
-
-impl From<SuiteLabel> for &'static str {
-    fn from(label: SuiteLabel) -> Self {
-        match label {
-            SuiteLabel::Suite => "Suite",
-            SuiteLabel::Describe => "Describe",
-            SuiteLabel::Given => "Given",
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct SuiteInfo {
-    pub label: SuiteLabel,
-    pub name: &'static str,
-}
+use header::suite::{SuiteLabel, SuiteHeader};
+use block::context::Context;
 
 pub struct Suite<T> {
-    pub info: SuiteInfo,
+    pub header: SuiteHeader,
     pub(crate) context: Context<T>,
 }
 
 impl<T> Suite<T> {
-    pub(crate) fn new(info: SuiteInfo, context: Context<T>) -> Self {
+    pub(crate) fn new(header: SuiteHeader, context: Context<T>) -> Self {
         Suite {
-            info: info,
+            header: header,
             context: context,
         }
+    }
+
+    pub fn num_examples(&self) -> usize {
+        self.context.num_examples()
     }
 }
 
@@ -56,26 +38,25 @@ where
 /// # extern crate rspec;
 /// #
 /// # use std::io;
-/// # use std::sync::{Arc, Mutex};
+/// # use std::sync::Arc;
 /// #
 /// # use rspec::prelude::*;
 /// #
 /// # pub fn main() {
-/// #     let simple = rspec::formatter::Simple::new(io::stdout());
-/// #     let formatter = Arc::new(Mutex::new(simple));
-/// #     let configuration = Configuration::default().parallel(false);
-/// #     let runner = Runner::new(configuration, vec![formatter]);
+/// #     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+/// #     let configuration = rspec::Configuration::default();
+/// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
 /// #
-/// runner.run_or_exit(rspec::suite("a test suite", (), |ctx| {
+/// runner.run(rspec::suite("a test suite", (), |_ctx| {
 ///     // …
-/// }));
+/// })).or_exit();
 /// # }
 /// ```
 ///
 /// Corresponding console output:
 ///
 /// ```no-run
-/// running tests
+/// tests
 /// Suite "a test suite":
 ///     …
 /// ```
@@ -89,14 +70,14 @@ where
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
 {
-    let info = SuiteInfo {
+    let header = SuiteHeader {
         label: SuiteLabel::Suite,
         name: name,
     };
-    suite_internal(info, environment, body)
+    suite_internal(header, environment, body)
 }
 
-/// Alias for [`suite`](fn.suite.html), see for more info.
+/// Alias for [`suite`](fn.suite.html), see for more header.
 ///
 /// Available further aliases:
 ///
@@ -106,14 +87,14 @@ where
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
 {
-    let info = SuiteInfo {
+    let header = SuiteHeader {
         label: SuiteLabel::Describe,
         name: name,
     };
-    suite_internal(info, environment, body)
+    suite_internal(header, environment, body)
 }
 
-/// Alias for [`suite`](fn.suite.html), see for more info.
+/// Alias for [`suite`](fn.suite.html), see for more header.
 ///
 /// Available further aliases:
 ///
@@ -123,20 +104,18 @@ where
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
 {
-    let info = SuiteInfo {
+    let header = SuiteHeader {
         label: SuiteLabel::Given,
         name: name,
     };
-    suite_internal(info, environment, body)
+    suite_internal(header, environment, body)
 }
 
-fn suite_internal<'a, F, T>(info: SuiteInfo, environment: T, body: F) -> (Suite<T>, T)
+fn suite_internal<'a, F, T>(header: SuiteHeader, environment: T, body: F) -> (Suite<T>, T)
 where
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
-{
-    // Note: root context's info get's ignored.
-    let mut ctx = Context::new(None);
+{    let mut ctx = Context::new(None);
     body(&mut ctx);
-    (Suite::new(info, ctx), environment)
+    (Suite::new(header, ctx), environment)
 }

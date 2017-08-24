@@ -1,34 +1,48 @@
 use std::io;
-use std::mem;
+use std::sync::Mutex;
+use std::ops::DerefMut;
 
 use colored::*;
-use context::{ContextInfo, ExampleInfo};
-use events::{Event, EventHandler};
-use formatter::formatter::Formatter;
+
+use header::Header;
+use header::suite::SuiteHeader;
+use header::context::ContextHeader;
+use header::example::ExampleHeader;
+use event_handler::EventHandler;
+use report::{Report, BlockReport};
 use report::suite::SuiteReport;
 use report::context::ContextReport;
 use report::example::ExampleReport;
-use suite::SuiteInfo;
 
-#[derive(Clone, Debug)]
-enum ScopeInfo {
-    Suite(SuiteInfo),
-    Context(ContextInfo),
-    Example(ExampleInfo),
-}
-
-pub struct Simple<T: io::Write> {
+struct FormatterState<T: io::Write = io::Stdout> {
     buffer: T,
-    name_stack: Vec<ScopeInfo>,
-    failed: Vec<Vec<ScopeInfo>>,
+    level: usize,
 }
 
-impl<T: io::Write> Simple<T> {
-    pub fn new(buffer: T) -> Simple<T> {
-        Simple {
+impl<T: io::Write> FormatterState<T> {
+    pub fn new(buffer: T) -> Self {
+        FormatterState {
             buffer: buffer,
-            name_stack: vec![],
-            failed: vec![],
+            level: 0,
+        }
+    }
+}
+
+pub struct Formatter<T: io::Write = io::Stdout> {
+    state: Mutex<FormatterState<T>>,
+}
+
+impl Default for Formatter<io::Stdout> {
+    fn default() -> Self {
+        Formatter::new(io::stdout())
+    }
+}
+
+impl<T: io::Write> Formatter<T> {
+    pub fn new(buffer: T) -> Self {
+        let state = FormatterState::new(buffer);
+        Formatter {
+            state: Mutex::new(state),
         }
     }
 
@@ -36,156 +50,199 @@ impl<T: io::Write> Simple<T> {
         "  ".repeat(depth)
     }
 
-    fn enter_suite(&mut self, info: &SuiteInfo) {
-        self.name_stack.push(ScopeInfo::Suite(info.clone()));
-        let _ = writeln!(self.buffer, "\nrunning tests");
-        let label: &str = info.label.into();
-        let _ = writeln!(self.buffer, "{} {:?}:", label, info.name);
+    fn access_state<F>(&self, mut f: F) -> io::Result<()>
+    where
+        F: FnMut(&mut FormatterState<T>) -> io::Result<()>
+    {
+        if let Ok(ref mut mutex_guard) = self.state.lock() {
+            f(mutex_guard.deref_mut())?;
+        } else {
+            eprintln!("\n{}: failed to aquire lock on mutex.", "error".red().bold());
+        }
+
+        Ok(())
     }
 
-    fn exit_suite(&mut self, report: &SuiteReport) {
-        let _ = writeln!(self.buffer, "\nfailures:");
-        let failed = mem::replace(&mut self.failed, vec![]);
-        for scope_stack in failed {
-            for (indent, scope) in scope_stack.into_iter().enumerate() {
-                match scope {
-                    ScopeInfo::Suite(info) => {
-                        let padding = Self::padding(indent);
-                        let label: &str = info.label.into();
-                        let _ = writeln!(self.buffer, "{}{} {:?}:", padding, label, info.name);
-                    }
-                    ScopeInfo::Context(info) => {
-                        let padding = Self::padding(indent);
-                        let label: &str = info.label.into();
-                        let _ = writeln!(self.buffer, "{}{} {:?}:", padding, label, info.name);
-                    }
-                    ScopeInfo::Example(info) => {
-                        let padding = Self::padding(indent);
-                        let label: &str = info.label.into();
-                        if let Some(failure) = info.failure {
-                            let _ = writeln!(self.buffer, "{}{} {:?}:", padding, label, info.name);
-                            let padding = Self::padding(indent + 1);
-                            let _ = writeln!(self.buffer, "{}{}", padding, failure);
-                        } else {
-                            let _ = writeln!(self.buffer, "{}{} {:?}", padding, label, info.name);
-                        }
-                    }
-                }
+    fn write_header<H>(&self, buffer: &mut T, indent: usize, header: &H) -> io::Result<()>
+    where
+        H: Header
+    {
+        let padding = Self::padding(indent);
+        write!(buffer, "{}{} {:?}", padding, header.label(), header.name())?;
+
+        Ok(())
+    }
+
+    fn write_suite_failures(&self, buffer: &mut T, indent: usize, report: &SuiteReport) -> io::Result<()> {
+        if report.is_failure() {
+            let _ = writeln!(buffer, "\nfailures:\n");
+            self.write_header(buffer, indent, report.get_header())?;
+            writeln!(buffer)?;
+            let context_report = report.get_context();
+            for block_report in context_report.get_blocks() {
+                self.write_block_failures(buffer, indent + 1, block_report)?;
             }
         }
 
-        let label = if report.failed == 0 {
+        Ok(())
+    }
+
+    fn write_block_failures(&self, buffer: &mut T, indent: usize, report: &BlockReport) -> io::Result<()> {
+        if report.is_failure() {
+            match report {
+                &BlockReport::Context(ref header, ref report) => {
+                    if let Some(header) = header.as_ref() {
+                        self.write_header(buffer, indent, header)?;
+                    }
+                    self.write_context_failures(buffer, indent + 1, report)?;
+                },
+                &BlockReport::Example(ref header, ref report) => {
+                    self.write_header(buffer, indent, header)?;
+                    writeln!(buffer)?;
+                    self.write_example_failure(buffer, indent + 1, report)?;
+                },
+            }
+        }
+        Ok(())
+    }
+
+    fn write_context_failures(&self, buffer: &mut T, indent: usize, report: &ContextReport) -> io::Result<()> {
+        if report.is_failure() {
+            writeln!(buffer)?;
+            for block_report in report.get_blocks() {
+                self.write_block_failures(buffer, indent + 1, block_report)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn write_example_failure(&self, buffer: &mut T, indent: usize, report: &ExampleReport) -> io::Result<()> {
+        if let &ExampleReport::Failure(Some(ref reason)) = report {
+            let padding = Self::padding(indent);
+            writeln!(buffer, "{}{}", padding, reason)?;
+        }
+        Ok(())
+    }
+
+    fn write_suite_prefix(&self, buffer: &mut T) -> io::Result<()> {
+        writeln!(buffer, "\ntests:\n")?;
+
+        Ok(())
+    }
+
+    fn write_suite_suffix(&self, buffer: &mut T, report: &SuiteReport) -> io::Result<()> {
+        let flag = self.report_flag(report);
+        write!(buffer, "\ntest result: {}.", flag)?;
+        writeln!(
+            buffer,
+            " {} passed; {} failed; {} ignored",
+            report.get_passed(), report.get_failed(), report.get_ignored()
+        )?;
+
+        if report.is_failure() {
+            writeln!(buffer, "\n{}: test failed", "error".red().bold())?;
+        }
+
+        Ok(())
+    }
+
+    fn report_flag<R>(&self, report: &R) -> ColoredString
+    where
+        R: Report
+    {
+        if report.is_success() {
             "ok".green()
         } else {
             "FAILED".red()
-        };
-        let _ = write!(self.buffer, "\ntest result: {}.", label);
-        let _ = write!(self.buffer, " {} passed", report.passed);
-        let _ = write!(self.buffer, "; {} failed", report.failed);
-        let _ = write!(self.buffer, "; {} ignored", report.ignored);
-        let _ = write!(self.buffer, "; {} measured", report.measured);
-        let _ = writeln!(self.buffer, "");
-
-        if report.failed > 0 {
-            let _ = writeln!(self.buffer, "\n{}: test failed", "error".red().bold());
         }
-    }
-
-    fn enter_context(&mut self, info: &ContextInfo) {
-        self.name_stack.push(ScopeInfo::Context(info.clone()));
-
-        let indent = self.name_stack.len() - 1;
-        let _ = write!(self.buffer, "{}", Self::padding(indent));
-
-        let label: &str = info.label.into();
-        let _ = writeln!(self.buffer, "{} {:?}:", label, info.name);
-    }
-
-    fn exit_context(&mut self, _report: &ContextReport) {
-        self.name_stack.pop();
-    }
-
-    fn enter_example(&mut self, info: &ExampleInfo) {
-        self.name_stack.push(ScopeInfo::Example(info.clone()));
-
-        let indent = self.name_stack.len() - 1;
-        let _ = write!(self.buffer, "{}", Self::padding(indent));
-
-        let label: &str = info.label.into();
-        let _ = write!(self.buffer, "{} {:?}", label, info.name);
-        let _ = write!(self.buffer, " ... ");
-    }
-
-    fn exit_example(&mut self, result: &ExampleReport) {
-        if let &ExampleReport::Failure(ref failure) = result {
-            if let Some(&mut ScopeInfo::Example(ref mut test_info)) = self.name_stack.last_mut() {
-                test_info.failure = failure.message.clone();
-            }
-            if !self.name_stack.is_empty() {
-                self.failed.push(self.name_stack.clone());
-            }
-        }
-        let label = if result.is_ok() {
-            "ok".green()
-        } else {
-            "FAILED".red()
-        };
-        let _ = writeln!(self.buffer, "{}", label);
-        self.name_stack.pop();
     }
 }
 
-impl<T: io::Write> EventHandler for Simple<T>
+impl<T: io::Write> EventHandler for Formatter<T>
 where
     T: Send + Sync,
 {
-    fn handle(&mut self, event: &Event) {
-        match *event {
-            Event::EnterSuite(ref name) => {
-                self.enter_suite(name);
-            }
-            Event::ExitSuite(ref report) => {
-                self.exit_suite(report);
-            }
-            Event::EnterContext(ref name) => {
-                self.enter_context(name);
-            }
-            Event::ExitContext(ref report) => {
-                self.exit_context(report);
-            }
-            Event::EnterExample(ref name) => {
-                self.enter_example(name);
-            }
-            Event::ExitExample(ref result) => {
-                self.exit_example(result);
-            }
-        };
-    }
-}
+    fn enter_suite(&self, suite: &SuiteHeader) -> io::Result<()> {
+        self.access_state(|state| {
+            state.level += 1;
+            let indentation = state.level - 1;
+            self.write_suite_prefix(&mut state.buffer)?;
+            self.write_header(&mut state.buffer, indentation, suite)?;
+            writeln!(state.buffer)?;
 
-impl<T: io::Write> Formatter for Simple<T>
-where
-    T: Send + Sync,
-{
+            Ok(())
+        })
+    }
+
+    fn exit_suite(&self, _suite: &SuiteHeader, report: &SuiteReport) -> io::Result<()> {
+        self.access_state(|state| {
+            self.write_suite_failures(&mut state.buffer, 0, report)?;
+            self.write_suite_suffix(&mut state.buffer, report)?;
+
+            state.level -= 1;
+
+            Ok(())
+        })
+    }
+
+    fn enter_context(&self, context: &ContextHeader) -> io::Result<()> {
+        self.access_state(|state| {
+            state.level += 1;
+            let indentation = state.level - 1;
+
+            self.write_header(&mut state.buffer, indentation, context)?;
+            writeln!(state.buffer)?;
+
+            Ok(())
+        })
+    }
+
+    fn exit_context(&self, _context: &ContextHeader, _report: &ContextReport) -> io::Result<()> {
+        self.access_state(|state| {
+            state.level -= 1;
+
+            Ok(())
+        })
+    }
+
+    fn enter_example(&self, example: &ExampleHeader) -> io::Result<()> {
+        self.access_state(|state| {
+            state.level += 1;
+            let indentation = state.level - 1;
+            self.write_header(&mut state.buffer, indentation, example)?;
+            write!(state.buffer, " ... ")?;
+
+            Ok(())
+        })
+    }
+
+    fn exit_example(&self, _example: &ExampleHeader, report: &ExampleReport) -> io::Result<()> {
+        self.access_state(|state| {
+            writeln!(state.buffer, "{}", self.report_flag(report))?;
+            state.level -= 1;
+
+            Ok(())
+        })
+    }
 }
 
 // #[cfg(test)]
 // mod tests {
 //     pub use super::*;
-//     pub use formatter::formatter::Formatter;
-//     pub use events::{Event, EventHandler};
+//     pub use event_handler::{Event, EventHandler};
 //     pub use example_report::*;
 //     pub use std::io;
 //     pub use std::str;
 //
 //     #[test]
 //     fn it_can_be_instanciated() {
-//         Simple::new(&mut vec![1u8]);
+//         Formatter::new(&mut vec![1u8]);
 //     }
 //
 //     #[test]
 //     fn it_impl_formatter_trait() {
-//         let _: &Formatter = &Simple::new(&mut vec![1u8]) as &Formatter;
+//         let _: &Formatter = &Formatter::new(&mut vec![1u8]) as &Formatter;
 //     }
 //
 //     mod event_start_runner {
@@ -195,11 +252,11 @@ where
 //         fn it_display_that_examples_started() {
 //             let mut v = vec![];
 //             {
-//                 let mut s = Simple::new(&mut v);
+//                 let mut s = Formatter::new(&mut v);
 //                 s.handle(&Event::EnterSuite);
 //             }
 //
-//             assert_eq!("\nrunning tests", str::from_utf8(&v).unwrap());
+//             assert_eq!("\ntests", str::from_utf8(&v).unwrap());
 //         }
 //     }
 //
@@ -217,7 +274,7 @@ where
 //                     fn $test_name() {
 //                         let mut sink = io::sink();
 //                         let res = {
-//                             let mut s = Simple::new(&mut sink);
+//                             let mut s = Formatter::new(&mut sink);
 //                             s.write_summary(ContextReport {
 //                                 passed: $succ,
 //                                 failed: $fail,
@@ -257,7 +314,7 @@ where
 //         fn it_displays_a_dot_when_success() {
 //             let mut v = vec![];
 //             {
-//                 let mut s = Simple::new(&mut v);
+//                 let mut s = Formatter::new(&mut v);
 //                 s.handle(&Event::ExitExample(SUCCESS_RES))
 //             }
 //
@@ -269,7 +326,7 @@ where
 //         fn it_displays_a_F_when_error() {
 //             let mut v = vec![];
 //             {
-//                 let mut s = Simple::new(&mut v);
+//                 let mut s = Formatter::new(&mut v);
 //                 s.handle(&Event::ExitExample(FAILED_RES))
 //             }
 //
@@ -283,7 +340,7 @@ where
 //         #[test]
 //         fn start_describe_event_push_the_name_stack() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Simple::new(&mut sink);
+//             let mut s = Formatter::new(&mut sink);
 //
 //             s.handle(&Event::EnterContext(String::from("Hey !")));
 //             assert_eq!(vec![String::from("Hey !")], s.name_stack);
@@ -296,7 +353,7 @@ where
 //         #[test]
 //         fn end_describe_event_pop_the_name_stack() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Simple::new(&mut sink);
+//             let mut s = Formatter::new(&mut sink);
 //
 //             s.handle(&Event::EnterContext(String::from("Hey !")));
 //             s.handle(&Event::EnterContext(String::from("Ho !")));
@@ -315,7 +372,7 @@ where
 //         #[test]
 //         fn it_register_failures() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Simple::new(&mut sink);
+//             let mut s = Formatter::new(&mut sink);
 //             s.handle(&Event::EnterExample("hola".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(1, s.failed.len());
@@ -324,7 +381,7 @@ where
 //         #[test]
 //         fn it_keep_track_of_the_failure_name() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Simple::new(&mut sink);
+//             let mut s = Formatter::new(&mut sink);
 //             s.handle(&Event::EnterExample("hola".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"hola".into()), s.failed.get(0));
@@ -333,7 +390,7 @@ where
 //         #[test]
 //         fn it_has_a_nice_diplay_for_describes() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Simple::new(&mut sink);
+//             let mut s = Formatter::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
@@ -348,7 +405,7 @@ where
 //         #[test]
 //         fn it_works_with_multiple_describes() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Simple::new(&mut sink);
+//             let mut s = Formatter::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
@@ -363,7 +420,7 @@ where
 //         #[test]
 //         fn it_doesnt_includes_success() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Simple::new(&mut sink);
+//             let mut s = Formatter::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(SUCCESS_RES));
@@ -374,7 +431,7 @@ where
 //         #[test]
 //         fn is_doesnt_keep_examples_in_name_stack() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Simple::new(&mut sink);
+//             let mut s = Formatter::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(SUCCESS_RES));
@@ -389,7 +446,7 @@ where
 //         fn format_all_failures_one_error() {
 //             let mut sink = &mut io::sink();
 //             let res = {
-//                 let mut s = Simple::new(&mut sink);
+//                 let mut s = Formatter::new(&mut sink);
 //                 s.handle(&Event::EnterContext("hola".into()));
 //                 s.handle(&Event::EnterExample("holé".into()));
 //                 s.handle(&Event::ExitExample(FAILED_RES));
@@ -403,7 +460,7 @@ where
 //         fn format_all_failures() {
 //             let mut sink = &mut io::sink();
 //             let res = {
-//                 let mut s = Simple::new(&mut sink);
+//                 let mut s = Formatter::new(&mut sink);
 //                 s.handle(&Event::EnterContext("hola".into()));
 //                 s.handle(&Event::EnterExample("holé".into()));
 //                 s.handle(&Event::ExitExample(FAILED_RES));
@@ -415,7 +472,7 @@ where
 //             assert_eq!("  1) hola | holé\n  2) hola | hola\n", res);
 //
 //             let res = {
-//                 let mut s = Simple::new(&mut sink);
+//                 let mut s = Formatter::new(&mut sink);
 //                 s.handle(&Event::EnterContext("hola".into()));
 //                 s.handle(&Event::EnterExample("holé".into()));
 //                 s.handle(&Event::ExitExample(FAILED_RES));

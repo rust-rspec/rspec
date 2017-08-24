@@ -1,4 +1,4 @@
-pub trait Visitor<T> {
+pub trait TestSuiteVisitor<T> {
     type Environment;
     type Output;
 

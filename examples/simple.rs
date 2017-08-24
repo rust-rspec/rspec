@@ -1,16 +1,13 @@
 extern crate rspec;
 
 use std::io;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::collections::BTreeSet;
 
-use rspec::prelude::*;
-
 pub fn main() {
-    let simple = rspec::formatter::Simple::new(io::stdout());
-    let formatter = Arc::new(Mutex::new(simple));
-    let configuration = Configuration::default().parallel(false);
-    let runner = Runner::new(configuration, vec![formatter]);
+    let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+    let configuration = rspec::Configuration::default();
+    let runner = rspec::Runner::new(configuration, vec![formatter]);
 
     #[derive(Clone, Debug)]
     struct Environment {
@@ -23,7 +20,7 @@ pub fn main() {
         len_before: 0,
     };
 
-    runner.run_or_exit(rspec::given("a BTreeSet", environment, |ctx| {
+    runner.run(rspec::given("a BTreeSet", environment, |ctx| {
         ctx.when("not having added any items", |ctx| {
             ctx.then("it is empty", |env| assert!(env.set.is_empty()));
         });
@@ -61,5 +58,5 @@ pub fn main() {
         ctx.then("panic!(…) fails", move |_env| {
             panic!("Some reason for failure.")
         });
-    }));
+    })).or_exit();
 }
