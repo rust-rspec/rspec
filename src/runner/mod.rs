@@ -26,7 +26,7 @@ use block::suite::Suite;
 use block::context::Context;
 use block::example::Example;
 use event_handler::EventHandler;
-use report::BlockReport;
+use report::{Report, BlockReport};
 use report::context::ContextReport;
 use report::suite::SuiteReport;
 use report::example::ExampleReport;
@@ -74,6 +74,62 @@ impl Runner {
                 eprintln!("\n{}: {:?}", "error".red().bold(), error);
             }
         }
+    }
+
+    fn wrap_all<T, U, F>(&self, context: &Context<T>, environment: &mut T, f: F) -> U
+    where
+        F: Fn(&mut T) -> U
+    {
+        for before_function in context.before_all.iter() {
+            before_function(environment);
+        }
+        let result = f(environment);
+        for after_function in context.after_all.iter() {
+            after_function(environment);
+        }
+        result
+    }
+
+    fn wrap_each<T, U, F>(&self, context: &Context<T>, environment: &mut T, f: F) -> U
+    where
+        F: Fn(&mut T) -> U
+    {
+        for before_function in context.before_each.iter() {
+            before_function(environment);
+        }
+        let result = f(environment);
+        for after_function in context.after_each.iter() {
+            after_function(environment);
+        }
+        result
+    }
+
+    fn evaluate_blocks_parallel<T>(&self, context: &Context<T>, environment: &T) -> Vec<BlockReport>
+    where
+        T: Clone + Send + Sync + ::std::fmt::Debug,
+    {
+        context.blocks.par_iter().map(|block| {
+            self.evaluate_block(block, context, environment)
+        }).collect()
+    }
+
+    fn evaluate_blocks_serial<T>(&self, context: &Context<T>, environment: &T) -> Vec<BlockReport>
+    where
+        T: Clone + Send + Sync + ::std::fmt::Debug,
+    {
+        context.blocks.iter().map(|block| {
+            self.evaluate_block(block, context, environment)
+        }).collect()
+    }
+
+    fn evaluate_block<T>(&self, block: &Block<T>, context: &Context<T>, environment: &T) -> BlockReport
+    where
+        T: Clone + Send + Sync + ::std::fmt::Debug,
+    {
+        let mut environment = environment.clone();
+        self.wrap_each(context, &mut environment, |environment| {
+            self.visit(block, environment)
+        })
     }
 
     fn prepare_before_run(&self) {
@@ -158,38 +214,13 @@ where
         if let Some(ref header) = context.header {
             self.broadcast(|handler| handler.enter_context(&header));
         }
-        for before_function in context.before_all.iter() {
-            before_function(environment);
-        }
-        let process_member = |runner: &Runner, member: &Block<T>, mut environment: T| {
-                for before_each_function in context.before_each.iter() {
-                    before_each_function(&mut environment);
-                }
-            let report = runner.visit(member, &mut environment);
-                for after_each_function in context.after_each.iter() {
-                    after_each_function(&mut environment);
-                }
-                report
-        };
-        let reports: Vec<_> = if self.configuration.parallel {
-            context
-                .blocks
-                .par_iter()
-                .map(|member| {
-                    process_member(self, member, environment.clone())
-            }).collect()
-        } else {
-            context
-                .blocks
-                .iter()
-                .map(|member| {
-                    process_member(self, member, environment.clone())
-                })
-                .collect()
-        };
-        for after_function in context.after_all.iter() {
-            after_function(environment);
-        }
+        let reports: Vec<_> = self.wrap_all(context, environment, |environment| {
+            if self.configuration.parallel {
+                self.evaluate_blocks_parallel(context, environment)
+            } else {
+                self.evaluate_blocks_serial(context, environment)
+            }
+        });
         let report = ContextReport::new(reports);
         if let Some(ref header) = context.header {
             self.broadcast(|handler| handler.exit_context(&header, &report));
