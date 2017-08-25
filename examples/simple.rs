@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 
 pub fn main() {
     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
-    let configuration = rspec::Configuration::default();
+    let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
     let runner = rspec::Runner::new(configuration, vec![formatter]);
 
     #[derive(Clone, Debug)]
@@ -58,5 +58,5 @@ pub fn main() {
         ctx.then("panic!(…) fails", move |_env| {
             panic!("Some reason for failure.")
         });
-    })).or_exit();
+    }));
 }

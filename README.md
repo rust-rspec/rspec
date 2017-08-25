@@ -85,7 +85,7 @@ pub fn main() {
             });
 
         });
-    }).or_exit(); // exits the process with a failure code if one of the tests failed.
+    }); // exits the process with a failure code if one of the tests failed.
 }
 ```
 

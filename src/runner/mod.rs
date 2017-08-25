@@ -6,18 +6,19 @@
 //!
 //! The main methods are `Runner::run` and `Runner::result`.
 
-mod configuration;
-mod failure;
+pub mod configuration;
 
-use colored::*;
-
-pub use runner::configuration::Configuration;
+pub use runner::configuration::{Configuration, ConfigurationBuilder};
 
 use std::fmt;
 use std::panic;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::borrow::Borrow;
+use std::cell::Cell;
+use std::process;
+use std::ops::{Deref, DerefMut};
 
+use colored::*;
 use rayon::prelude::*;
 
 use block::Block;
@@ -34,6 +35,7 @@ use visitor::TestSuiteVisitor;
 pub struct Runner {
     configuration: configuration::Configuration,
     handlers: Vec<Arc<EventHandler>>,
+    should_exit: Mutex<Cell<bool>>,
 }
 
 impl Runner {
@@ -41,6 +43,7 @@ impl Runner {
         Runner {
             configuration: configuration,
             handlers: handlers,
+            should_exit: Mutex::new(Cell::new(false)),
         }
     }
 }
@@ -54,6 +57,9 @@ impl Runner {
         self.prepare_before_run();
         let report = self.visit(&suite, &mut environment);
         self.clean_after_run();
+        if let Ok(mut mutex_guard) = self.should_exit.lock() {
+            *mutex_guard.deref_mut().get_mut() |= report.is_failure();
+        }
         report
     }
 
@@ -81,6 +87,27 @@ impl Runner {
         let _ = panic::take_hook();
     }
 }
+
+impl Drop for Runner {
+    fn drop(&mut self) {
+        let should_exit = if let Ok(mutex_guard) = self.should_exit.lock() {
+            mutex_guard.deref().get()
+        } else { false };
+
+        if self.configuration.exit_on_failure && should_exit {
+            // XXX Cargo test failure returns 101.
+            //
+            // > "We use 101 as the standard failure exit code because it's something unique
+            // > that the test runner can check for in run-fail tests (as opposed to something
+            // > like 1, which everybody uses). I don't expect this behavior can ever change.
+            // > This behavior probably dates to before 2013,
+            // > all the way back to the creation of compiletest." – @brson
+
+            process::exit(101);
+        }
+    }
+}
+
 
 impl<T> TestSuiteVisitor<Suite<T>> for Runner
 where

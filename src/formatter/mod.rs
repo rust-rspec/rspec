@@ -9,8 +9,6 @@
 //! use std::io;
 //! use std::sync::Arc;
 //!
-//! use rspec::prelude::*;
-//!
 //! pub fn main() {
 //!     #[derive(Clone, Debug)]
 //!     struct Environment {
@@ -21,14 +19,14 @@
 //!         // ...
 //!     };
 //!     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
-//!     let configuration = rspec::Configuration::default();
+//!     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
 //!     let runner = rspec::Runner::new(configuration, vec![formatter]);
 //!
 //!     runner.run(rspec::suite("a test suite", environment, |ctx| {
 //!         ctx.context("opens a context labeled 'context'", |_ctx| {
 //!             // …
 //!         });
-//!     })).or_exit();
+//!     }));
 //! }
 //! ```
 

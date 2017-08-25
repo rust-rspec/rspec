@@ -53,5 +53,5 @@ pub fn main() {
         ctx.then("panic!(…) fails", move |_env| {
             panic!("Some reason for failure.")
         });
-    }).or_exit();
+    });
 }

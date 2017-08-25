@@ -26,13 +26,7 @@ pub mod visitor;
 
 pub use block::suite::{suite, describe, given};
 pub use formatter::Formatter;
-pub use runner::{Configuration, Runner};
-
-pub mod prelude {
-    pub use block::suite::{suite, describe, given};
-    pub use formatter::Formatter;
-    pub use runner::{Configuration, Runner};
-}
+pub use runner::{Configuration, ConfigurationBuilder, Runner};
 
 #[macro_export]
 macro_rules! rspec_run {
@@ -41,7 +35,7 @@ macro_rules! rspec_run {
         use std::sync::Arc;
 
         let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
-        let configuration = rspec::Configuration::default();
+        let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
         let runner = rspec::Runner::new(configuration, vec![formatter]);
 
         runner.run(rspec::$label($name, $env, |$ctx| $block))

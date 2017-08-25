@@ -1,5 +1,3 @@
-use std::process;
-
 use header::suite::SuiteHeader;
 use report::Report;
 use report::context::ContextReport;
@@ -26,25 +24,6 @@ impl SuiteReport {
     pub fn get_context(&self) -> &ContextReport {
         &self.context
     }
-
-    pub fn or_exit(self) -> Self {
-        if self.is_failure() {
-            // XXX Cargo test failure returns 101.
-            //
-            // > "We use 101 as the standard failure exit code because it's something unique
-            // > that the test runner can check for in run-fail tests (as opposed to something
-            // > like 1, which everybody uses). I don't expect this behavior can ever change.
-            // > This behavior probably dates to before 2013,
-            // > all the way back to the creation of compiletest." – @brson
-
-            process::exit(101);
-        }
-        self
-    }
-
-    // pub fn get_blocks(&self) -> &[BlockReport] {
-    //     self.context.get_blocks()
-    // }
 }
 
 impl Report for SuiteReport {
