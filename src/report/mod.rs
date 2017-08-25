@@ -1,10 +1,17 @@
-pub mod suite;
-pub mod context;
-pub mod example;
+//! Reports provide information about an evaluated test unit.
 
-use header::context::ContextHeader;
-use header::example::ExampleHeader;
+mod suite;
+mod context;
+mod example;
 
+pub use report::suite::*;
+pub use report::context::*;
+pub use report::example::*;
+
+use header::ContextHeader;
+use header::ExampleHeader;
+
+/// `Report` holds the results of a structural group's test execution.
 pub trait Report {
     fn is_success(&self) -> bool;
     fn is_failure(&self) -> bool;
@@ -14,6 +21,7 @@ pub trait Report {
     fn get_ignored(&self) -> u32;
 }
 
+/// `BlockReport` holds the results of a context block's test execution.
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum BlockReport {
     Context(Option<ContextHeader>, context::ContextReport),

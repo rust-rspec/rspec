@@ -2,6 +2,7 @@ use std::fmt;
 
 use header::Header;
 
+/// A [`Example`](../block/struct.Example.html)'s cosmetic label.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ExampleLabel {
     It,
@@ -19,6 +20,7 @@ impl From<ExampleLabel> for &'static str {
     }
 }
 
+/// A [`Header`](trait.Header.html) with label and name of an [`Example`](../block/struct.Example.html).
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ExampleHeader {
     pub label: ExampleLabel,

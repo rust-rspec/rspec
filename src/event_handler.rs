@@ -2,12 +2,12 @@
 
 use std::io;
 
-use header::suite::SuiteHeader;
-use header::context::ContextHeader;
-use header::example::ExampleHeader;
-use report::suite::SuiteReport;
-use report::context::ContextReport;
-use report::example::ExampleReport;
+use header::SuiteHeader;
+use header::ContextHeader;
+use header::ExampleHeader;
+use report::SuiteReport;
+use report::ContextReport;
+use report::ExampleReport;
 
 pub trait EventHandler: Send + Sync {
     fn enter_suite(&self, suite: &SuiteHeader) -> io::Result<()>;

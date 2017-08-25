@@ -1,8 +1,8 @@
-use header::suite::SuiteHeader;
+use header::SuiteHeader;
 use report::Report;
-use report::context::ContextReport;
+use report::ContextReport;
 
-/// The runner assembles a `SuiteReport` for each context during test execution.
+/// `SuiteReport` holds the results of a context suite's test execution.
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct SuiteReport {
     header: SuiteHeader,

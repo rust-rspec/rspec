@@ -1,6 +1,7 @@
-use header::suite::{SuiteLabel, SuiteHeader};
-use block::context::Context;
+use header::{SuiteLabel, SuiteHeader};
+use block::Context;
 
+/// Test suites bundle a set of closely related test examples into a logical execution group.
 pub struct Suite<T> {
     pub header: SuiteHeader,
     pub(crate) context: Context<T>,
@@ -30,7 +31,7 @@ where
 {
 }
 
-/// This creates a test suite's root context and returns a [Runner](../runner/struct.Runner.html) ready to run the test suite.
+/// Creates a test suite from a given root context.
 ///
 /// # Examples
 ///
@@ -75,7 +76,7 @@ where
     suite_internal(header, environment, body)
 }
 
-/// Alias for [`suite`](fn.suite.html), see for more header.
+/// Alias for [`suite`](fn.suite.html), see for more info.
 ///
 /// Available further aliases:
 ///
@@ -92,7 +93,7 @@ where
     suite_internal(header, environment, body)
 }
 
-/// Alias for [`suite`](fn.suite.html), see for more header.
+/// Alias for [`suite`](fn.suite.html), see for more info.
 ///
 /// Available further aliases:
 ///

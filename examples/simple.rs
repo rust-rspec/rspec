@@ -54,9 +54,5 @@ pub fn main() {
         ctx.when("returning to outer context", |ctx| {
             ctx.then("it is still empty", |env| assert!(env.set.is_empty()));
         });
-
-        ctx.then("panic!(…) fails", move |_env| {
-            panic!("Some reason for failure.")
-        });
     }));
 }

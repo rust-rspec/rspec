@@ -5,43 +5,45 @@ use std::ops::DerefMut;
 use colored::*;
 
 use header::Header;
-use header::suite::SuiteHeader;
-use header::context::ContextHeader;
-use header::example::ExampleHeader;
+use header::SuiteHeader;
+use header::ContextHeader;
+use header::ExampleHeader;
 use event_handler::EventHandler;
 use report::{Report, BlockReport};
-use report::suite::SuiteReport;
-use report::context::ContextReport;
-use report::example::ExampleReport;
+use report::SuiteReport;
+use report::ContextReport;
+use report::ExampleReport;
 
-struct FormatterState<T: io::Write = io::Stdout> {
+struct SerialFormatterState<T: io::Write = io::Stdout> {
     buffer: T,
     level: usize,
 }
 
-impl<T: io::Write> FormatterState<T> {
+impl<T: io::Write> SerialFormatterState<T> {
     pub fn new(buffer: T) -> Self {
-        FormatterState {
+        SerialFormatterState {
             buffer: buffer,
             level: 0,
         }
     }
 }
 
-pub struct Formatter<T: io::Write = io::Stdout> {
-    state: Mutex<FormatterState<T>>,
+/// Preferred formatter for serial test suite execution
+/// (see [`Configuration.parallel`](struct.Configuration.html#fields)).
+pub struct SerialFormatter<T: io::Write = io::Stdout> {
+    state: Mutex<SerialFormatterState<T>>,
 }
 
-impl Default for Formatter<io::Stdout> {
+impl Default for SerialFormatter<io::Stdout> {
     fn default() -> Self {
-        Formatter::new(io::stdout())
+        SerialFormatter::new(io::stdout())
     }
 }
 
-impl<T: io::Write> Formatter<T> {
+impl<T: io::Write> SerialFormatter<T> {
     pub fn new(buffer: T) -> Self {
-        let state = FormatterState::new(buffer);
-        Formatter {
+        let state = SerialFormatterState::new(buffer);
+        SerialFormatter {
             state: Mutex::new(state),
         }
     }
@@ -52,7 +54,7 @@ impl<T: io::Write> Formatter<T> {
 
     fn access_state<F>(&self, mut f: F) -> io::Result<()>
     where
-        F: FnMut(&mut FormatterState<T>) -> io::Result<()>
+        F: FnMut(&mut SerialFormatterState<T>) -> io::Result<()>
     {
         if let Ok(ref mut mutex_guard) = self.state.lock() {
             f(mutex_guard.deref_mut())?;
@@ -159,7 +161,7 @@ impl<T: io::Write> Formatter<T> {
     }
 }
 
-impl<T: io::Write> EventHandler for Formatter<T>
+impl<T: io::Write> EventHandler for SerialFormatter<T>
 where
     T: Send + Sync,
 {
@@ -237,12 +239,12 @@ where
 //
 //     #[test]
 //     fn it_can_be_instanciated() {
-//         Formatter::new(&mut vec![1u8]);
+//         SerialFormatter::new(&mut vec![1u8]);
 //     }
 //
 //     #[test]
 //     fn it_impl_formatter_trait() {
-//         let _: &Formatter = &Formatter::new(&mut vec![1u8]) as &Formatter;
+//         let _: &SerialFormatter = &SerialFormatter::new(&mut vec![1u8]) as &SerialFormatter;
 //     }
 //
 //     mod event_start_runner {
@@ -252,7 +254,7 @@ where
 //         fn it_display_that_examples_started() {
 //             let mut v = vec![];
 //             {
-//                 let mut s = Formatter::new(&mut v);
+//                 let mut s = SerialFormatter::new(&mut v);
 //                 s.handle(&Event::EnterSuite);
 //             }
 //
@@ -274,7 +276,7 @@ where
 //                     fn $test_name() {
 //                         let mut sink = io::sink();
 //                         let res = {
-//                             let mut s = Formatter::new(&mut sink);
+//                             let mut s = SerialFormatter::new(&mut sink);
 //                             s.write_summary(ContextReport {
 //                                 passed: $succ,
 //                                 failed: $fail,
@@ -314,7 +316,7 @@ where
 //         fn it_displays_a_dot_when_success() {
 //             let mut v = vec![];
 //             {
-//                 let mut s = Formatter::new(&mut v);
+//                 let mut s = SerialFormatter::new(&mut v);
 //                 s.handle(&Event::ExitExample(SUCCESS_RES))
 //             }
 //
@@ -326,7 +328,7 @@ where
 //         fn it_displays_a_F_when_error() {
 //             let mut v = vec![];
 //             {
-//                 let mut s = Formatter::new(&mut v);
+//                 let mut s = SerialFormatter::new(&mut v);
 //                 s.handle(&Event::ExitExample(FAILED_RES))
 //             }
 //
@@ -340,7 +342,7 @@ where
 //         #[test]
 //         fn start_describe_event_push_the_name_stack() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Formatter::new(&mut sink);
+//             let mut s = SerialFormatter::new(&mut sink);
 //
 //             s.handle(&Event::EnterContext(String::from("Hey !")));
 //             assert_eq!(vec![String::from("Hey !")], s.name_stack);
@@ -353,7 +355,7 @@ where
 //         #[test]
 //         fn end_describe_event_pop_the_name_stack() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Formatter::new(&mut sink);
+//             let mut s = SerialFormatter::new(&mut sink);
 //
 //             s.handle(&Event::EnterContext(String::from("Hey !")));
 //             s.handle(&Event::EnterContext(String::from("Ho !")));
@@ -372,7 +374,7 @@ where
 //         #[test]
 //         fn it_register_failures() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Formatter::new(&mut sink);
+//             let mut s = SerialFormatter::new(&mut sink);
 //             s.handle(&Event::EnterExample("hola".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(1, s.failed.len());
@@ -381,7 +383,7 @@ where
 //         #[test]
 //         fn it_keep_track_of_the_failure_name() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Formatter::new(&mut sink);
+//             let mut s = SerialFormatter::new(&mut sink);
 //             s.handle(&Event::EnterExample("hola".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"hola".into()), s.failed.get(0));
@@ -390,7 +392,7 @@ where
 //         #[test]
 //         fn it_has_a_nice_diplay_for_describes() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Formatter::new(&mut sink);
+//             let mut s = SerialFormatter::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
@@ -405,7 +407,7 @@ where
 //         #[test]
 //         fn it_works_with_multiple_describes() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Formatter::new(&mut sink);
+//             let mut s = SerialFormatter::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
@@ -420,7 +422,7 @@ where
 //         #[test]
 //         fn it_doesnt_includes_success() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Formatter::new(&mut sink);
+//             let mut s = SerialFormatter::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(SUCCESS_RES));
@@ -431,7 +433,7 @@ where
 //         #[test]
 //         fn is_doesnt_keep_examples_in_name_stack() {
 //             let mut sink = &mut io::sink();
-//             let mut s = Formatter::new(&mut sink);
+//             let mut s = SerialFormatter::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(SUCCESS_RES));
@@ -446,7 +448,7 @@ where
 //         fn format_all_failures_one_error() {
 //             let mut sink = &mut io::sink();
 //             let res = {
-//                 let mut s = Formatter::new(&mut sink);
+//                 let mut s = SerialFormatter::new(&mut sink);
 //                 s.handle(&Event::EnterContext("hola".into()));
 //                 s.handle(&Event::EnterExample("holé".into()));
 //                 s.handle(&Event::ExitExample(FAILED_RES));
@@ -460,7 +462,7 @@ where
 //         fn format_all_failures() {
 //             let mut sink = &mut io::sink();
 //             let res = {
-//                 let mut s = Formatter::new(&mut sink);
+//                 let mut s = SerialFormatter::new(&mut sink);
 //                 s.handle(&Event::EnterContext("hola".into()));
 //                 s.handle(&Event::EnterExample("holé".into()));
 //                 s.handle(&Event::ExitExample(FAILED_RES));
@@ -472,7 +474,7 @@ where
 //             assert_eq!("  1) hola | holé\n  2) hola | hola\n", res);
 //
 //             let res = {
-//                 let mut s = Formatter::new(&mut sink);
+//                 let mut s = SerialFormatter::new(&mut sink);
 //                 s.handle(&Event::EnterContext("hola".into()));
 //                 s.handle(&Event::EnterExample("holé".into()));
 //                 s.handle(&Event::ExitExample(FAILED_RES));

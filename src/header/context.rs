@@ -2,7 +2,7 @@ use std::fmt;
 
 use header::Header;
 
-/// The label assigned to each context providing it with additional semantic meaning.
+/// A [`Context`](../block/struct.Context.html)'s cosmetic label.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ContextLabel {
     Describe,
@@ -24,8 +24,7 @@ impl From<ContextLabel> for &'static str {
     }
 }
 
-/// The information, consisting of a label and name, that is assigned to each context
-/// providing it with additional semantic meaning.
+/// A [`Header`](trait.Header.html) with label and name of a [`Context`](../block/struct.Context.html).
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ContextHeader {
     pub label: ContextLabel,

@@ -5,6 +5,7 @@ use report::Report;
 #[cfg(feature = "expectest_compat")]
 use expectest::core::TestResult as ExpectestResult;
 
+/// `ExampleReport` holds the results of a context example's test execution.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ExampleReport {
     Success,
@@ -34,12 +35,14 @@ impl Report for ExampleReport {
     }
 }
 
+/// Returning `()` from an `Example<T>` is considered a success.
 impl From<()> for ExampleReport {
     fn from(_other: ()) -> ExampleReport {
         ExampleReport::Success
     }
 }
 
+/// rspec considers a boolean, `()`-returning example successful.
 impl From<bool> for ExampleReport {
     fn from(other: bool) -> ExampleReport {
         if other {

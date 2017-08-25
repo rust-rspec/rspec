@@ -1,14 +1,8 @@
-//! The Runner is where all the examples are actually executed.
-//!
-//! A Runner is instanciated by using [`context::describe`](../context/fn.describe.html) and
-//! [`context::rdescribe`](../context/fn.rdescribe.html). You should not try to instanciate
-//! a Runner directly.
-//!
-//! The main methods are `Runner::run` and `Runner::result`.
+//! Runners are responsible for executing a test suite's examples.
 
-pub mod configuration;
+mod configuration;
 
-pub use runner::configuration::{Configuration, ConfigurationBuilder};
+pub use runner::configuration::*;
 
 use std::fmt;
 use std::panic;
@@ -22,16 +16,17 @@ use colored::*;
 use rayon::prelude::*;
 
 use block::Block;
-use block::suite::Suite;
-use block::context::Context;
-use block::example::Example;
+use block::Suite;
+use block::Context;
+use block::Example;
 use event_handler::EventHandler;
 use report::{Report, BlockReport};
-use report::context::ContextReport;
-use report::suite::SuiteReport;
-use report::example::ExampleReport;
+use report::ContextReport;
+use report::SuiteReport;
+use report::ExampleReport;
 use visitor::TestSuiteVisitor;
 
+/// Runner for executing a test suite's examples.
 pub struct Runner {
     configuration: configuration::Configuration,
     handlers: Vec<Arc<EventHandler>>,

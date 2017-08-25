@@ -9,14 +9,13 @@
 //!
 
 use block::Block;
-use block::example::Example;
-use header::context::{ContextLabel, ContextHeader};
-use header::example::{ExampleLabel, ExampleHeader};
+use block::Example;
+use header::{ContextLabel, ContextHeader};
+use header::{ExampleLabel, ExampleHeader};
 
-use report::example::ExampleReport;
+use report::ExampleReport;
 
-/// Contexts are a powerful method to make your tests clear and well organized.
-/// In the long term this practice will keep tests easy to read.
+/// Test contexts are a convenient tool for adding structure and code sharing to a test suite.
 pub struct Context<T> {
     pub(crate) header: Option<ContextHeader>,
     pub(crate) blocks: Vec<Block<T>>,
@@ -113,7 +112,7 @@ where
         self.context_internal(Some(header), body)
     }
 
-    /// Alias for [`context`](struct.Context.html#method.context), see for more header.
+    /// Alias for [`context`](struct.Context.html#method.context), see for more info.
     ///
     /// Available further aliases:
     ///
@@ -130,7 +129,7 @@ where
         self.context_internal(Some(header), body)
     }
 
-    /// Alias for [`context`](struct.Context.html#method.context), see for more header.
+    /// Alias for [`context`](struct.Context.html#method.context), see for more info.
     ///
     /// Available further aliases:
     ///
@@ -258,7 +257,7 @@ where
         self.example_internal(header, body)
     }
 
-    /// Alias for [`example`](struct.Context.html#method.example), see for more header.
+    /// Alias for [`example`](struct.Context.html#method.example), see for more info.
     ///
     /// Available further aliases:
     ///
@@ -272,7 +271,7 @@ where
         self.example_internal(header, body)
     }
 
-    /// Alias for [`example`](struct.Context.html#method.example), see for more header.
+    /// Alias for [`example`](struct.Context.html#method.example), see for more info.
     ///
     /// Available further aliases:
     ///
@@ -367,7 +366,7 @@ where
         self.before_all.push(Box::new(body))
     }
 
-    /// Alias for [`before_all`](struct.Context.html#method.before_all), see for more header.
+    /// Alias for [`before_all`](struct.Context.html#method.before_all), see for more info.
     pub fn before<F>(&mut self, body: F)
     where
         F: 'static + Fn(&mut T),
@@ -481,7 +480,7 @@ where
         self.after_all.push(Box::new(body))
     }
 
-    /// Alias for [`after_all`](struct.Context.html#method.after_all), see for more header.
+    /// Alias for [`after_all`](struct.Context.html#method.after_all), see for more info.
     pub fn after<F>(&mut self, body: F)
     where
         F: 'static + Fn(&mut T),
@@ -545,7 +544,7 @@ where
 mod tests {
     // use super::*;
 
-    use block::suite::{suite, describe, given};
+    use block::{suite, describe, given};
 
     macro_rules! test_suite_alias {
             ($suite: ident) => {

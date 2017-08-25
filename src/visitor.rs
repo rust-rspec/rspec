@@ -1,4 +1,5 @@
-pub trait TestSuiteVisitor<T> {
+
+pub(crate) trait TestSuiteVisitor<T> {
     type Environment;
     type Output;
 

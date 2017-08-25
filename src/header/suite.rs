@@ -2,6 +2,7 @@ use std::fmt;
 
 use header::Header;
 
+/// A [`Suite`](../block/struct.Suite.html)'s cosmetic label.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SuiteLabel {
     Suite,
@@ -19,6 +20,7 @@ impl From<SuiteLabel> for &'static str {
     }
 }
 
+/// A [`Header`](trait.Header.html) with label and name of a [`Suite`](../block/struct.Suite.html).
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SuiteHeader {
     pub label: SuiteLabel,

@@ -1,25 +1,27 @@
 use std::io;
 
-use header::suite::SuiteHeader;
-use header::context::ContextHeader;
-use header::example::ExampleHeader;
+use header::SuiteHeader;
+use header::ContextHeader;
+use header::ExampleHeader;
 use event_handler::EventHandler;
 use report::BlockReport;
-use report::suite::SuiteReport;
-use report::context::ContextReport;
-use report::example::ExampleReport;
-use formatter::serial::Formatter as SerialFormatter;
+use report::SuiteReport;
+use report::ContextReport;
+use report::ExampleReport;
+use formatter::serial::SerialFormatter;
 
-pub struct Formatter<T: io::Write> {
+/// Preferred formatter for parallel test suite execution
+/// (see [`Configuration.parallel`](struct.Configuration.html#fields)).
+pub struct ParallelFormatter<T: io::Write> {
     serial: SerialFormatter<T>,
 }
 
-impl<T: io::Write> Formatter<T>
+impl<T: io::Write> ParallelFormatter<T>
 where
     T: Send + Sync,
 {
-    pub fn new(buffer: T) -> Formatter<T> {
-        Formatter {
+    pub fn new(buffer: T) -> ParallelFormatter<T> {
+        ParallelFormatter {
             serial: SerialFormatter::new(buffer),
         }
     }
@@ -66,7 +68,7 @@ where
     }
 }
 
-impl<T: io::Write> EventHandler for Formatter<T>
+impl<T: io::Write> EventHandler for ParallelFormatter<T>
 where
     T: Send + Sync,
 {

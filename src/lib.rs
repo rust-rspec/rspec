@@ -15,19 +15,46 @@ extern crate colored;
 extern crate rayon;
 
 pub mod block;
-
 pub mod header;
 pub mod report;
-
 pub mod event_handler;
 pub mod runner;
 pub mod formatter;
-pub mod visitor;
 
-pub use block::suite::{suite, describe, given};
+mod visitor;
+
+pub use block::{suite, describe, given};
 pub use formatter::Formatter;
 pub use runner::{Configuration, ConfigurationBuilder, Runner};
 
+/// A wrapper-macro for conveniently running a test suite with
+/// the default configuration with considerebly less glue-code.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use(rspec_run)]
+/// # extern crate rspec;
+/// #
+/// # pub fn main() {
+/// #[derive(Clone, Debug)]
+/// struct Environment {
+///     // ...
+/// }
+///
+/// let environment = Environment {
+///     // ...
+/// };
+///
+/// rspec_run!(given "a scenario", environment, |ctx| {
+///     ctx.when("...", |ctx| {
+///         // ...
+///     });
+///
+///     ctx.then("...", |env| { /* ... */ });
+/// });
+/// # }
+/// ```
 #[macro_export]
 macro_rules! rspec_run {
     ($label:ident $name:expr, $env:ident, |$ctx:ident| $block:block) => ({
@@ -46,7 +73,7 @@ macro_rules! rspec_run {
 mod tests {
 
     pub use super::*;
-    pub use block::context::*;
+    pub use block::*;
 
     // Test list:
     // x check that tests can call `assert_eq!`

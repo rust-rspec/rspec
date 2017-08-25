@@ -1,11 +1,14 @@
-pub mod suite;
-pub mod context;
-pub mod example;
+//! Blocks are used to build a tree structure of named tests and contextes.
 
-use block::context::Context;
-use block::example::Example;
+mod suite;
+mod context;
+mod example;
 
-/// This enum is used to build a tree of named tests and contextes.
+pub use block::suite::*;
+pub use block::context::*;
+pub use block::example::*;
+
+/// Blocks are used to build a tree structure of named tests and contextes.
 pub enum Block<T> {
     Context(Context<T>),
     Example(Example<T>),
