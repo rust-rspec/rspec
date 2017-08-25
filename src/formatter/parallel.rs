@@ -3,12 +3,12 @@ use std::io;
 use header::SuiteHeader;
 use header::ContextHeader;
 use header::ExampleHeader;
-use event_handler::EventHandler;
+use runner::RunnerObserver;
 use report::BlockReport;
 use report::SuiteReport;
 use report::ContextReport;
 use report::ExampleReport;
-use formatter::serial::SerialFormatter;
+use formatter::SerialFormatter;
 
 /// Preferred formatter for parallel test suite execution
 /// (see [`Configuration.parallel`](struct.Configuration.html#fields)).
@@ -26,75 +26,66 @@ where
         }
     }
 
-    fn replay_suite(&self, suite: &SuiteHeader, report: &SuiteReport) -> io::Result<()> {
-        self.serial.enter_suite(suite)?;
-        self.replay_context(None, report.get_context())?;
-        self.serial.exit_suite(suite, report)?;
-
-        Ok(())
+    fn replay_suite(&self, suite: &SuiteHeader, report: &SuiteReport) {
+        self.serial.enter_suite(suite);
+        self.replay_context(None, report.get_context());
+        self.serial.exit_suite(suite, report);
     }
 
-    fn replay_block(&self, report: &BlockReport) -> io::Result<()> {
+    fn replay_block(&self, report: &BlockReport) {
         match report {
             &BlockReport::Context(ref header, ref report) => {
-                self.replay_context(header.as_ref(), report)?;
+                self.replay_context(header.as_ref(), report);
             },
             &BlockReport::Example(ref header, ref report) => {
-                self.replay_example(header, report)?;
+                self.replay_example(header, report);
             },
         }
-
-        Ok(())
     }
 
-    fn replay_context(&self, context: Option<&ContextHeader>, report: &ContextReport) -> io::Result<()> {
+    fn replay_context(&self, context: Option<&ContextHeader>, report: &ContextReport) {
         if let Some(header) = context {
-            self.serial.enter_context(header)?;
+            self.serial.enter_context(header);
         }
         for report in report.get_blocks() {
-            self.replay_block(report)?;
+            self.replay_block(report);
         }
         if let Some(header) = context {
-            self.serial.exit_context(header, report)?;
+            self.serial.exit_context(header, report);
         }
-
-        Ok(())
     }
 
-    fn replay_example(&self, example: &ExampleHeader, report: &ExampleReport) -> io::Result<()> {
-        self.serial.enter_example(example)?;
-        self.serial.exit_example(example, report)?;
-        Ok(())
+    fn replay_example(&self, example: &ExampleHeader, report: &ExampleReport) {
+        self.serial.enter_example(example);
+        self.serial.exit_example(example, report);
     }
 }
 
-impl<T: io::Write> EventHandler for ParallelFormatter<T>
+impl<T: io::Write> RunnerObserver for ParallelFormatter<T>
 where
     T: Send + Sync,
 {
-    fn enter_suite(&self, _suite: &SuiteHeader) -> io::Result<()> {
-        Ok(())
+    fn enter_suite(&self, _suite: &SuiteHeader) {
+
     }
 
-    fn exit_suite(&self, suite: &SuiteHeader, report: &SuiteReport) -> io::Result<()> {
-        self.replay_suite(suite, report)?;
-
-        Ok(())
+    fn exit_suite(&self, suite: &SuiteHeader, report: &SuiteReport) {
+        self.replay_suite(suite, report);
     }
 
-    fn enter_context(&self, _context: &ContextHeader) -> io::Result<()> {
-        Ok(())
+    fn enter_context(&self, _context: &ContextHeader) {
+
     }
 
-    fn exit_context(&self, _context: &ContextHeader, _report: &ContextReport) -> io::Result<()> {
-        Ok(())
+    fn exit_context(&self, _context: &ContextHeader, _report: &ContextReport) {
+
     }
 
-    fn enter_example(&self, _example: &ExampleHeader) -> io::Result<()> {
-        Ok(())
+    fn enter_example(&self, _example: &ExampleHeader) {
+
     }
 
-    fn exit_example(&self, _example: &ExampleHeader, _report: &ExampleReport) -> io::Result<()> {
-        Ok(())
+    fn exit_example(&self, _example: &ExampleHeader, _report: &ExampleReport) {
+
     }
 }

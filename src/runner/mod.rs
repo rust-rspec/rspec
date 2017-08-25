@@ -1,10 +1,11 @@
 //! Runners are responsible for executing a test suite's examples.
 
 mod configuration;
+mod observer;
 
 pub use runner::configuration::*;
+pub use runner::observer::*;
 
-use std::fmt;
 use std::panic;
 use std::sync::{Arc, Mutex};
 use std::borrow::Borrow;
@@ -12,14 +13,12 @@ use std::cell::Cell;
 use std::process;
 use std::ops::{Deref, DerefMut};
 
-use colored::*;
 use rayon::prelude::*;
 
 use block::Block;
 use block::Suite;
 use block::Context;
 use block::Example;
-use event_handler::EventHandler;
 use report::{Report, BlockReport};
 use report::ContextReport;
 use report::SuiteReport;
@@ -29,15 +28,15 @@ use visitor::TestSuiteVisitor;
 /// Runner for executing a test suite's examples.
 pub struct Runner {
     configuration: configuration::Configuration,
-    handlers: Vec<Arc<EventHandler>>,
+    observers: Vec<Arc<RunnerObserver>>,
     should_exit: Mutex<Cell<bool>>,
 }
 
 impl Runner {
-    pub fn new(configuration: Configuration, handlers: Vec<Arc<EventHandler>>) -> Runner {
+    pub fn new(configuration: Configuration, observers: Vec<Arc<RunnerObserver>>) -> Runner {
         Runner {
             configuration: configuration,
-            handlers: handlers,
+            observers: observers,
             should_exit: Mutex::new(Cell::new(false)),
         }
     }
@@ -58,16 +57,12 @@ impl Runner {
         report
     }
 
-    fn broadcast<F, U, V>(&self, mut f: F)
+    fn broadcast<F>(&self, mut f: F)
     where
-        F: FnMut(&EventHandler) -> Result<U, V>,
-        U: fmt::Debug,
-        V: fmt::Debug
+        F: FnMut(&RunnerObserver),
     {
-        for event_handler in &self.handlers {
-            if let Err(error) = f(event_handler.borrow()) {
-                eprintln!("\n{}: {:?}", "error".red().bold(), error);
-            }
+        for observer in &self.observers {
+            f(observer.borrow());
         }
     }
 

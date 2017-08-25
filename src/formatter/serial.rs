@@ -8,7 +8,7 @@ use header::Header;
 use header::SuiteHeader;
 use header::ContextHeader;
 use header::ExampleHeader;
-use event_handler::EventHandler;
+use runner::RunnerObserver;
 use report::{Report, BlockReport};
 use report::SuiteReport;
 use report::ContextReport;
@@ -52,17 +52,18 @@ impl<T: io::Write> SerialFormatter<T> {
         "  ".repeat(depth)
     }
 
-    fn access_state<F>(&self, mut f: F) -> io::Result<()>
+    fn access_state<F>(&self, mut f: F)
     where
         F: FnMut(&mut SerialFormatterState<T>) -> io::Result<()>
     {
         if let Ok(ref mut mutex_guard) = self.state.lock() {
-            f(mutex_guard.deref_mut())?;
+            let result = f(mutex_guard.deref_mut());
+            if let Err(error) = result {
+                eprintln!("\n{}: {:?}", "error".red().bold(), error);
+            }
         } else {
             eprintln!("\n{}: failed to aquire lock on mutex.", "error".red().bold());
         }
-
-        Ok(())
     }
 
     fn write_header<H>(&self, buffer: &mut T, indent: usize, header: &H) -> io::Result<()>
@@ -161,11 +162,11 @@ impl<T: io::Write> SerialFormatter<T> {
     }
 }
 
-impl<T: io::Write> EventHandler for SerialFormatter<T>
+impl<T: io::Write> RunnerObserver for SerialFormatter<T>
 where
     T: Send + Sync,
 {
-    fn enter_suite(&self, suite: &SuiteHeader) -> io::Result<()> {
+    fn enter_suite(&self, suite: &SuiteHeader) {
         self.access_state(|state| {
             state.level += 1;
             let indentation = state.level - 1;
@@ -174,10 +175,10 @@ where
             writeln!(state.buffer)?;
 
             Ok(())
-        })
+        });
     }
 
-    fn exit_suite(&self, _suite: &SuiteHeader, report: &SuiteReport) -> io::Result<()> {
+    fn exit_suite(&self, _suite: &SuiteHeader, report: &SuiteReport) {
         self.access_state(|state| {
             self.write_suite_failures(&mut state.buffer, 0, report)?;
             self.write_suite_suffix(&mut state.buffer, report)?;
@@ -185,10 +186,10 @@ where
             state.level -= 1;
 
             Ok(())
-        })
+        });
     }
 
-    fn enter_context(&self, context: &ContextHeader) -> io::Result<()> {
+    fn enter_context(&self, context: &ContextHeader) {
         self.access_state(|state| {
             state.level += 1;
             let indentation = state.level - 1;
@@ -197,18 +198,18 @@ where
             writeln!(state.buffer)?;
 
             Ok(())
-        })
+        });
     }
 
-    fn exit_context(&self, _context: &ContextHeader, _report: &ContextReport) -> io::Result<()> {
+    fn exit_context(&self, _context: &ContextHeader, _report: &ContextReport) {
         self.access_state(|state| {
             state.level -= 1;
 
             Ok(())
-        })
+        });
     }
 
-    fn enter_example(&self, example: &ExampleHeader) -> io::Result<()> {
+    fn enter_example(&self, example: &ExampleHeader) {
         self.access_state(|state| {
             state.level += 1;
             let indentation = state.level - 1;
@@ -216,23 +217,23 @@ where
             write!(state.buffer, " ... ")?;
 
             Ok(())
-        })
+        });
     }
 
-    fn exit_example(&self, _example: &ExampleHeader, report: &ExampleReport) -> io::Result<()> {
+    fn exit_example(&self, _example: &ExampleHeader, report: &ExampleReport) {
         self.access_state(|state| {
             writeln!(state.buffer, "{}", self.report_flag(report))?;
             state.level -= 1;
 
             Ok(())
-        })
+        });
     }
 }
 
 // #[cfg(test)]
 // mod tests {
 //     pub use super::*;
-//     pub use event_handler::{Event, EventHandler};
+//     pub use runner::observer::{Event, RunnerObserver};
 //     pub use example_report::*;
 //     pub use std::io;
 //     pub use std::str;

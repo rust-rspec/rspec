@@ -17,7 +17,6 @@ extern crate rayon;
 pub mod block;
 pub mod header;
 pub mod report;
-pub mod event_handler;
 pub mod runner;
 pub mod formatter;
 
