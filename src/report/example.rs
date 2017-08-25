@@ -35,14 +35,14 @@ impl Report for ExampleReport {
     }
 }
 
-/// Returning `()` from an `Example<T>` is considered a success.
+/// rspec considers examples returning `()` a success.
 impl From<()> for ExampleReport {
     fn from(_other: ()) -> ExampleReport {
         ExampleReport::Success
     }
 }
 
-/// rspec considers a boolean, `()`-returning example successful.
+/// rspec considers examples returning `true` a success, `false` a failure.
 impl From<bool> for ExampleReport {
     fn from(other: bool) -> ExampleReport {
         if other {
@@ -53,6 +53,7 @@ impl From<bool> for ExampleReport {
     }
 }
 
+/// rspec considers examples returning `Result::Ok(…)` a success, `Result::Err(…)` a failure.
 impl<T1, T2> From<Result<T1, T2>> for ExampleReport
 where
     T2: ::std::fmt::Debug,
@@ -65,6 +66,7 @@ where
     }
 }
 
+/// rspec considers examples returning `ExpectestResult::Ok(…)` a success, `ExpectestResult::Err(…)` a failure.
 #[cfg(feature = "expectest_compat")]
 impl From<ExpectestResult> for ExampleReport {
     fn from(other: ExpectestResult) -> ExampleReport {
