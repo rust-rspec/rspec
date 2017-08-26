@@ -5,22 +5,22 @@ use report::{SuiteReport, ContextReport, ExampleReport};
 
 /// `RunnerObserver`s can be attached to a [`Runner`](../runner/struct.Runner.html) to observe a
 pub trait RunnerObserver: Send + Sync {
-    fn enter_suite(&self, suite: &SuiteHeader);
-    fn exit_suite(&self, suite: &SuiteHeader, report: &SuiteReport);
-    fn enter_context(&self, context: &ContextHeader);
-    fn exit_context(&self, context: &ContextHeader, _report: &ContextReport);
-    fn enter_example(&self, example: &ExampleHeader);
-    fn exit_example(&self, example: &ExampleHeader, report: &ExampleReport);
+    fn enter_suite(&self, header: &SuiteHeader);
+    fn exit_suite(&self, header: &SuiteHeader, report: &SuiteReport);
+    fn enter_context(&self, header: &ContextHeader);
+    fn exit_context(&self, header: &ContextHeader, report: &ContextReport);
+    fn enter_example(&self, header: &ExampleHeader);
+    fn exit_example(&self, header: &ExampleHeader, report: &ExampleReport);
 }
 
 #[cfg(feature = "specialization")]
-impl<T> RunnerObserver for T {
-    fn enter_suite(&self, suite: &SuiteHeader) {}
-    fn exit_suite(&self, suite: &SuiteHeader, report: &SuiteReport) {}
-    fn enter_context(&self, context: &ContextHeader) {}
-    fn exit_context(&self, context: &ContextHeader, _report: &ContextReport) {}
-    fn enter_example(&self, example: &ExampleHeader) {}
-    fn exit_example(&self, example: &ExampleHeader, report: &ExampleReport) {}
+default impl<T> RunnerObserver for T {
+    fn enter_suite(&self, header: &SuiteHeader) {}
+    fn exit_suite(&self, header: &SuiteHeader, report: &SuiteReport) {}
+    fn enter_context(&self, header: &ContextHeader) {}
+    fn exit_context(&self, header: &ContextHeader, report: &ContextReport) {}
+    fn enter_example(&self, header: &ExampleHeader) {}
+    fn exit_example(&self, header: &ExampleHeader, report: &ExampleReport) {}
 }
 
 #[cfg(test)]
