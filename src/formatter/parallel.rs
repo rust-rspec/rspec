@@ -1,13 +1,8 @@
 use std::io;
 
-use header::SuiteHeader;
-use header::ContextHeader;
-use header::ExampleHeader;
+use header::{SuiteHeader, ContextHeader, ExampleHeader};
+use report::{BlockReport, SuiteReport, ContextReport, ExampleReport};
 use runner::RunnerObserver;
-use report::BlockReport;
-use report::SuiteReport;
-use report::ContextReport;
-use report::ExampleReport;
 use formatter::SerialFormatter;
 
 /// Preferred formatter for parallel test suite execution

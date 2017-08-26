@@ -1,5 +1,4 @@
 use report::ExampleReport;
-
 use header::ExampleHeader;
 
 /// Test examples are the smallest unit of a testing framework, wrapping one or more assertions.

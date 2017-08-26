@@ -8,11 +8,8 @@
 //! Running these tests and doing asserts is not the job of the Context, but the Runner.
 //!
 
-use block::Block;
-use block::Example;
-use header::{ContextLabel, ContextHeader};
-use header::{ExampleLabel, ExampleHeader};
-
+use block::{Block, Example};
+use header::{ContextLabel, ContextHeader, ExampleLabel, ExampleHeader};
 use report::ExampleReport;
 
 /// Test contexts are a convenient tool for adding structure and code sharing to a test suite.

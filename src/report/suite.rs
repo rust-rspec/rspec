@@ -1,6 +1,5 @@
 use header::SuiteHeader;
-use report::Report;
-use report::ContextReport;
+use report::{Report, ContextReport};
 
 /// `SuiteReport` holds the results of a context suite's test execution.
 #[derive(PartialEq, Eq, Clone, Debug)]

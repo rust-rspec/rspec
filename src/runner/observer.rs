@@ -1,11 +1,7 @@
 //! Events are sent by the Runner to signal the progression in the test suite, with the results
 
-use header::SuiteHeader;
-use header::ContextHeader;
-use header::ExampleHeader;
-use report::SuiteReport;
-use report::ContextReport;
-use report::ExampleReport;
+use header::{SuiteHeader, ContextHeader, ExampleHeader};
+use report::{SuiteReport, ContextReport, ExampleReport};
 
 /// `RunnerObserver`s can be attached to a [`Runner`](../runner/struct.Runner.html) to observe a
 pub trait RunnerObserver: Send + Sync {

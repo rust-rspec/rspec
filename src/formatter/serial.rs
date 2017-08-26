@@ -4,14 +4,9 @@ use std::ops::DerefMut;
 
 use colored::*;
 
-use header::SuiteHeader;
-use header::ContextHeader;
-use header::ExampleHeader;
+use header::{SuiteHeader, ContextHeader, ExampleHeader};
+use report::{Report, BlockReport, SuiteReport, ContextReport, ExampleReport};
 use runner::RunnerObserver;
-use report::{Report, BlockReport};
-use report::SuiteReport;
-use report::ContextReport;
-use report::ExampleReport;
 
 struct SerialFormatterState<T: io::Write = io::Stdout> {
     buffer: T,
