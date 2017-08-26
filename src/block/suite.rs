@@ -17,8 +17,16 @@ impl<T> Suite<T> {
         }
     }
 
+    pub fn num_blocks(&self) -> usize {
+        self.context.num_blocks()
+    }
+
     pub fn num_examples(&self) -> usize {
         self.context.num_examples()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.context.is_empty()
     }
 }
 
@@ -127,12 +135,44 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty() {
-
+    fn empty_suite() {
         let suite = suite("name", (), |_| {});
-
         assert_eq!(suite.header.label, SuiteLabel::Suite);
         assert_eq!(suite.header.name, "name");
         assert_eq!(suite.environment, ());
+        assert_eq!(suite.is_empty(), true);
+        assert_eq!(suite.num_examples(), 0);
+    }
+
+    #[test]
+    fn empty_describe() {
+        let describe = describe("name", (), |_| {});
+        assert_eq!(describe.header.label, SuiteLabel::Describe);
+        assert_eq!(describe.header.name, "name");
+        assert_eq!(describe.environment, ());
+        assert_eq!(describe.is_empty(), true);
+        assert_eq!(describe.num_examples(), 0);
+    }
+
+    #[test]
+    fn empty_given() {
+        let given = given("name", (), |_| {});
+        assert_eq!(given.header.label, SuiteLabel::Given);
+        assert_eq!(given.header.name, "name");
+        assert_eq!(given.environment, ());
+        assert_eq!(given.is_empty(), true);
+        assert_eq!(given.num_examples(), 0);
+    }
+
+    #[test]
+    fn non_empty_suite() {
+        let suite = suite("suite", (), |ctx| {
+            ctx.context("context", |_| {});
+        });
+        assert_eq!(suite.header.label, SuiteLabel::Suite);
+        assert_eq!(suite.header.name, "suite");
+        assert_eq!(suite.environment, ());
+        assert_eq!(suite.is_empty(), false);
+        assert_eq!(suite.num_examples(), 0);
     }
 }

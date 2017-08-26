@@ -37,10 +37,18 @@ impl<T> Context<T> {
         }
     }
 
+    pub fn num_blocks(&self) -> usize {
+        self.blocks.len()
+    }
+
     pub fn num_examples(&self) -> usize {
         self.blocks.iter().fold(0, |count, block| {
             count + block.num_examples()
         })
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.blocks.is_empty()
     }
 }
 
