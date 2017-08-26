@@ -23,15 +23,27 @@ impl Report for ExampleReport {
     }
 
     fn get_passed(&self) -> u32 {
-        if &ExampleReport::Success == self { 1 } else { 0 }
+        if &ExampleReport::Success == self {
+            1
+        } else {
+            0
+        }
     }
 
     fn get_failed(&self) -> u32 {
-        if let &ExampleReport::Failure(_) = self { 1 } else { 0 }
+        if let &ExampleReport::Failure(_) = self {
+            1
+        } else {
+            0
+        }
     }
 
     fn get_ignored(&self) -> u32 {
-        if &ExampleReport::Ignored == self { 1 } else { 0 }
+        if &ExampleReport::Ignored == self {
+            1
+        } else {
+            0
+        }
     }
 }
 
@@ -48,7 +60,10 @@ impl From<bool> for ExampleReport {
         if other {
             ExampleReport::Success
         } else {
-            ExampleReport::Failure(Some("assertion failed: `expected condition to be true`".to_owned()))
+            ExampleReport::Failure(Some(
+                "assertion failed: `expected condition to be true`"
+                    .to_owned(),
+            ))
         }
     }
 }

@@ -5,10 +5,10 @@
 #[derive(Builder)]
 pub struct Configuration {
     /// Whether the runner executes tests in parallel
-    #[builder(default="true")]
+    #[builder(default = "true")]
     pub parallel: bool,
     /// Whether the runner exits the procees upon encountering failures
-    #[builder(default="true")]
+    #[builder(default = "true")]
     pub exit_on_failure: bool,
 }
 
@@ -29,11 +29,17 @@ mod tests {
         assert_eq!(config.parallel, true);
         assert_eq!(config.exit_on_failure, true);
 
-        let config = ConfigurationBuilder::default().parallel(false).build().unwrap();
+        let config = ConfigurationBuilder::default()
+            .parallel(false)
+            .build()
+            .unwrap();
         assert_eq!(config.parallel, false);
         assert_eq!(config.exit_on_failure, true);
 
-        let config = ConfigurationBuilder::default().exit_on_failure(false).build().unwrap();
+        let config = ConfigurationBuilder::default()
+            .exit_on_failure(false)
+            .build()
+            .unwrap();
         assert_eq!(config.parallel, true);
         assert_eq!(config.exit_on_failure, false);
     }

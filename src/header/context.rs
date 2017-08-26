@@ -63,8 +63,14 @@ mod tests {
         fn subject(label: ContextLabel) -> String {
             format!("{}", ContextHeader::new(label, "Test"))
         };
-        assert_eq!(subject(ContextLabel::Context), "Context \"Test\"".to_owned());
-        assert_eq!(subject(ContextLabel::Specify), "Specify \"Test\"".to_owned());
+        assert_eq!(
+            subject(ContextLabel::Context),
+            "Context \"Test\"".to_owned()
+        );
+        assert_eq!(
+            subject(ContextLabel::Specify),
+            "Specify \"Test\"".to_owned()
+        );
         assert_eq!(subject(ContextLabel::When), "When \"Test\"".to_owned());
     }
 }

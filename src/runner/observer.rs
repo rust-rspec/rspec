@@ -18,7 +18,7 @@ pub trait RunnerObserver: Send + Sync {
 }
 
 #[cfg(feature = "specialization")]
-default impl<T> RunnerObserver for T {
+impl<T> RunnerObserver for T {
     fn enter_suite(&self, suite: &SuiteHeader) {}
     fn exit_suite(&self, suite: &SuiteHeader, report: &SuiteReport) {}
     fn enter_context(&self, context: &ContextHeader) {}

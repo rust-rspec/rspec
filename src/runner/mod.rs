@@ -68,7 +68,7 @@ impl Runner {
 
     fn wrap_all<T, U, F>(&self, context: &Context<T>, environment: &mut T, f: F) -> U
     where
-        F: Fn(&mut T) -> U
+        F: Fn(&mut T) -> U,
     {
         for before_function in context.before_all.iter() {
             before_function(environment);
@@ -82,7 +82,7 @@ impl Runner {
 
     fn wrap_each<T, U, F>(&self, context: &Context<T>, environment: &mut T, f: F) -> U
     where
-        F: Fn(&mut T) -> U
+        F: Fn(&mut T) -> U,
     {
         for before_function in context.before_each.iter() {
             before_function(environment);
@@ -98,21 +98,30 @@ impl Runner {
     where
         T: Clone + Send + Sync + ::std::fmt::Debug,
     {
-        context.blocks.par_iter().map(|block| {
-            self.evaluate_block(block, context, environment)
-        }).collect()
+        context
+            .blocks
+            .par_iter()
+            .map(|block| self.evaluate_block(block, context, environment))
+            .collect()
     }
 
     fn evaluate_blocks_serial<T>(&self, context: &Context<T>, environment: &T) -> Vec<BlockReport>
     where
         T: Clone + Send + Sync + ::std::fmt::Debug,
     {
-        context.blocks.iter().map(|block| {
-            self.evaluate_block(block, context, environment)
-        }).collect()
+        context
+            .blocks
+            .iter()
+            .map(|block| self.evaluate_block(block, context, environment))
+            .collect()
     }
 
-    fn evaluate_block<T>(&self, block: &Block<T>, context: &Context<T>, environment: &T) -> BlockReport
+    fn evaluate_block<T>(
+        &self,
+        block: &Block<T>,
+        context: &Context<T>,
+        environment: &T,
+    ) -> BlockReport
     where
         T: Clone + Send + Sync + ::std::fmt::Debug,
     {
@@ -138,7 +147,9 @@ impl Drop for Runner {
     fn drop(&mut self) {
         let should_exit = if let Ok(mutex_guard) = self.should_exit.lock() {
             mutex_guard.deref().get()
-        } else { false };
+        } else {
+            false
+        };
 
         if self.configuration.exit_on_failure && should_exit {
             // XXX Cargo test failure returns 101.
@@ -164,7 +175,10 @@ where
 
     fn visit(&self, suite: &Suite<T>, environment: &mut Self::Environment) -> Self::Output {
         self.broadcast(|handler| handler.enter_suite(&suite.header));
-        let report = SuiteReport::new(suite.header.clone(), self.visit(&suite.context, environment));
+        let report = SuiteReport::new(
+            suite.header.clone(),
+            self.visit(&suite.context, environment),
+        );
         self.broadcast(|handler| handler.exit_suite(&suite.header, &report));
         report
     }
@@ -204,13 +218,14 @@ where
         if let Some(ref header) = context.header {
             self.broadcast(|handler| handler.enter_context(&header));
         }
-        let reports: Vec<_> = self.wrap_all(context, environment, |environment| {
-            if self.configuration.parallel {
+        let reports: Vec<_> =
+            self.wrap_all(context, environment, |environment| if self.configuration
+                .parallel
+            {
                 self.evaluate_blocks_parallel(context, environment)
             } else {
                 self.evaluate_blocks_serial(context, environment)
-            }
-        });
+            });
         let report = ContextReport::new(reports);
         if let Some(ref header) = context.header {
             self.broadcast(|handler| handler.exit_context(&header, &report));

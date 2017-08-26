@@ -60,7 +60,10 @@ mod tests {
             format!("{}", SuiteHeader::new(label, "Test"))
         };
         assert_eq!(subject(SuiteLabel::Suite), "Suite \"Test\"".to_owned());
-        assert_eq!(subject(SuiteLabel::Describe), "Describe \"Test\"".to_owned());
+        assert_eq!(
+            subject(SuiteLabel::Describe),
+            "Describe \"Test\"".to_owned()
+        );
         assert_eq!(subject(SuiteLabel::Given), "Given \"Test\"".to_owned());
     }
 }

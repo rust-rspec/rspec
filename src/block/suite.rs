@@ -116,7 +116,8 @@ fn suite_internal<'a, F, T>(header: SuiteHeader, environment: T, body: F) -> Sui
 where
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
-{    let mut ctx = Context::new(None);
+{
+    let mut ctx = Context::new(None);
     body(&mut ctx);
     Suite::new(header, environment, ctx)
 }

@@ -8,9 +8,7 @@ pub struct ContextReport {
 
 impl ContextReport {
     pub fn new(sub_reports: Vec<BlockReport>) -> Self {
-        ContextReport {
-            sub_reports: sub_reports,
-        }
+        ContextReport { sub_reports: sub_reports }
     }
 
     pub fn get_blocks(&self) -> &[BlockReport] {

@@ -21,9 +21,7 @@ where
     T: Send + Sync,
 {
     pub fn new(buffer: T) -> ParallelFormatter<T> {
-        ParallelFormatter {
-            serial: SerialFormatter::new(buffer),
-        }
+        ParallelFormatter { serial: SerialFormatter::new(buffer) }
     }
 
     fn replay_suite(&self, suite: &SuiteHeader, report: &SuiteReport) {
@@ -36,10 +34,10 @@ where
         match report {
             &BlockReport::Context(ref header, ref report) => {
                 self.replay_context(header.as_ref(), report);
-            },
+            }
             &BlockReport::Example(ref header, ref report) => {
                 self.replay_example(header, report);
-            },
+            }
         }
     }
 
@@ -65,27 +63,17 @@ impl<T: io::Write> RunnerObserver for ParallelFormatter<T>
 where
     T: Send + Sync,
 {
-    fn enter_suite(&self, _suite: &SuiteHeader) {
-
-    }
+    fn enter_suite(&self, _suite: &SuiteHeader) {}
 
     fn exit_suite(&self, suite: &SuiteHeader, report: &SuiteReport) {
         self.replay_suite(suite, report);
     }
 
-    fn enter_context(&self, _context: &ContextHeader) {
+    fn enter_context(&self, _context: &ContextHeader) {}
 
-    }
+    fn exit_context(&self, _context: &ContextHeader, _report: &ContextReport) {}
 
-    fn exit_context(&self, _context: &ContextHeader, _report: &ContextReport) {
+    fn enter_example(&self, _example: &ExampleHeader) {}
 
-    }
-
-    fn enter_example(&self, _example: &ExampleHeader) {
-
-    }
-
-    fn exit_example(&self, _example: &ExampleHeader, _report: &ExampleReport) {
-
-    }
+    fn exit_example(&self, _example: &ExampleHeader, _report: &ExampleReport) {}
 }

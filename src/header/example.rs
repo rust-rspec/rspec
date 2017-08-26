@@ -59,7 +59,10 @@ mod tests {
         fn subject(label: ExampleLabel) -> String {
             format!("{}", ExampleHeader::new(label, "Test"))
         };
-        assert_eq!(subject(ExampleLabel::Example), "Example \"Test\"".to_owned());
+        assert_eq!(
+            subject(ExampleLabel::Example),
+            "Example \"Test\"".to_owned()
+        );
         assert_eq!(subject(ExampleLabel::It), "It \"Test\"".to_owned());
         assert_eq!(subject(ExampleLabel::Then), "Then \"Test\"".to_owned());
     }

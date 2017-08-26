@@ -16,9 +16,7 @@ pub fn main() {
         set: BTreeSet<usize>,
     }
 
-    let environment = Environment {
-        set: BTreeSet::new(),
-    };
+    let environment = Environment { set: BTreeSet::new() };
 
     // A test suite using the `suite`, `context`, `example` syntax family:
     runner.run(rspec::suite("a BTreeSet", environment.clone(), |ctx| {

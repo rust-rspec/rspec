@@ -42,9 +42,7 @@ impl Default for SerialFormatter<io::Stdout> {
 impl<T: io::Write> SerialFormatter<T> {
     pub fn new(buffer: T) -> Self {
         let state = SerialFormatterState::new(buffer);
-        SerialFormatter {
-            state: Mutex::new(state),
-        }
+        SerialFormatter { state: Mutex::new(state) }
     }
 
     fn padding(depth: usize) -> String {
@@ -53,7 +51,7 @@ impl<T: io::Write> SerialFormatter<T> {
 
     fn access_state<F>(&self, mut f: F)
     where
-        F: FnMut(&mut SerialFormatterState<T>) -> io::Result<()>
+        F: FnMut(&mut SerialFormatterState<T>) -> io::Result<()>,
     {
         if let Ok(ref mut mutex_guard) = self.state.lock() {
             let result = f(mutex_guard.deref_mut());
@@ -61,11 +59,19 @@ impl<T: io::Write> SerialFormatter<T> {
                 eprintln!("\n{}: {:?}", "error".red().bold(), error);
             }
         } else {
-            eprintln!("\n{}: failed to aquire lock on mutex.", "error".red().bold());
+            eprintln!(
+                "\n{}: failed to aquire lock on mutex.",
+                "error".red().bold()
+            );
         }
     }
 
-    fn write_suite_failures(&self, buffer: &mut T, indent: usize, report: &SuiteReport) -> io::Result<()> {
+    fn write_suite_failures(
+        &self,
+        buffer: &mut T,
+        indent: usize,
+        report: &SuiteReport,
+    ) -> io::Result<()> {
         if report.is_failure() {
             let _ = writeln!(buffer, "\nfailures:\n");
             writeln!(buffer, "{}{}", Self::padding(indent), report.get_header())?;
@@ -78,7 +84,12 @@ impl<T: io::Write> SerialFormatter<T> {
         Ok(())
     }
 
-    fn write_block_failures(&self, buffer: &mut T, indent: usize, report: &BlockReport) -> io::Result<()> {
+    fn write_block_failures(
+        &self,
+        buffer: &mut T,
+        indent: usize,
+        report: &BlockReport,
+    ) -> io::Result<()> {
         if report.is_failure() {
             match report {
                 &BlockReport::Context(ref header, ref report) => {
@@ -86,17 +97,22 @@ impl<T: io::Write> SerialFormatter<T> {
                         write!(buffer, "{}{}", Self::padding(indent), header)?;
                     }
                     self.write_context_failures(buffer, indent + 1, report)?;
-                },
+                }
                 &BlockReport::Example(ref header, ref report) => {
                     writeln!(buffer, "{}{}", Self::padding(indent), header)?;
                     self.write_example_failure(buffer, indent + 1, report)?;
-                },
+                }
             }
         }
         Ok(())
     }
 
-    fn write_context_failures(&self, buffer: &mut T, indent: usize, report: &ContextReport) -> io::Result<()> {
+    fn write_context_failures(
+        &self,
+        buffer: &mut T,
+        indent: usize,
+        report: &ContextReport,
+    ) -> io::Result<()> {
         if report.is_failure() {
             writeln!(buffer)?;
             for block_report in report.get_blocks() {
@@ -107,7 +123,12 @@ impl<T: io::Write> SerialFormatter<T> {
         Ok(())
     }
 
-    fn write_example_failure(&self, buffer: &mut T, indent: usize, report: &ExampleReport) -> io::Result<()> {
+    fn write_example_failure(
+        &self,
+        buffer: &mut T,
+        indent: usize,
+        report: &ExampleReport,
+    ) -> io::Result<()> {
         if let &ExampleReport::Failure(Some(ref reason)) = report {
             let padding = Self::padding(indent);
             writeln!(buffer, "{}{}", padding, reason)?;
@@ -127,7 +148,9 @@ impl<T: io::Write> SerialFormatter<T> {
         writeln!(
             buffer,
             " {} passed; {} failed; {} ignored",
-            report.get_passed(), report.get_failed(), report.get_ignored()
+            report.get_passed(),
+            report.get_failed(),
+            report.get_ignored()
         )?;
 
         if report.is_failure() {
@@ -139,7 +162,7 @@ impl<T: io::Write> SerialFormatter<T> {
 
     fn report_flag<R>(&self, report: &R) -> ColoredString
     where
-        R: Report
+        R: Report,
     {
         if report.is_success() {
             "ok".green()
@@ -177,7 +200,12 @@ where
     fn enter_context(&self, context: &ContextHeader) {
         self.access_state(|state| {
             state.level += 1;
-            writeln!(state.buffer, "{}{}", Self::padding(state.level - 1), context)?;
+            writeln!(
+                state.buffer,
+                "{}{}",
+                Self::padding(state.level - 1),
+                context
+            )?;
 
             Ok(())
         });
@@ -194,7 +222,12 @@ where
     fn enter_example(&self, example: &ExampleHeader) {
         self.access_state(|state| {
             state.level += 1;
-            write!(state.buffer, "{}{} ... ", Self::padding(state.level - 1), example)?;
+            write!(
+                state.buffer,
+                "{}{} ... ",
+                Self::padding(state.level - 1),
+                example
+            )?;
 
             Ok(())
         });
