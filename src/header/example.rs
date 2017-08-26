@@ -1,7 +1,5 @@
 use std::fmt;
 
-use header::Header;
-
 /// A [`Example`](../block/struct.Example.html)'s cosmetic label.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ExampleLabel {
@@ -10,12 +8,12 @@ pub enum ExampleLabel {
     Then,
 }
 
-impl From<ExampleLabel> for &'static str {
-    fn from(label: ExampleLabel) -> Self {
-        match label {
-            ExampleLabel::It => "It",
-            ExampleLabel::Example => "Example",
-            ExampleLabel::Then => "Then",
+impl fmt::Display for ExampleLabel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &ExampleLabel::It => write!(f, "It"),
+            &ExampleLabel::Example => write!(f, "Example"),
+            &ExampleLabel::Then => write!(f, "Then"),
         }
     }
 }
@@ -36,21 +34,33 @@ impl ExampleHeader {
     }
 }
 
-impl Header for ExampleHeader {
-    fn label(&self) -> &str {
-        self.label.into()
-    }
-
-    fn name(&self) -> &str {
-        &self.name[..]
+impl fmt::Display for ExampleHeader {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {:?}", self.label, self.name)
     }
 }
 
-impl fmt::Display for ExampleHeader {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let label: &str = self.label.into();
-        write!(f, "{} {:?}", label, self.name)?;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        Ok(())
+    #[test]
+    fn label_fmt() {
+        fn subject(label: ExampleLabel) -> String {
+            format!("{}", label)
+        };
+        assert_eq!(subject(ExampleLabel::Example), "Example".to_owned());
+        assert_eq!(subject(ExampleLabel::It), "It".to_owned());
+        assert_eq!(subject(ExampleLabel::Then), "Then".to_owned());
+    }
+
+    #[test]
+    fn header_fmt() {
+        fn subject(label: ExampleLabel) -> String {
+            format!("{}", ExampleHeader::new(label, "Test"))
+        };
+        assert_eq!(subject(ExampleLabel::Example), "Example \"Test\"".to_owned());
+        assert_eq!(subject(ExampleLabel::It), "It \"Test\"".to_owned());
+        assert_eq!(subject(ExampleLabel::Then), "Then \"Test\"".to_owned());
     }
 }

@@ -1,7 +1,5 @@
 use std::fmt;
 
-use header::Header;
-
 /// A [`Suite`](../block/struct.Suite.html)'s cosmetic label.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SuiteLabel {
@@ -10,12 +8,12 @@ pub enum SuiteLabel {
     Given,
 }
 
-impl From<SuiteLabel> for &'static str {
-    fn from(label: SuiteLabel) -> Self {
-        match label {
-            SuiteLabel::Suite => "Suite",
-            SuiteLabel::Describe => "Describe",
-            SuiteLabel::Given => "Given",
+impl fmt::Display for SuiteLabel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &SuiteLabel::Suite => write!(f, "Suite"),
+            &SuiteLabel::Describe => write!(f, "Describe"),
+            &SuiteLabel::Given => write!(f, "Given"),
         }
     }
 }
@@ -36,21 +34,33 @@ impl SuiteHeader {
     }
 }
 
-impl Header for SuiteHeader {
-    fn label(&self) -> &str {
-        self.label.into()
-    }
-
-    fn name(&self) -> &str {
-        &self.name[..]
+impl fmt::Display for SuiteHeader {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {:?}", self.label, self.name)
     }
 }
 
-impl fmt::Display for SuiteHeader {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let label: &str = self.label.into();
-        write!(f, "{} {:?}", label, self.name)?;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        Ok(())
+    #[test]
+    fn label_fmt() {
+        fn subject(label: SuiteLabel) -> String {
+            format!("{}", label)
+        };
+        assert_eq!(subject(SuiteLabel::Suite), "Suite".to_owned());
+        assert_eq!(subject(SuiteLabel::Describe), "Describe".to_owned());
+        assert_eq!(subject(SuiteLabel::Given), "Given".to_owned());
+    }
+
+    #[test]
+    fn header_fmt() {
+        fn subject(label: SuiteLabel) -> String {
+            format!("{}", SuiteHeader::new(label, "Test"))
+        };
+        assert_eq!(subject(SuiteLabel::Suite), "Suite \"Test\"".to_owned());
+        assert_eq!(subject(SuiteLabel::Describe), "Describe \"Test\"".to_owned());
+        assert_eq!(subject(SuiteLabel::Given), "Given \"Test\"".to_owned());
     }
 }

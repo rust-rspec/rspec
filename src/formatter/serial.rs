@@ -4,7 +4,6 @@ use std::ops::DerefMut;
 
 use colored::*;
 
-use header::Header;
 use header::SuiteHeader;
 use header::ContextHeader;
 use header::ExampleHeader;
@@ -66,21 +65,10 @@ impl<T: io::Write> SerialFormatter<T> {
         }
     }
 
-    fn write_header<H>(&self, buffer: &mut T, indent: usize, header: &H) -> io::Result<()>
-    where
-        H: Header
-    {
-        let padding = Self::padding(indent);
-        write!(buffer, "{}{} {:?}", padding, header.label(), header.name())?;
-
-        Ok(())
-    }
-
     fn write_suite_failures(&self, buffer: &mut T, indent: usize, report: &SuiteReport) -> io::Result<()> {
         if report.is_failure() {
             let _ = writeln!(buffer, "\nfailures:\n");
-            self.write_header(buffer, indent, report.get_header())?;
-            writeln!(buffer)?;
+            writeln!(buffer, "{}{}", Self::padding(indent), report.get_header())?;
             let context_report = report.get_context();
             for block_report in context_report.get_blocks() {
                 self.write_block_failures(buffer, indent + 1, block_report)?;
@@ -95,13 +83,12 @@ impl<T: io::Write> SerialFormatter<T> {
             match report {
                 &BlockReport::Context(ref header, ref report) => {
                     if let Some(header) = header.as_ref() {
-                        self.write_header(buffer, indent, header)?;
+                        write!(buffer, "{}{}", Self::padding(indent), header)?;
                     }
                     self.write_context_failures(buffer, indent + 1, report)?;
                 },
                 &BlockReport::Example(ref header, ref report) => {
-                    self.write_header(buffer, indent, header)?;
-                    writeln!(buffer)?;
+                    writeln!(buffer, "{}{}", Self::padding(indent), header)?;
                     self.write_example_failure(buffer, indent + 1, report)?;
                 },
             }
@@ -169,10 +156,8 @@ where
     fn enter_suite(&self, suite: &SuiteHeader) {
         self.access_state(|state| {
             state.level += 1;
-            let indentation = state.level - 1;
             self.write_suite_prefix(&mut state.buffer)?;
-            self.write_header(&mut state.buffer, indentation, suite)?;
-            writeln!(state.buffer)?;
+            write!(state.buffer, "{}{}", Self::padding(state.level - 1), suite)?;
 
             Ok(())
         });
@@ -192,10 +177,7 @@ where
     fn enter_context(&self, context: &ContextHeader) {
         self.access_state(|state| {
             state.level += 1;
-            let indentation = state.level - 1;
-
-            self.write_header(&mut state.buffer, indentation, context)?;
-            writeln!(state.buffer)?;
+            writeln!(state.buffer, "{}{}", Self::padding(state.level - 1), context)?;
 
             Ok(())
         });
@@ -212,9 +194,7 @@ where
     fn enter_example(&self, example: &ExampleHeader) {
         self.access_state(|state| {
             state.level += 1;
-            let indentation = state.level - 1;
-            self.write_header(&mut state.buffer, indentation, example)?;
-            write!(state.buffer, " ... ")?;
+            write!(state.buffer, "{}{} ... ", Self::padding(state.level - 1), example)?;
 
             Ok(())
         });
