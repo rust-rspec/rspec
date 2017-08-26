@@ -26,3 +26,8 @@ default impl<T> RunnerObserver for T {
     fn enter_example(&self, example: &ExampleHeader) {}
     fn exit_example(&self, example: &ExampleHeader, report: &ExampleReport) {}
 }
+
+#[cfg(test)]
+mod tests {
+    // Nothing to test here, yet.
+}

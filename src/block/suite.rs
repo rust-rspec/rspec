@@ -3,14 +3,16 @@ use block::Context;
 
 /// Test suites bundle a set of closely related test examples into a logical execution group.
 pub struct Suite<T> {
-    pub header: SuiteHeader,
+    pub(crate) header: SuiteHeader,
+    pub(crate) environment: T,
     pub(crate) context: Context<T>,
 }
 
 impl<T> Suite<T> {
-    pub(crate) fn new(header: SuiteHeader, context: Context<T>) -> Self {
+    pub(crate) fn new(header: SuiteHeader, environment: T, context: Context<T>) -> Self {
         Suite {
             header: header,
+            environment: environment,
             context: context,
         }
     }
@@ -64,7 +66,7 @@ where
 ///
 /// - [`describe`](fn.describe.html).
 /// - [`given`](fn.given.html).
-pub fn suite<F, T>(name: &'static str, environment: T, body: F) -> (Suite<T>, T)
+pub fn suite<F, T>(name: &'static str, environment: T, body: F) -> Suite<T>
 where
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
@@ -81,7 +83,7 @@ where
 /// Available further aliases:
 ///
 /// - [`given`](fn.describe.html).
-pub fn describe<F, T>(name: &'static str, environment: T, body: F) -> (Suite<T>, T)
+pub fn describe<F, T>(name: &'static str, environment: T, body: F) -> Suite<T>
 where
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
@@ -98,7 +100,7 @@ where
 /// Available further aliases:
 ///
 /// - [`describe`](fn.describe.html).
-pub fn given<F, T>(name: &'static str, environment: T, body: F) -> (Suite<T>, T)
+pub fn given<F, T>(name: &'static str, environment: T, body: F) -> Suite<T>
 where
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
@@ -110,11 +112,26 @@ where
     suite_internal(header, environment, body)
 }
 
-fn suite_internal<'a, F, T>(header: SuiteHeader, environment: T, body: F) -> (Suite<T>, T)
+fn suite_internal<'a, F, T>(header: SuiteHeader, environment: T, body: F) -> Suite<T>
 where
     F: FnOnce(&mut Context<T>) -> (),
     T: Clone + ::std::fmt::Debug,
 {    let mut ctx = Context::new(None);
     body(&mut ctx);
-    (Suite::new(header, ctx), environment)
+    Suite::new(header, environment, ctx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty() {
+
+        let suite = suite("name", (), |_| {});
+
+        assert_eq!(suite.header.label, SuiteLabel::Suite);
+        assert_eq!(suite.header.name, "name");
+        assert_eq!(suite.environment, ());
+    }
 }

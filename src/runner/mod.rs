@@ -43,11 +43,11 @@ impl Runner {
 }
 
 impl Runner {
-    pub fn run<T>(&self, suite: (Suite<T>, T)) -> SuiteReport
+    pub fn run<T>(&self, suite: Suite<T>) -> SuiteReport
     where
         T: Clone + Send + Sync + ::std::fmt::Debug,
     {
-        let (suite, mut environment) = suite;
+        let mut environment = suite.environment.clone();
         self.prepare_before_run();
         let report = self.visit(&suite, &mut environment);
         self.clean_after_run();
