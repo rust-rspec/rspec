@@ -550,15 +550,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
-
     use block::{suite, describe, given};
 
     macro_rules! test_suite_alias {
-            ($suite: ident) => {
-                $suite("suite (or alias)", (), |_| {});
-            }
+        ($suite: ident) => {
+            $suite("suite (or alias)", (), |_| {});
         }
+    }
 
     #[test]
     fn it_has_root_functions() {
@@ -568,12 +566,12 @@ mod tests {
     }
 
     macro_rules! test_context_alias {
-            ($suite: ident, $context: ident) => {
-                $suite("suite (or alias)", (), |ctx| {
-                    ctx.$context("context (or alias)", |_| {})
-                });
-            }
+        ($suite: ident, $context: ident) => {
+            $suite("suite (or alias)", (), |ctx| {
+                ctx.$context("context (or alias)", |_| {})
+            });
         }
+    }
 
     #[test]
     fn it_has_contextual_function_context() {
@@ -597,16 +595,16 @@ mod tests {
     }
 
     macro_rules! test_example_alias {
-            ($suite: ident, $context: ident, $example: ident) => {
-                $suite("suite (or alias)", (), |ctx| {
-                    ctx.$context("context (or alias)", |ctx| {
-                        ctx.$example("example (or alias)", |_| {
+        ($suite: ident, $context: ident, $example: ident) => {
+            $suite("suite (or alias)", (), |ctx| {
+                ctx.$context("context (or alias)", |ctx| {
+                    ctx.$example("example (or alias)", |_| {
 
-                        });
                     });
                 });
-            }
+            });
         }
+    }
 
     #[test]
     fn it_has_check_function_example() {
