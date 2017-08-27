@@ -56,7 +56,7 @@ pub use runner::{Configuration, ConfigurationBuilder, Runner};
 /// ```
 #[macro_export]
 macro_rules! rspec_run {
-    ($label:ident $name:expr, $env:ident, |$ctx:ident| $block:block) => ({
+    ($label:ident $name:expr, $env:expr, |$ctx:ident| $block:block) => ({
         use std::io;
         use std::sync::Arc;
 
