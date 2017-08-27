@@ -166,8 +166,10 @@ impl Drop for Runner {
             // > like 1, which everybody uses). I don't expect this behavior can ever change.
             // > This behavior probably dates to before 2013,
             // > all the way back to the creation of compiletest." – @brson
-
+            #[cfg(not(test))]
             process::exit(101);
+            #[cfg(test)]
+            panic!("test suite failed !")
         }
     }
 }
@@ -452,6 +454,143 @@ mod tests {
                 // assert
                 assert_eq!(1, last_caller_id.load(Ordering::SeqCst));
             }
+        }
+
+        mod wrap_all {
+            use super::*;
+
+            use std::sync::atomic::*;
+
+            #[test]
+            fn it_can_be_called() {
+                // arrange
+                let runner = Runner::default();
+                // act
+                runner.wrap_all(&Context::default(), &mut (), |_| {})
+                // assert
+            }
+
+            #[test]
+            fn it_calls_the_closure() {
+                // arrange
+                let runner = Runner::default();
+                let has_been_called = AtomicBool::new(false);
+                // act
+                runner.wrap_all(&Context::default(), &mut (), |_| has_been_called.store(true, Ordering::SeqCst));
+                // assert
+                assert_eq!(true, has_been_called.load(Ordering::SeqCst));
+            }
+
+            #[test]
+            fn it_calls_the_before_all_callbacks() {
+                // arrange
+                let runner = Runner::default();
+                let has_been_called = Arc::new(AtomicBool::new(false));
+                let closure_bool_handler = has_been_called.clone();
+                let mut context = Context::default();
+                // act
+                context.before_all(move |_| closure_bool_handler.store(true, Ordering::SeqCst));
+                runner.wrap_all(&context, &mut (), |_| ());
+                // assert
+                assert_eq!(true, has_been_called.load(Ordering::SeqCst));
+            }
+
+            #[test]
+            fn it_calls_the_after_all_callbacks() {
+                // arrange
+                let runner = Runner::default();
+                let has_been_called = Arc::new(AtomicBool::new(false));
+                let closure_bool_handler = has_been_called.clone();
+                let mut context = Context::default();
+                // act
+                context.after_all(move |_| closure_bool_handler.store(true, Ordering::SeqCst));
+                runner.wrap_all(&context, &mut (), |_| ());
+                // assert
+                assert_eq!(true, has_been_called.load(Ordering::SeqCst));
+            }
+
+            #[test]
+            fn it_calls_all_before_all_callbacks() {
+                // arrange
+                let runner = Runner::default();
+                let call_counter = Arc::new(AtomicUsize::new(0));
+                let closure_counter_handler1 = call_counter.clone();
+                let closure_counter_handler2 = call_counter.clone();
+                let mut context = Context::default();
+                // act
+                context.before_all(move |_| { closure_counter_handler1.fetch_add(1, Ordering::SeqCst); });
+                context.before_all(move |_| { closure_counter_handler2.fetch_add(1, Ordering::SeqCst); });
+                runner.wrap_all(&context, &mut (), |_| ());
+                // assert
+                assert_eq!(2, call_counter.load(Ordering::SeqCst));
+            }
+
+            #[test]
+            fn it_calls_all_after_all_callbacks() {
+                // arrange
+                let runner = Runner::default();
+                let call_counter = Arc::new(AtomicUsize::new(0));
+                let closure_counter_handler1 = call_counter.clone();
+                let closure_counter_handler2 = call_counter.clone();
+                let mut context = Context::default();
+                // act
+                context.after_all(move |_| { closure_counter_handler1.fetch_add(1, Ordering::SeqCst); });
+                context.after_all(move |_| { closure_counter_handler2.fetch_add(1, Ordering::SeqCst); });
+                runner.wrap_all(&context, &mut (), |_| ());
+                // assert
+                assert_eq!(2, call_counter.load(Ordering::SeqCst));
+            }
+
+            #[test]
+            fn it_calls_before_all_hook_before_the_main_closure() {
+                // arrange
+                let runner = Runner::default();
+                let last_caller_id = Arc::new(AtomicUsize::new(0));
+                let last_caller_handler1 = last_caller_id.clone();
+                let last_caller_handler2 = last_caller_id.clone();
+                let mut context = Context::default();
+                // act
+                context.before_all(move |_| { last_caller_handler1.store(1, Ordering::SeqCst); });
+                runner.wrap_all(&context, &mut (), |_| { last_caller_handler2.store(2, Ordering::SeqCst); });
+                // assert
+                assert_eq!(2, last_caller_id.load(Ordering::SeqCst));
+            }
+
+            #[test]
+            fn it_calls_after_all_hook_after_the_main_closure() {
+                // arrange
+                let runner = Runner::default();
+                let last_caller_id = Arc::new(AtomicUsize::new(0));
+                let last_caller_handler1 = last_caller_id.clone();
+                let last_caller_handler2 = last_caller_id.clone();
+                let mut context = Context::default();
+                // act
+                context.after_all(move |_| { last_caller_handler1.store(1, Ordering::SeqCst); });
+                runner.wrap_all(&context, &mut (), |_| { last_caller_handler2.store(2, Ordering::SeqCst); });
+                // assert
+                assert_eq!(1, last_caller_id.load(Ordering::SeqCst));
+            }
+        }
+    }
+
+    mod impl_drop_for_runner {
+        use super::*;
+
+        #[test]
+        #[should_panic]
+        fn it_should_abort() {
+            // arrange
+            let config = ConfigurationBuilder::default()
+                .exit_on_failure(true)
+                .build()
+                .unwrap();
+            // act
+            {
+                let runner = Runner::new(config, vec!());
+                (*runner.should_exit.lock().unwrap()).set(true);
+            }
+            // assert
+            // test should panic
         }
     }
 
