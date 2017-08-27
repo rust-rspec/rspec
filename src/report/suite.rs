@@ -2,20 +2,13 @@ use header::SuiteHeader;
 use report::{Report, ContextReport};
 
 /// `SuiteReport` holds the results of a context suite's test execution.
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, new)]
 pub struct SuiteReport {
     header: SuiteHeader,
     context: ContextReport,
 }
 
 impl SuiteReport {
-    pub fn new(header: SuiteHeader, context: ContextReport) -> Self {
-        SuiteReport {
-            header: header,
-            context: context,
-        }
-    }
-
     pub fn get_header(&self) -> &SuiteHeader {
         &self.header
     }

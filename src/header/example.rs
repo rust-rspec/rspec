@@ -1,7 +1,7 @@
 use std::default::Default;
 use std::fmt;
 
-/// A [`Example`](../block/struct.Example.html)'s cosmetic label.
+/// How the [`Example`](../block/struct.Example.html) will be printed by the `Formatter`
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ExampleLabel {
     It,
@@ -20,19 +20,10 @@ impl fmt::Display for ExampleLabel {
 }
 
 /// A [`Header`](trait.Header.html) with label and name of an [`Example`](../block/struct.Example.html).
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, new)]
 pub struct ExampleHeader {
     pub label: ExampleLabel,
     pub name: &'static str,
-}
-
-impl ExampleHeader {
-    pub fn new(label: ExampleLabel, name: &'static str) -> Self {
-        ExampleHeader {
-            label: label,
-            name: name,
-        }
-    }
 }
 
 impl Default for ExampleHeader {

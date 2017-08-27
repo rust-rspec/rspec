@@ -58,37 +58,37 @@ impl Runner {
         report
     }
 
-    fn broadcast<F>(&self, mut f: F)
+    fn broadcast<F>(&self, mut handler: F)
     where
         F: FnMut(&RunnerObserver),
     {
         for observer in &self.observers {
-            f(observer.borrow());
+            handler(observer.borrow());
         }
     }
 
-    fn wrap_all<T, U, F>(&self, context: &Context<T>, environment: &mut T, f: F) -> U
+    fn wrap_all<T, U, F>(&self, context: &Context<T>, environment: &mut T, wrapped_block: F) -> U
     where
         F: Fn(&mut T) -> U,
     {
         for before_function in context.before_all.iter() {
             before_function(environment);
         }
-        let result = f(environment);
+        let result = wrapped_block(environment);
         for after_function in context.after_all.iter() {
             after_function(environment);
         }
         result
     }
 
-    fn wrap_each<T, U, F>(&self, context: &Context<T>, environment: &mut T, f: F) -> U
+    fn wrap_each<T, U, F>(&self, context: &Context<T>, environment: &mut T, wrapped_block: F) -> U
     where
         F: Fn(&mut T) -> U,
     {
         for before_function in context.before_each.iter() {
             before_function(environment);
         }
-        let result = f(environment);
+        let result = wrapped_block(environment);
         for after_function in context.after_each.iter() {
             after_function(environment);
         }

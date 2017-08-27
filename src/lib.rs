@@ -8,6 +8,9 @@
 #[macro_use]
 extern crate derive_builder;
 
+#[macro_use]
+extern crate derive_new;
+
 #[cfg(feature = "expectest_compat")]
 extern crate expectest;
 

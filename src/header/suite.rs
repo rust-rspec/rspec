@@ -1,6 +1,6 @@
 use std::fmt;
 
-/// A [`Suite`](../block/struct.Suite.html)'s cosmetic label.
+/// How the [`Suite`](../block/struct.Suite.html) will be printed by the `Formatter`
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SuiteLabel {
     Suite,
@@ -19,19 +19,10 @@ impl fmt::Display for SuiteLabel {
 }
 
 /// A [`Header`](trait.Header.html) with label and name of a [`Suite`](../block/struct.Suite.html).
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, new)]
 pub struct SuiteHeader {
     pub label: SuiteLabel,
     pub name: &'static str,
-}
-
-impl SuiteHeader {
-    pub fn new(label: SuiteLabel, name: &'static str) -> Self {
-        SuiteHeader {
-            label: label,
-            name: name,
-        }
-    }
 }
 
 impl fmt::Display for SuiteHeader {

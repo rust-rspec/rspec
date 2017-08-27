@@ -58,17 +58,7 @@ impl<T: io::Write> RunnerObserver for ParallelFormatter<T>
 where
     T: Send + Sync,
 {
-    fn enter_suite(&self, _header: &SuiteHeader) {}
-
     fn exit_suite(&self, header: &SuiteHeader, report: &SuiteReport) {
         self.replay_suite(header, report);
     }
-
-    fn enter_context(&self, _header: &ContextHeader) {}
-
-    fn exit_context(&self, _header: &ContextHeader, _report: &ContextReport) {}
-
-    fn enter_example(&self, _header: &ExampleHeader) {}
-
-    fn exit_example(&self, _header: &ExampleHeader, _report: &ExampleReport) {}
 }

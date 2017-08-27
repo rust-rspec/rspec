@@ -8,18 +8,11 @@ use header::{SuiteHeader, ContextHeader, ExampleHeader};
 use report::{Report, BlockReport, SuiteReport, ContextReport, ExampleReport};
 use runner::RunnerObserver;
 
+#[derive(new)]
 struct SerialFormatterState<T: io::Write = io::Stdout> {
     buffer: T,
+    #[new(value = "0")]
     level: usize,
-}
-
-impl<T: io::Write> SerialFormatterState<T> {
-    pub fn new(buffer: T) -> Self {
-        SerialFormatterState {
-            buffer: buffer,
-            level: 0,
-        }
-    }
 }
 
 /// Preferred formatter for serial test suite execution
@@ -44,16 +37,18 @@ impl<T: io::Write> SerialFormatter<T> {
         "  ".repeat(depth)
     }
 
-    fn access_state<F>(&self, mut f: F)
+    fn access_state<F>(&self, mut accessor: F)
     where
         F: FnMut(&mut SerialFormatterState<T>) -> io::Result<()>,
     {
         if let Ok(ref mut mutex_guard) = self.state.lock() {
-            let result = f(mutex_guard.deref_mut());
+            let result = accessor(mutex_guard.deref_mut());
             if let Err(error) = result {
+                // TODO: better error handling
                 eprintln!("\n{}: {:?}", "error".red().bold(), error);
             }
         } else {
+            // TODO: better error handling
             eprintln!(
                 "\n{}: failed to aquire lock on mutex.",
                 "error".red().bold()

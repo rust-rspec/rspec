@@ -1,8 +1,17 @@
 [package]
-authors = ["Thomas Wickham <mackwic@gmail.com>", "Vincent Esche <regexident@gmail.com>"]
+authors = [
+    "Thomas Wickham <mackwic@gmail.com>",
+    "Vincent Esche <regexident@gmail.com>",
+]
 description = "Write Rspec-like tests with stable rust"
 homepage = "https://mackwic.github.io/rspec"
-keywords = ["rspec", "test", "harness", "bdd"]
+keywords = [
+    "rspec",
+    "test",
+    "harness",
+    "tdd",
+    "bdd",
+]
 license = "MPL-2.0"
 name = "rspec"
 readme = "README.md"
@@ -15,6 +24,7 @@ version = "0.0.153"
 
 [dependencies]
 colored = "1.4.0"
+derive-new = "0.5.0"
 derive_builder = "0.5.0"
 rayon = "0.8.2"
 

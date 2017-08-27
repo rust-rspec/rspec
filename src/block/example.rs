@@ -8,13 +8,13 @@ pub struct Example<T> {
 }
 
 impl<T> Example<T> {
-    pub(crate) fn new<F>(header: ExampleHeader, f: F) -> Self
+    pub(crate) fn new<F>(header: ExampleHeader, assertion: F) -> Self
     where
         F: 'static + Fn(&T) -> ExampleReport,
     {
         Example {
             header: header,
-            function: Box::new(f),
+            function: Box::new(assertion),
         }
     }
 }

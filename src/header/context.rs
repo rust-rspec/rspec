@@ -1,6 +1,6 @@
 use std::fmt;
 
-/// A [`Context`](../block/struct.Context.html)'s cosmetic label.
+/// How the [`Context`](../block/struct.Context.html) will be printed by the `Formatter`
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ContextLabel {
     Describe,
@@ -23,19 +23,10 @@ impl fmt::Display for ContextLabel {
 }
 
 /// A [`Header`](trait.Header.html) with label and name of a [`Context`](../block/struct.Context.html).
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, new)]
 pub struct ContextHeader {
     pub label: ContextLabel,
     pub name: &'static str,
-}
-
-impl ContextHeader {
-    pub fn new(label: ContextLabel, name: &'static str) -> Self {
-        ContextHeader {
-            label: label,
-            name: name,
-        }
-    }
 }
 
 impl fmt::Display for ContextHeader {

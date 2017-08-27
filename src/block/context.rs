@@ -1,9 +1,9 @@
-//! The Context module holds all the functionality for the test declaration, that is:
+//! The Context module holds all the functionalities for the test declaration, that is:
 //! `before`, `after`, `suite`, `context`, `it` and their variants.
 //!
-//! A Context can also holds reference to children Contextes, for whom the before closures will be
-//! executed after the before closures of the current context. The order of execution of tests
-//! respect the order of declaration of theses tests.
+//! A Context can also holds reference to children Contextes, for which the `before`
+//! [closures](https://rustbyexample.com/fn/closures.html) will be executed after the `before`
+//! [closures](https://rustbyexample.com/fn/closures.html) of the current context.
 //!
 //! Running these tests and doing asserts is not the job of the Context, but the Runner.
 //!
@@ -40,9 +40,7 @@ impl<T> Context<T> {
     }
 
     pub fn num_examples(&self) -> usize {
-        self.blocks.iter().fold(0, |count, block| {
-            count + block.num_examples()
-        })
+        self.blocks.iter().map(|b| b.num_examples()).sum()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -70,7 +68,7 @@ where
 {
     /// Open and name a new context within the current context.
     ///
-    /// Note that the order of execution is not guaranteed to match the declaration order.
+    /// Note that the order of execution **IS NOT** guaranteed to match the declaration order.
     ///
     /// # Examples
     ///
@@ -208,9 +206,6 @@ where
         F: FnOnce(&mut Context<T>) -> (),
         T: ::std::fmt::Debug,
     {
-        // let existing_infos = self.blocks.iter().map(|m| m.header );
-        // let () = existing_infos;
-        // if self.blocks.contain
         let mut child = Context::new(header);
         body(&mut child);
         self.blocks.push(Block::Context(child))
@@ -218,7 +213,7 @@ where
 
     /// Open and name a new example within the current context.
     ///
-    /// Note that the order of execution is not guaranteed to match the declaration order.
+    /// Note that the order of execution **IS NOT** guaranteed to match the declaration order.
     ///
     /// # Examples
     ///
@@ -318,9 +313,9 @@ where
     }
 
     /// Declares a closure that will be executed once before any
-    /// of the context's context or example blocks are being executed.
+    /// of the context's children (context or example blocks) are being executed.
     ///
-    /// Note that the order of execution is guaranteed to match the declaration order.
+    /// Note that the order of execution **IS NOT** guaranteed to match the declaration order.
     ///
     /// # Examples
     ///
@@ -381,9 +376,9 @@ where
     }
 
     /// Declares a closure that will be executed once before each
-    /// of the context's context or example blocks.
+    /// of the context's children (context or example blocks).
     ///
-    /// Note that the order of execution is guaranteed to match the declaration order.
+    /// Note that the order of execution **IS NOT** guaranteed to match the declaration order.
     ///
     /// # Examples
     ///
@@ -432,9 +427,9 @@ where
     }
 
     /// Declares a closure that will be executed once after any
-    /// of the context's context or example blocks have been executed.
+    /// of the context's children (context or example blocks) have been executed.
     ///
-    /// Note that the order of execution is guaranteed to match the declaration order.
+    /// Note that the order of execution **IS NOT** guaranteed to match the declaration order.
     ///
     /// # Examples
     ///
@@ -495,9 +490,9 @@ where
     }
 
     /// Declares a closure that will be executed once after each
-    /// of the context's context or example blocks.
+    /// of the context's children (context or example blocks).
     ///
-    /// Note that the order of execution is guaranteed to match the declaration order.
+    /// Note that the order of execution **IS NOT** guaranteed to match the declaration order.
     ///
     /// # Examples
     ///

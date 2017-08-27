@@ -2,6 +2,7 @@ use header::{SuiteLabel, SuiteHeader};
 use block::Context;
 
 /// Test suites bundle a set of closely related test examples into a logical execution group.
+#[derive(new)]
 pub struct Suite<T> {
     pub(crate) header: SuiteHeader,
     pub(crate) environment: T,
@@ -9,14 +10,6 @@ pub struct Suite<T> {
 }
 
 impl<T> Suite<T> {
-    pub(crate) fn new(header: SuiteHeader, environment: T, context: Context<T>) -> Self {
-        Suite {
-            header: header,
-            environment: environment,
-            context: context,
-        }
-    }
-
     pub fn num_blocks(&self) -> usize {
         self.context.num_blocks()
     }
