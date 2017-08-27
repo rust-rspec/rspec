@@ -1,58 +1,50 @@
+#[macro_use(rspec_run)]
 extern crate rspec;
 
-use std::io;
-use std::sync::Arc;
-use std::collections::BTreeSet;
-
 pub fn main() {
-    let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
-    let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-    let runner = rspec::Runner::new(configuration, vec![formatter]);
-
-    #[derive(Clone, Debug)]
-    struct Environment {
-        set: BTreeSet<usize>,
-        len_before: usize,
-    }
-
-    let environment = Environment {
-        set: BTreeSet::new(),
-        len_before: 0,
-    };
-
-    runner.run(rspec::given("a BTreeSet", environment, |ctx| {
-        ctx.when("not having added any items", |ctx| {
-            ctx.then("it is empty", |env| assert!(env.set.is_empty()));
+    // The easiest way to open a suite is by calling the `rspec_run!` macro,
+    // passing it the result of one of these functions:
+    //
+    // - `rspec_run`,
+    // - `rspec::describe`
+    // - `rspec::given`
+    //
+    // which all behave the same and only differ in the label
+    // that is printed the the est suite's log.
+    //
+    // One then passes the following arguments to aforementioned function:
+    //
+    // - a name (to add some more meaning to the runner's output)
+    // - an initial value (to base the tests on)
+    // - a closure (to provide the suite's test logic)
+    rspec_run!(given "a value of zero", 0, |ctx| {
+        ctx.then("it is zero", |value| {
+            assert_eq!(*value, 0);
         });
 
-        ctx.when("adding an new item", |ctx| {
-            ctx.before_all(|env| {
-                env.len_before = env.set.len();
-                env.set.insert(42);
+        ctx.when("multiplying by itself", |ctx| {
+            // Any time one wants to mutate the value being tested
+            // one does so by calling `ctx.before(…)` (or `ctx.after(…)`),
+            // which will execute the provided closure before any other
+            // sub-context (e.g. `ctx.when(…)`) or example (e.g. `ctx.then(…)`)
+            // is executed:
+            ctx.before(|value| {
+                *value *= *value;
             });
 
-            ctx.then("it is not empty any more", |env| {
-                assert!(!env.set.is_empty());
-            });
-
-            ctx.then("its len increases by 1", move |env| {
-                assert_eq!(env.set.len(), env.len_before + 1);
-            });
-
-            ctx.when("adding it again", |ctx| {
-                ctx.before_all(|env| {
-                    env.len_before = env.set.len();
-                    env.set.insert(42);
-                });
-
-                ctx.then("its len remains the same", move |env| {
-                    assert_eq!(env.set.len(), env.len_before);
-                });
+            ctx.then("it remains zero", |value| {
+                assert_eq!(*value, 0);
             });
         });
 
-        ctx.when("returning to outer context", |ctx| {
-            ctx.then("it is still empty", |env| assert!(env.set.is_empty()));
+        ctx.when("adding a value to it", |ctx| {
+            ctx.before(|value| {
+                *value += 42;
+            });
+
+            ctx.then("it becomes said value", |value| {
+                assert_eq!(*value, 42);
+            });
         });
-    }));
+    });
 }
