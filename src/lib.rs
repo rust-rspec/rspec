@@ -26,46 +26,41 @@ pub use block::{suite, describe, given};
 pub use formatter::Formatter;
 pub use runner::{Configuration, ConfigurationBuilder, Runner};
 
+use block::Suite;
+
 /// A wrapper-macro for conveniently running a test suite with
 /// the default configuration with considerebly less glue-code.
 ///
 /// # Examples
 ///
 /// ```
-/// # #[macro_use(rspec_run)]
 /// # extern crate rspec;
 /// #
 /// # pub fn main() {
-/// #[derive(Clone, Debug)]
-/// struct Environment {
-///     // ...
-/// }
-///
-/// let environment = Environment {
-///     // ...
-/// };
-///
-/// rspec_run!(given "a scenario", environment, |ctx| {
+/// rspec::run(&rspec::given("a scenario", (), |ctx| {
 ///     ctx.when("...", |ctx| {
 ///         // ...
 ///     });
 ///
 ///     ctx.then("...", |env| { /* ... */ });
-/// });
+/// }));
 /// # }
 /// ```
-#[macro_export]
-macro_rules! rspec_run {
-    ($label:ident $name:expr, $env:expr, |$ctx:ident| $block:block) => ({
-        use std::io;
-        use std::sync::Arc;
+pub fn run<T>(suite: &Suite<T>)
+where
+    T: Clone + Send + Sync + ::std::fmt::Debug,
+{
+    use std::io;
+    use std::sync::Arc;
 
-        let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
-        let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-        let runner = rspec::Runner::new(configuration, vec![formatter]);
+    use formatter::Formatter;
+    use runner::{ConfigurationBuilder, Runner};
 
-        runner.run(rspec::$label($name, $env, |$ctx| $block))
-    })
+    let formatter = Arc::new(Formatter::new(io::stdout()));
+    let configuration = ConfigurationBuilder::default().build().unwrap();
+    let runner = Runner::new(configuration, vec![formatter]);
+
+    runner.run(suite);
 }
 
 #[cfg(test)]

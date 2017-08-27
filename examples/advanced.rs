@@ -1,4 +1,3 @@
-#[macro_use(rspec_run)]
 extern crate rspec;
 
 use std::collections::BTreeSet;
@@ -15,7 +14,7 @@ pub fn main() {
         len_before: 0,
     };
 
-    rspec_run!(given "a BTreeSet", environment, |ctx| {
+    rspec::run(&rspec::given("a BTreeSet", environment, |ctx| {
         ctx.when("not having added any items", |ctx| {
             ctx.then("it is empty", |env| assert!(env.set.is_empty()));
         });
@@ -53,5 +52,5 @@ pub fn main() {
         ctx.then("panic!(…) fails", move |_env| {
             panic!("Some reason for failure.")
         });
-    });
+    }));
 }

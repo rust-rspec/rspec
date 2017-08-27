@@ -56,7 +56,7 @@ where
 /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
 /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
 /// #
-/// runner.run(rspec::suite("a test suite", (), |_ctx| {
+/// runner.run(&rspec::suite("a test suite", (), |_ctx| {
 ///     // …
 /// }));
 /// # }

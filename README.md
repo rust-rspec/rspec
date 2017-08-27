@@ -34,7 +34,6 @@ You can see complete examples in the [`examples/`](https://github.com/mackwic/rs
 
 
 ```rust
-#[macro_use(rspec_run)]
 extern crate rspec;
 
 pub fn main() {
@@ -46,10 +45,10 @@ pub fn main() {
         // ...
     }
 
-    // `rspec_run` is a convenience wrapper that takes care of setting up
+    // `rspec::run(…)` is a convenience wrapper that takes care of setting up
     // a runner, formatter, configuration and running the test suite for you.
     // If you want more direct control, you can manually set up those things, too.
-    rspec_run!(describe "rspec, a BDD testing framework", Environment::default(), |ctx| {
+    rspec::run(&rspec::describe("rspec, a BDD testing framework", Environment::default(), |ctx| {
         // `describe`, or any of its equivalents, opens the root context
         // of your test suite. Within you can then either define test examples:
         ctx.it("can define top-level tests", |_| true);
@@ -85,7 +84,7 @@ pub fn main() {
             });
 
         });
-    }); // exits the process with a failure code if one of the tests failed.
+    })); // exits the process with a failure code if one of the tests failed.
 }
 ```
 
@@ -105,7 +104,7 @@ it is possible to freely mix structural elements across variants.
 #### Variant A: `suite`, `context` & `example`
 
 ```rust
-runner.run(rspec::suite("opens a suite", /* environment */, |ctx| {
+runner.run(&rspec::suite("opens a suite", /* environment */, |ctx| {
     ctx.context("opens a context", |ctx| {
         ctx.example("opens an example", |env| /* test condition */ );
     });
@@ -115,7 +114,7 @@ runner.run(rspec::suite("opens a suite", /* environment */, |ctx| {
 #### Variant B: `describe`, `specify` & `it`
 
 ```rust
-runner.run(rspec::describe("opens a suite", /* environment */, |ctx| {
+runner.run(&rspec::describe("opens a suite", /* environment */, |ctx| {
     ctx.specify("opens a context", |ctx| {
         ctx.it("opens an example", |env| /* test condition */ );
     });
@@ -125,7 +124,7 @@ runner.run(rspec::describe("opens a suite", /* environment */, |ctx| {
 #### Variant C: `given`, `when` & `then`
 
 ```rust
-runner.run(rspec::given("opens a suite", /* environment */, |ctx| {
+runner.run(&rspec::given("opens a suite", /* environment */, |ctx| {
     ctx.when("opens a context", |ctx| {
         ctx.then("opens an example", |env| /* test condition */ );
     });

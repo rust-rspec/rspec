@@ -2,40 +2,39 @@ extern crate rspec;
 
 use std::io;
 use std::sync::Arc;
-use std::collections::BTreeSet;
 
-// An example of a single runner running multiple test suites in succession.
+// An example of a single runner running multiple semantically equivalent,
+// yet syntactically different test suites in succession:
 
 pub fn main() {
     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
     let runner = rspec::Runner::new(configuration, vec![formatter]);
 
-    #[derive(Clone, Debug)]
-    struct Environment {
-        set: BTreeSet<usize>,
-    }
-
-    let environment = Environment { set: BTreeSet::new() };
-
     // A test suite using the `suite`, `context`, `example` syntax family:
-    runner.run(rspec::suite("a BTreeSet", environment.clone(), |ctx| {
-        ctx.context("not having added any items", |ctx| {
-            ctx.example("it is empty", |env| assert!(env.set.is_empty()));
+    runner.run(&rspec::suite("an value of ten", 10, |ctx| {
+        ctx.context("adding 5 to it", |ctx| {
+            ctx.example("results in fifteen", |num| {
+                assert_eq!(*num, 15);
+            });
         });
     }));
 
     // A test suite using the `describe`, `specify`, `it` syntax family:
-    runner.run(rspec::describe("a BTreeSet", environment.clone(), |ctx| {
-        ctx.specify("not having added any items", |ctx| {
-            ctx.it("it is empty", |env| assert!(env.set.is_empty()));
+    runner.run(&rspec::describe("an value of ten", 10, |ctx| {
+        ctx.specify("adding 5 to it", |ctx| {
+            ctx.it("results in fifteen", |num| {
+                assert_eq!(*num, 15);
+            });
         });
     }));
 
     // A test suite using the `given`, `when`, `then` syntax family:
-    runner.run(rspec::given("a BTreeSet", environment.clone(), |ctx| {
-        ctx.when("not having added any items", |ctx| {
-            ctx.then("it is empty", |env| assert!(env.set.is_empty()));
+    runner.run(&rspec::given("an value of ten", 10, |ctx| {
+        ctx.when("adding 5 to it", |ctx| {
+            ctx.then("results in fifteen", |num| {
+                assert_eq!(*num, 15);
+            });
         });
     }));
 }

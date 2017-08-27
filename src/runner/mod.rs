@@ -10,6 +10,7 @@ use std::borrow::Borrow;
 use std::cell::Cell;
 use std::ops::{Deref, DerefMut};
 use std::panic;
+#[cfg(not(test))]
 use std::process;
 use std::sync::{Arc, Mutex};
 
@@ -43,13 +44,13 @@ impl Runner {
 }
 
 impl Runner {
-    pub fn run<T>(&self, suite: Suite<T>) -> SuiteReport
+    pub fn run<T>(&self, suite: &Suite<T>) -> SuiteReport
     where
         T: Clone + Send + Sync + ::std::fmt::Debug,
     {
         let mut environment = suite.environment.clone();
         self.prepare_before_run();
-        let report = self.visit(&suite, &mut environment);
+        let report = self.visit(suite, &mut environment);
         self.clean_after_run();
         if let Ok(mut mutex_guard) = self.should_exit.lock() {
             *mutex_guard.deref_mut().get_mut() |= report.is_failure();
@@ -597,7 +598,6 @@ mod tests {
     mod impl_visitor_block_for_runner {
         use super::*;
 
-        use block::*;
         use header::*;
 
         #[test]

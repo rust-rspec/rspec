@@ -1,11 +1,10 @@
-#[macro_use(rspec_run)]
 extern crate rspec;
 
 pub fn main() {
-    // The easiest way to open a suite is by calling the `rspec_run!` macro,
+    // The easiest way to open a suite is by calling the `rspec::run(…)` function,
     // passing it the result of one of these functions:
     //
-    // - `rspec_run`,
+    // - `rspec::suite`,
     // - `rspec::describe`
     // - `rspec::given`
     //
@@ -17,7 +16,7 @@ pub fn main() {
     // - a name (to add some more meaning to the runner's output)
     // - an initial value (to base the tests on)
     // - a closure (to provide the suite's test logic)
-    rspec_run!(given "a value of zero", 0, |ctx| {
+    rspec::run(&rspec::given("a value of zero", 0, |ctx| {
         ctx.then("it is zero", |value| {
             assert_eq!(*value, 0);
         });
@@ -46,5 +45,5 @@ pub fn main() {
                 assert_eq!(*value, 42);
             });
         });
-    });
+    }));
 }

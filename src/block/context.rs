@@ -85,7 +85,7 @@ where
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
     /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
     /// #
-    /// runner.run(rspec::suite("a test suite", (), |ctx| {
+    /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.context("opens a context labeled 'context'", |_ctx| {
     ///         // …
     ///     });
@@ -172,7 +172,7 @@ where
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
     /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
     /// #
-    /// runner.run(rspec::suite("a suite",(), |ctx| {
+    /// runner.run(&rspec::suite("a suite",(), |ctx| {
     ///     ctx.context("a context", |ctx| {
     ///         ctx.scope(|ctx| {
     ///             ctx.example("an example", |_env| {
@@ -233,7 +233,7 @@ where
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
     /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
     /// #
-    /// runner.run(rspec::suite("a test suite", (), |ctx| {
+    /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.example("an example", |_env| {
     ///         // …
     ///     });
@@ -335,7 +335,7 @@ where
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
     /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
     /// #
-    /// runner.run(rspec::suite("a test suite", (), |ctx| {
+    /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.before_all(|_env| {
     ///         // …
     ///     });
@@ -398,7 +398,7 @@ where
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
     /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
     /// #
-    /// runner.run(rspec::suite("a test suite", (), |ctx| {
+    /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.before_each(|_env| {
     ///         // …
     ///     });
@@ -449,7 +449,7 @@ where
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
     /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
     /// #
-    /// runner.run(rspec::suite("a test suite", (), |ctx| {
+    /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.after_all(|_env| {
     ///         // …
     ///     });
@@ -512,7 +512,7 @@ where
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
     /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
     /// #
-    /// runner.run(rspec::suite("a test suite", (), |ctx| {
+    /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.after_each(|_env| {
     ///         // …
     ///     });
