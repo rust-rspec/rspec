@@ -300,7 +300,7 @@ mod tests {
             }
 
             struct ObserverStub {
-                events: Mutex<Vec<(String, SuiteHeader)>>,
+                events: Mutex<Vec<(&'static str, SuiteHeader)>>,
             }
             impl ObserverStub {
                 fn new() -> Self {
@@ -312,7 +312,7 @@ mod tests {
             impl RunnerObserver for ObserverStub {
                 fn enter_suite(&self, header: &SuiteHeader) {
                     let mut vec = self.events.lock().unwrap();
-                    (*vec).push((String::from("enter_suite"), header.clone()));
+                    (*vec).push(("enter_suite", header.clone()));
                 }
             }
 
@@ -327,7 +327,7 @@ mod tests {
                 // assert
                 let lock = spy1.events.lock().expect("no dangling threads");
                 let res = (*lock).get(0).expect("to have been called once");
-                assert_eq!(&(String::from("enter_suite"), expected), res);
+                assert_eq!(&("enter_suite", expected), res);
             }
         }
     }
