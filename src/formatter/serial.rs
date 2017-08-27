@@ -175,7 +175,12 @@ where
         self.access_state(|state| {
             state.level += 1;
             self.write_suite_prefix(&mut state.buffer)?;
-            write!(state.buffer, "{}{}", Self::padding(state.level - 1), header)?;
+            writeln!(
+                state.buffer,
+                "{}{}",
+                Self::padding(state.level - 1),
+                header
+            )?;
 
             Ok(())
         });
