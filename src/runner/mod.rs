@@ -594,4 +594,21 @@ mod tests {
         }
     }
 
+    mod impl_visitor_block_for_runner {
+        use super::*;
+
+        use block::*;
+        use header::*;
+
+        #[test]
+        fn it_can_be_called() {
+            // arrange
+            let runner = Runner::default();
+            let block = Block::Example(Example::new(ExampleHeader::default(), |_| ExampleReport::Success));
+            // act
+            // assert
+            runner.visit(&block, &mut ());
+        }
+    }
+
 }

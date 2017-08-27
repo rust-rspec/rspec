@@ -1,3 +1,4 @@
+use std::default::Default;
 use std::fmt;
 
 /// A [`Example`](../block/struct.Example.html)'s cosmetic label.
@@ -31,6 +32,13 @@ impl ExampleHeader {
             label: label,
             name: name,
         }
+    }
+}
+
+impl Default for ExampleHeader {
+    /// Used for testing
+    fn default() -> Self {
+        ExampleHeader::new(ExampleLabel::It, "example")
     }
 }
 
