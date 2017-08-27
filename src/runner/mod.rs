@@ -6,12 +6,12 @@ mod observer;
 pub use runner::configuration::*;
 pub use runner::observer::*;
 
-use std::panic;
-use std::sync::{Arc, Mutex};
 use std::borrow::Borrow;
 use std::cell::Cell;
-use std::process;
 use std::ops::{Deref, DerefMut};
+use std::panic;
+use std::process;
+use std::sync::{Arc, Mutex};
 
 use rayon::prelude::*;
 
@@ -248,4 +248,88 @@ where
         self.broadcast(|handler| handler.exit_example(&example.header, &report));
         report
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod runner {
+        use super::*;
+
+        #[test]
+        fn it_can_be_instanciated() {
+            // arrange
+            let _ = Runner::new(Configuration::default(), vec!());
+            // act
+            // assert
+        }
+
+        mod broadcast {
+            use super::*;
+
+            use header::*;
+            use std::sync::atomic::*;
+
+            // XXX blank impl for stubbing
+            impl RunnerObserver for () {}
+
+            #[test]
+            fn it_call_the_closure() {
+                // arrange
+                let spy = Arc::new(());
+                let runner = Runner::new(Configuration::default(), vec!(spy));
+                let has_been_called = AtomicBool::new(false);
+                // act
+                runner.broadcast(|_| has_been_called.store(true, Ordering::SeqCst));
+                // assert
+                assert_eq!(true, has_been_called.load(Ordering::SeqCst));
+            }
+
+            #[test]
+            fn it_call_it_once_per_observer() {
+                // arrange
+                let spy1 = Arc::new(());
+                let spy2 = Arc::new(());
+                let runner = Runner::new(Configuration::default(), vec![spy1, spy2]);
+                let call_times = AtomicUsize::new(0);
+                // act
+                runner.broadcast(|_| { call_times.fetch_add(1, Ordering::SeqCst); });
+                // assert
+                assert_eq!(2, call_times.load(Ordering::SeqCst))
+            }
+
+            struct ObserverStub {
+                events: Mutex<Vec<(String, SuiteHeader)>>,
+            }
+            impl ObserverStub {
+                fn new() -> Self {
+                    ObserverStub { events: Mutex::new(vec!()) }
+                }
+            }
+
+            // XXX stub implem
+            impl RunnerObserver for ObserverStub {
+                fn enter_suite(&self, header: &SuiteHeader) {
+                    let mut vec = self.events.lock().unwrap();
+                    (*vec).push((String::from("enter_suite"), header.clone()));
+                }
+            }
+
+            #[test]
+            fn it_gives_the_observer_as_callback_argument() {
+                // arrange
+                let spy1 = Arc::new(ObserverStub::new());
+                let expected = SuiteHeader::new(SuiteLabel::Describe, "hello");
+                let runner = Runner::new(Configuration::default(), vec![spy1.clone()]);
+                // act
+                runner.broadcast(|observer| observer.enter_suite(&expected.clone()));
+                // assert
+                let lock = spy1.events.lock().expect("no dangling threads");
+                let res = (*lock).get(0).expect("to have been called once");
+                assert_eq!(&(String::from("enter_suite"), expected), res);
+            }
+        }
+    }
+
 }
