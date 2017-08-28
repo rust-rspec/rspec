@@ -595,6 +595,67 @@ mod tests {
         }
     }
 
+    mod impl_visitor_example_for_runner {
+        use super::*;
+
+        use header::*;
+        use report::*;
+        use std::sync::atomic::*;
+
+        #[derive(Default, Debug, Clone)]
+        struct SpyObserver {
+            enter_example: Arc<AtomicBool>,
+            exit_example: Arc<AtomicBool>,
+        }
+        impl RunnerObserver for SpyObserver {
+            fn enter_example(&self, _header: &ExampleHeader) {
+               self.enter_example.store(true, Ordering::SeqCst)
+            }
+
+            fn exit_example(&self, _header: &ExampleHeader, _report: &ExampleReport) {
+                self.exit_example.store(true, Ordering::SeqCst)
+            }
+        }
+
+        #[test]
+        fn it_can_be_called() {
+            // arrange
+            let runner = Runner::default();
+            let example = Example::fixture_success();
+            // act
+            // assert
+            runner.visit(&example, &mut ());
+        }
+
+        #[test]
+        fn it_calls_observer_hooks() {
+            // arrange
+            let spy = Arc::new(SpyObserver::default());
+            let runner = Runner::new(Configuration::default(), vec![spy.clone()]);
+            let example = Example::fixture_success();
+            // act
+            runner.visit(&example, &mut ());
+            // assert
+            assert!(true == spy.enter_example.load(Ordering::SeqCst));
+            assert!(true == spy.exit_example.load(Ordering::SeqCst))
+        }
+
+        #[test]
+        fn it_gives_an_env_to_the_example() {
+            // arrange
+            let runner = Runner::default();
+            let mut environment = Arc::new(AtomicBool::new(false));
+            // act
+            let example = Example::new(ExampleHeader::default(), |env : &Arc<AtomicBool>| {
+                env.store(true, Ordering::SeqCst);
+                ExampleReport::Success
+            });
+            runner.visit(&example, &mut environment);
+            // assert
+            assert_eq!(true, environment.load(Ordering::SeqCst));
+        }
+    }
+
     mod impl_visitor_block_for_runner {
         use super::*;
 
