@@ -604,7 +604,7 @@ mod tests {
         fn it_can_be_called() {
             // arrange
             let runner = Runner::default();
-            let block = Block::Example(Example::new(ExampleHeader::default(), |_| ExampleReport::Success));
+            let block = Block::Example(Example::fixture_success());
             // act
             // assert
             runner.visit(&block, &mut ());

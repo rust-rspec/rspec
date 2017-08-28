@@ -17,6 +17,24 @@ impl<T> Example<T> {
             function: Box::new(assertion),
         }
     }
+
+    /// Used for testing purpose
+    #[cfg(test)]
+    pub fn fixture_success() -> Self {
+        Example::new(ExampleHeader::default(), |_| ExampleReport::Success)
+    }
+
+    /// Used for testing purpose
+    #[cfg(test)]
+    pub fn fixture_ignored() -> Self {
+        Example::new(ExampleHeader::default(), |_| ExampleReport::Ignored)
+    }
+
+    /// Used for testing purpose
+    #[cfg(test)]
+    pub fn fixture_failed() -> Self {
+        Example::new(ExampleHeader::default(), |_| ExampleReport::Failure(None))
+    }
 }
 
 unsafe impl<T> Send for Example<T>
