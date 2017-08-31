@@ -31,7 +31,7 @@ pub use runner::{Configuration, ConfigurationBuilder, Runner};
 
 use block::Suite;
 
-/// A wrapper-macro for conveniently running a test suite with
+/// A wrapper for conveniently running a test suite with
 /// the default configuration with considerebly less glue-code.
 ///
 /// # Examples
