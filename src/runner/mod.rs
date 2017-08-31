@@ -28,7 +28,7 @@ use visitor::TestSuiteVisitor;
 
 /// Runner for executing a test suite's examples.
 pub struct Runner {
-    configuration: configuration::Configuration,
+    pub configuration: configuration::Configuration,
     observers: Vec<Arc<RunnerObserver>>,
     should_exit: Mutex<Cell<bool>>,
 }
@@ -184,12 +184,12 @@ where
     type Output = SuiteReport;
 
     fn visit(&self, suite: &Suite<T>, environment: &mut Self::Environment) -> Self::Output {
-        self.broadcast(|handler| handler.enter_suite(&suite.header));
+        self.broadcast(|handler| handler.enter_suite(self, &suite.header));
         let report = SuiteReport::new(
             suite.header.clone(),
             self.visit(&suite.context, environment),
         );
-        self.broadcast(|handler| handler.exit_suite(&suite.header, &report));
+        self.broadcast(|handler| handler.exit_suite(self, &suite.header, &report));
         report
     }
 }
@@ -226,7 +226,7 @@ where
 
     fn visit(&self, context: &Context<T>, environment: &mut Self::Environment) -> Self::Output {
         if let Some(ref header) = context.header {
-            self.broadcast(|handler| handler.enter_context(&header));
+            self.broadcast(|handler| handler.enter_context(self, &header));
         }
         let reports: Vec<_> =
             self.wrap_all(context, environment, |environment| if self.configuration
@@ -238,7 +238,7 @@ where
             });
         let report = ContextReport::new(reports);
         if let Some(ref header) = context.header {
-            self.broadcast(|handler| handler.exit_context(&header, &report));
+            self.broadcast(|handler| handler.exit_context(self, &header, &report));
         }
         report
     }
@@ -252,10 +252,10 @@ where
     type Output = ExampleReport;
 
     fn visit(&self, example: &Example<T>, environment: &mut Self::Environment) -> Self::Output {
-        self.broadcast(|handler| handler.enter_example(&example.header));
+        self.broadcast(|handler| handler.enter_example(self, &example.header));
         let function = &example.function;
         let report = function(environment);
-        self.broadcast(|handler| handler.exit_example(&example.header, &report));
+        self.broadcast(|handler| handler.exit_example(self, &example.header, &report));
         report
     }
 }
@@ -320,7 +320,7 @@ mod tests {
 
             // XXX stub implem
             impl RunnerObserver for ObserverStub {
-                fn enter_suite(&self, header: &SuiteHeader) {
+                fn enter_suite(&self, _runner: &Runner, header: &SuiteHeader) {
                     let mut vec = self.events.lock().unwrap();
                     (*vec).push(("enter_suite", header.clone()));
                 }
@@ -333,7 +333,7 @@ mod tests {
                 let expected = SuiteHeader::new(SuiteLabel::Describe, "hello");
                 let runner = Runner::new(Configuration::default(), vec![spy1.clone()]);
                 // act
-                runner.broadcast(|observer| observer.enter_suite(&expected.clone()));
+                runner.broadcast(|observer| observer.enter_suite(&runner, &expected.clone()));
                 // assert
                 let lock = spy1.events.lock().expect("no dangling threads");
                 let res = (*lock).get(0).expect("to have been called once");
@@ -608,11 +608,11 @@ mod tests {
             exit_example: Arc<AtomicBool>,
         }
         impl RunnerObserver for SpyObserver {
-            fn enter_example(&self, _header: &ExampleHeader) {
+            fn enter_example(&self, _runner: &Runner, _header: &ExampleHeader) {
                self.enter_example.store(true, Ordering::SeqCst)
             }
 
-            fn exit_example(&self, _header: &ExampleHeader, _report: &ExampleReport) {
+            fn exit_example(&self, _runner: &Runner, _header: &ExampleHeader, _report: &ExampleReport) {
                 self.exit_example.store(true, Ordering::SeqCst)
             }
         }
@@ -658,8 +658,6 @@ mod tests {
 
     mod impl_visitor_block_for_runner {
         use super::*;
-
-        use header::*;
 
         #[test]
         fn it_can_be_called() {

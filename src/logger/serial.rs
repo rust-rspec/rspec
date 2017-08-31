@@ -6,7 +6,7 @@ use colored::*;
 
 use header::{SuiteHeader, ContextHeader, ExampleHeader};
 use report::{Report, BlockReport, SuiteReport, ContextReport, ExampleReport};
-use runner::RunnerObserver;
+use runner::{Runner, RunnerObserver};
 
 #[derive(new)]
 struct SerialLoggerState<T: io::Write = io::Stdout> {
@@ -166,7 +166,7 @@ impl<T: io::Write> RunnerObserver for SerialLogger<T>
 where
     T: Send + Sync,
 {
-    fn enter_suite(&self, header: &SuiteHeader) {
+    fn enter_suite(&self, _runner: &Runner, header: &SuiteHeader) {
         self.access_state(|state| {
             state.level += 1;
             self.write_suite_prefix(&mut state.buffer)?;
@@ -181,7 +181,7 @@ where
         });
     }
 
-    fn exit_suite(&self, _header: &SuiteHeader, report: &SuiteReport) {
+    fn exit_suite(&self, _runner: &Runner, _header: &SuiteHeader, report: &SuiteReport) {
         self.access_state(|state| {
             self.write_suite_failures(&mut state.buffer, 0, report)?;
             self.write_suite_suffix(&mut state.buffer, report)?;
@@ -192,7 +192,7 @@ where
         });
     }
 
-    fn enter_context(&self, header: &ContextHeader) {
+    fn enter_context(&self, _runner: &Runner, header: &ContextHeader) {
         self.access_state(|state| {
             state.level += 1;
             writeln!(
@@ -206,7 +206,7 @@ where
         });
     }
 
-    fn exit_context(&self, _header: &ContextHeader, _report: &ContextReport) {
+    fn exit_context(&self, _runner: &Runner, _header: &ContextHeader, _report: &ContextReport) {
         self.access_state(|state| {
             state.level -= 1;
 
@@ -214,7 +214,7 @@ where
         });
     }
 
-    fn enter_example(&self, header: &ExampleHeader) {
+    fn enter_example(&self, _runner: &Runner, header: &ExampleHeader) {
         self.access_state(|state| {
             state.level += 1;
             write!(
@@ -228,7 +228,7 @@ where
         });
     }
 
-    fn exit_example(&self, _header: &ExampleHeader, report: &ExampleReport) {
+    fn exit_example(&self, _runner: &Runner, _header: &ExampleHeader, report: &ExampleReport) {
         self.access_state(|state| {
             writeln!(state.buffer, "{}", self.report_flag(report))?;
             state.level -= 1;
