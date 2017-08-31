@@ -1,6 +1,6 @@
 use std::fmt;
 
-/// How the [`Suite`](../block/struct.Suite.html) will be printed by the `Formatter`
+/// How the [`Suite`](../block/struct.Suite.html) will be printed by the [`Logger`](../logger/index.html).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SuiteLabel {
     Suite,

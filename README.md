@@ -46,7 +46,7 @@ pub fn main() {
     }
 
     // `rspec::run(…)` is a convenience wrapper that takes care of setting up
-    // a runner, formatter, configuration and running the test suite for you.
+    // a runner, logger, configuration and running the test suite for you.
     // If you want more direct control, you can manually set up those things, too.
     rspec::run(&rspec::describe("rspec, a BDD testing framework", Environment::default(), |ctx| {
         // `describe`, or any of its equivalents, opens the root context

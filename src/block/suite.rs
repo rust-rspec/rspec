@@ -45,9 +45,9 @@ where
 /// # use std::sync::Arc;
 /// #
 /// # pub fn main() {
-/// #     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+/// #     let logger = Arc::new(rspec::Logger::new(io::stdout()));
 /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-/// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
+/// #     let runner = rspec::Runner::new(configuration, vec![logger]);
 /// #
 /// runner.run(&rspec::suite("a test suite", (), |_ctx| {
 ///     // …

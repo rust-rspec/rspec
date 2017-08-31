@@ -9,28 +9,28 @@ use report::{Report, BlockReport, SuiteReport, ContextReport, ExampleReport};
 use runner::RunnerObserver;
 
 #[derive(new)]
-struct SerialFormatterState<T: io::Write = io::Stdout> {
+struct SerialLoggerState<T: io::Write = io::Stdout> {
     buffer: T,
     #[new(value = "0")]
     level: usize,
 }
 
-/// Preferred formatter for serial test suite execution
+/// Preferred logger for serial test suite execution
 /// (see [`Configuration.parallel`](struct.Configuration.html#fields)).
-pub struct SerialFormatter<T: io::Write = io::Stdout> {
-    state: Mutex<SerialFormatterState<T>>,
+pub struct SerialLogger<T: io::Write = io::Stdout> {
+    state: Mutex<SerialLoggerState<T>>,
 }
 
-impl Default for SerialFormatter<io::Stdout> {
+impl Default for SerialLogger<io::Stdout> {
     fn default() -> Self {
-        SerialFormatter::new(io::stdout())
+        SerialLogger::new(io::stdout())
     }
 }
 
-impl<T: io::Write> SerialFormatter<T> {
+impl<T: io::Write> SerialLogger<T> {
     pub fn new(buffer: T) -> Self {
-        let state = SerialFormatterState::new(buffer);
-        SerialFormatter { state: Mutex::new(state) }
+        let state = SerialLoggerState::new(buffer);
+        SerialLogger { state: Mutex::new(state) }
     }
 
     fn padding(depth: usize) -> String {
@@ -39,7 +39,7 @@ impl<T: io::Write> SerialFormatter<T> {
 
     fn access_state<F>(&self, mut accessor: F)
     where
-        F: FnMut(&mut SerialFormatterState<T>) -> io::Result<()>,
+        F: FnMut(&mut SerialLoggerState<T>) -> io::Result<()>,
     {
         if let Ok(ref mut mutex_guard) = self.state.lock() {
             let result = accessor(mutex_guard.deref_mut());
@@ -162,7 +162,7 @@ impl<T: io::Write> SerialFormatter<T> {
     }
 }
 
-impl<T: io::Write> RunnerObserver for SerialFormatter<T>
+impl<T: io::Write> RunnerObserver for SerialLogger<T>
 where
     T: Send + Sync,
 {
@@ -248,12 +248,12 @@ where
 //
 //     #[test]
 //     fn it_can_be_instanciated() {
-//         SerialFormatter::new(&mut vec![1u8]);
+//         SerialLogger::new(&mut vec![1u8]);
 //     }
 //
 //     #[test]
-//     fn it_impl_formatter_trait() {
-//         let _: &SerialFormatter = &SerialFormatter::new(&mut vec![1u8]) as &SerialFormatter;
+//     fn it_impl_logger_trait() {
+//         let _: &SerialLogger = &SerialLogger::new(&mut vec![1u8]) as &SerialLogger;
 //     }
 //
 //     mod event_start_runner {
@@ -263,7 +263,7 @@ where
 //         fn it_display_that_examples_started() {
 //             let mut v = vec![];
 //             {
-//                 let mut s = SerialFormatter::new(&mut v);
+//                 let mut s = SerialLogger::new(&mut v);
 //                 s.handle(&Event::EnterSuite);
 //             }
 //
@@ -285,7 +285,7 @@ where
 //                     fn $test_name() {
 //                         let mut sink = io::sink();
 //                         let res = {
-//                             let mut s = SerialFormatter::new(&mut sink);
+//                             let mut s = SerialLogger::new(&mut sink);
 //                             s.write_summary(ContextReport {
 //                                 passed: $succ,
 //                                 failed: $fail,
@@ -325,7 +325,7 @@ where
 //         fn it_displays_a_dot_when_success() {
 //             let mut v = vec![];
 //             {
-//                 let mut s = SerialFormatter::new(&mut v);
+//                 let mut s = SerialLogger::new(&mut v);
 //                 s.handle(&Event::ExitExample(SUCCESS_RES))
 //             }
 //
@@ -337,7 +337,7 @@ where
 //         fn it_displays_a_F_when_error() {
 //             let mut v = vec![];
 //             {
-//                 let mut s = SerialFormatter::new(&mut v);
+//                 let mut s = SerialLogger::new(&mut v);
 //                 s.handle(&Event::ExitExample(FAILED_RES))
 //             }
 //
@@ -351,7 +351,7 @@ where
 //         #[test]
 //         fn start_describe_event_push_the_name_stack() {
 //             let mut sink = &mut io::sink();
-//             let mut s = SerialFormatter::new(&mut sink);
+//             let mut s = SerialLogger::new(&mut sink);
 //
 //             s.handle(&Event::EnterContext(String::from("Hey !")));
 //             assert_eq!(vec![String::from("Hey !")], s.name_stack);
@@ -364,7 +364,7 @@ where
 //         #[test]
 //         fn end_describe_event_pop_the_name_stack() {
 //             let mut sink = &mut io::sink();
-//             let mut s = SerialFormatter::new(&mut sink);
+//             let mut s = SerialLogger::new(&mut sink);
 //
 //             s.handle(&Event::EnterContext(String::from("Hey !")));
 //             s.handle(&Event::EnterContext(String::from("Ho !")));
@@ -383,7 +383,7 @@ where
 //         #[test]
 //         fn it_register_failures() {
 //             let mut sink = &mut io::sink();
-//             let mut s = SerialFormatter::new(&mut sink);
+//             let mut s = SerialLogger::new(&mut sink);
 //             s.handle(&Event::EnterExample("hola".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(1, s.failed.len());
@@ -392,7 +392,7 @@ where
 //         #[test]
 //         fn it_keep_track_of_the_failure_name() {
 //             let mut sink = &mut io::sink();
-//             let mut s = SerialFormatter::new(&mut sink);
+//             let mut s = SerialLogger::new(&mut sink);
 //             s.handle(&Event::EnterExample("hola".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
 //             assert_eq!(Some(&"hola".into()), s.failed.get(0));
@@ -401,7 +401,7 @@ where
 //         #[test]
 //         fn it_has_a_nice_diplay_for_describes() {
 //             let mut sink = &mut io::sink();
-//             let mut s = SerialFormatter::new(&mut sink);
+//             let mut s = SerialLogger::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
@@ -416,7 +416,7 @@ where
 //         #[test]
 //         fn it_works_with_multiple_describes() {
 //             let mut sink = &mut io::sink();
-//             let mut s = SerialFormatter::new(&mut sink);
+//             let mut s = SerialLogger::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(FAILED_RES));
@@ -431,7 +431,7 @@ where
 //         #[test]
 //         fn it_doesnt_includes_success() {
 //             let mut sink = &mut io::sink();
-//             let mut s = SerialFormatter::new(&mut sink);
+//             let mut s = SerialLogger::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(SUCCESS_RES));
@@ -442,7 +442,7 @@ where
 //         #[test]
 //         fn is_doesnt_keep_examples_in_name_stack() {
 //             let mut sink = &mut io::sink();
-//             let mut s = SerialFormatter::new(&mut sink);
+//             let mut s = SerialLogger::new(&mut sink);
 //             s.handle(&Event::EnterContext("hola".into()));
 //             s.handle(&Event::EnterExample("holé".into()));
 //             s.handle(&Event::ExitExample(SUCCESS_RES));
@@ -457,7 +457,7 @@ where
 //         fn format_all_failures_one_error() {
 //             let mut sink = &mut io::sink();
 //             let res = {
-//                 let mut s = SerialFormatter::new(&mut sink);
+//                 let mut s = SerialLogger::new(&mut sink);
 //                 s.handle(&Event::EnterContext("hola".into()));
 //                 s.handle(&Event::EnterExample("holé".into()));
 //                 s.handle(&Event::ExitExample(FAILED_RES));
@@ -471,7 +471,7 @@ where
 //         fn format_all_failures() {
 //             let mut sink = &mut io::sink();
 //             let res = {
-//                 let mut s = SerialFormatter::new(&mut sink);
+//                 let mut s = SerialLogger::new(&mut sink);
 //                 s.handle(&Event::EnterContext("hola".into()));
 //                 s.handle(&Event::EnterExample("holé".into()));
 //                 s.handle(&Event::ExitExample(FAILED_RES));
@@ -483,7 +483,7 @@ where
 //             assert_eq!("  1) hola | holé\n  2) hola | hola\n", res);
 //
 //             let res = {
-//                 let mut s = SerialFormatter::new(&mut sink);
+//                 let mut s = SerialLogger::new(&mut sink);
 //                 s.handle(&Event::EnterContext("hola".into()));
 //                 s.handle(&Event::EnterExample("holé".into()));
 //                 s.handle(&Event::ExitExample(FAILED_RES));

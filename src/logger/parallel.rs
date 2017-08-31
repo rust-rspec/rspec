@@ -3,20 +3,20 @@ use std::io;
 use header::{SuiteHeader, ContextHeader, ExampleHeader};
 use report::{BlockReport, SuiteReport, ContextReport, ExampleReport};
 use runner::RunnerObserver;
-use formatter::SerialFormatter;
+use logger::SerialLogger;
 
-/// Preferred formatter for parallel test suite execution
+/// Preferred logger for parallel test suite execution
 /// (see [`Configuration.parallel`](struct.Configuration.html#fields)).
-pub struct ParallelFormatter<T: io::Write> {
-    serial: SerialFormatter<T>,
+pub struct ParallelLogger<T: io::Write> {
+    serial: SerialLogger<T>,
 }
 
-impl<T: io::Write> ParallelFormatter<T>
+impl<T: io::Write> ParallelLogger<T>
 where
     T: Send + Sync,
 {
-    pub fn new(buffer: T) -> ParallelFormatter<T> {
-        ParallelFormatter { serial: SerialFormatter::new(buffer) }
+    pub fn new(buffer: T) -> ParallelLogger<T> {
+        ParallelLogger { serial: SerialLogger::new(buffer) }
     }
 
     fn replay_suite(&self, suite: &SuiteHeader, report: &SuiteReport) {
@@ -54,7 +54,7 @@ where
     }
 }
 
-impl<T: io::Write> RunnerObserver for ParallelFormatter<T>
+impl<T: io::Write> RunnerObserver for ParallelLogger<T>
 where
     T: Send + Sync,
 {

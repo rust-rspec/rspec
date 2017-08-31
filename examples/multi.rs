@@ -7,9 +7,9 @@ use std::sync::Arc;
 // yet syntactically different test suites in succession:
 
 pub fn main() {
-    let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+    let logger = Arc::new(rspec::Logger::new(io::stdout()));
     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-    let runner = rspec::Runner::new(configuration, vec![formatter]);
+    let runner = rspec::Runner::new(configuration, vec![logger]);
 
     // A test suite using the `suite`, `context`, `example` syntax family:
     runner.run(&rspec::suite("an value of ten", 10, |ctx| {

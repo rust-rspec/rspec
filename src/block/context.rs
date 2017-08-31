@@ -79,9 +79,9 @@ where
     /// # use std::sync::Arc;
     /// #
     /// # pub fn main() {
-    /// #     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+    /// #     let logger = Arc::new(rspec::Logger::new(io::stdout()));
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-    /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
+    /// #     let runner = rspec::Runner::new(configuration, vec![logger]);
     /// #
     /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.context("opens a context labeled 'context'", |_ctx| {
@@ -166,9 +166,9 @@ where
     /// # use std::sync::Arc;
     /// #
     /// # pub fn main() {
-    /// #     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+    /// #     let logger = Arc::new(rspec::Logger::new(io::stdout()));
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-    /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
+    /// #     let runner = rspec::Runner::new(configuration, vec![logger]);
     /// #
     /// runner.run(&rspec::suite("a suite",(), |ctx| {
     ///     ctx.context("a context", |ctx| {
@@ -224,9 +224,9 @@ where
     /// # use std::sync::Arc;
     /// #
     /// # pub fn main() {
-    /// #     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+    /// #     let logger = Arc::new(rspec::Logger::new(io::stdout()));
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-    /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
+    /// #     let runner = rspec::Runner::new(configuration, vec![logger]);
     /// #
     /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.example("an example", |_env| {
@@ -326,9 +326,9 @@ where
     /// # use std::sync::Arc;
     /// #
     /// # pub fn main() {
-    /// #     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+    /// #     let logger = Arc::new(rspec::Logger::new(io::stdout()));
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-    /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
+    /// #     let runner = rspec::Runner::new(configuration, vec![logger]);
     /// #
     /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.before_all(|_env| {
@@ -389,9 +389,9 @@ where
     /// # use std::sync::Arc;
     /// #
     /// # pub fn main() {
-    /// #     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+    /// #     let logger = Arc::new(rspec::Logger::new(io::stdout()));
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-    /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
+    /// #     let runner = rspec::Runner::new(configuration, vec![logger]);
     /// #
     /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.before_each(|_env| {
@@ -440,9 +440,9 @@ where
     /// # use std::sync::Arc;
     /// #
     /// # pub fn main() {
-    /// #     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+    /// #     let logger = Arc::new(rspec::Logger::new(io::stdout()));
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-    /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
+    /// #     let runner = rspec::Runner::new(configuration, vec![logger]);
     /// #
     /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.after_all(|_env| {
@@ -503,9 +503,9 @@ where
     /// # use std::sync::Arc;
     /// #
     /// # pub fn main() {
-    /// #     let formatter = Arc::new(rspec::Formatter::new(io::stdout()));
+    /// #     let logger = Arc::new(rspec::Logger::new(io::stdout()));
     /// #     let configuration = rspec::ConfigurationBuilder::default().build().unwrap();
-    /// #     let runner = rspec::Runner::new(configuration, vec![formatter]);
+    /// #     let runner = rspec::Runner::new(configuration, vec![logger]);
     /// #
     /// runner.run(&rspec::suite("a test suite", (), |ctx| {
     ///     ctx.after_each(|_env| {

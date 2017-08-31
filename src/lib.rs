@@ -21,12 +21,12 @@ pub mod block;
 pub mod header;
 pub mod report;
 pub mod runner;
-pub mod formatter;
+pub mod logger;
 
 mod visitor;
 
 pub use block::{suite, describe, given};
-pub use formatter::Formatter;
+pub use logger::Logger;
 pub use runner::{Configuration, ConfigurationBuilder, Runner};
 
 use block::Suite;
@@ -56,12 +56,12 @@ where
     use std::io;
     use std::sync::Arc;
 
-    use formatter::Formatter;
+    use logger::Logger;
     use runner::{ConfigurationBuilder, Runner};
 
-    let formatter = Arc::new(Formatter::new(io::stdout()));
+    let logger = Arc::new(Logger::new(io::stdout()));
     let configuration = ConfigurationBuilder::default().build().unwrap();
-    let runner = Runner::new(configuration, vec![formatter]);
+    let runner = Runner::new(configuration, vec![logger]);
 
     runner.run(suite);
 }
@@ -81,8 +81,8 @@ mod tests {
     // x check that we can use after in a describe
     // x check that after/before are run in all child contextes
     // x runner broadcasts run events
-    // x progress formatter is an event handler
-    // x pluggable formatters via formatter trait
+    // x progress logger is an event handler
+    // x pluggable loggers via logger trait
     // - stats time events is an event handler
     // - detect slow tests via treshold
     // - time the total running time

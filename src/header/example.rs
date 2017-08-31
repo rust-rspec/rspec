@@ -1,7 +1,7 @@
 use std::default::Default;
 use std::fmt;
 
-/// How the [`Example`](../block/struct.Example.html) will be printed by the `Formatter`
+/// How the [`Example`](../block/struct.Example.html) will be printed by the [`Logger`](../logger/index.html).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ExampleLabel {
     It,
