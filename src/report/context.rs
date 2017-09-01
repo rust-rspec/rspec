@@ -1,7 +1,7 @@
 use report::{Report, BlockReport};
 
 /// `ContextReport` holds the results of a context's test execution.
-#[derive(PartialEq, Eq, Clone, Default, Debug, new)]
+#[derive(PartialEq, Eq, Clone, Debug, new)]
 pub struct ContextReport {
     sub_reports: Vec<BlockReport>,
 }

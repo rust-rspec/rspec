@@ -10,7 +10,7 @@
 
 use block::{Block, Example};
 use header::{ContextLabel, ContextHeader, ExampleLabel, ExampleHeader};
-use report::ExampleReport;
+use report::ExampleResult;
 use std::default::Default;
 
 /// Test contexts are a convenient tool for adding structure and code sharing to a test suite.
@@ -252,7 +252,7 @@ where
     pub fn example<F, U>(&mut self, name: &'static str, body: F)
     where
         F: 'static + Fn(&T) -> U,
-        U: Into<ExampleReport>,
+        U: Into<ExampleResult>,
     {
         let header = ExampleHeader::new(ExampleLabel::Example, name);
         self.example_internal(header, body)
@@ -266,7 +266,7 @@ where
     pub fn it<F, U>(&mut self, name: &'static str, body: F)
     where
         F: 'static + Fn(&T) -> U,
-        U: Into<ExampleReport>,
+        U: Into<ExampleResult>,
     {
         let header = ExampleHeader::new(ExampleLabel::It, name);
         self.example_internal(header, body)
@@ -280,7 +280,7 @@ where
     pub fn then<F, U>(&mut self, name: &'static str, body: F)
     where
         F: 'static + Fn(&T) -> U,
-        U: Into<ExampleReport>,
+        U: Into<ExampleResult>,
     {
         let header = ExampleHeader::new(ExampleLabel::Then, name);
         self.example_internal(header, body)
@@ -289,7 +289,7 @@ where
     fn example_internal<F, U>(&mut self, header: ExampleHeader, body: F)
     where
         F: 'static + Fn(&T) -> U,
-        U: Into<ExampleReport>,
+        U: Into<ExampleResult>,
     {
         use std::panic::{catch_unwind, AssertUnwindSafe};
 
@@ -305,7 +305,7 @@ where
                     let message = error_as_str.or(error_as_string).map(|cow| {
                         format!("thread panicked at '{:?}'.", cow.to_string())
                     });
-                    ExampleReport::Failure(message)
+                    ExampleResult::Failure(message)
                 }
             }
         });

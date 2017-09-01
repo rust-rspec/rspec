@@ -5,7 +5,7 @@ use std::ops::DerefMut;
 use colored::*;
 
 use header::{SuiteHeader, ContextHeader, ExampleHeader};
-use report::{Report, BlockReport, SuiteReport, ContextReport, ExampleReport};
+use report::{Report, BlockReport, SuiteReport, ContextReport, ExampleReport, ExampleResult};
 use runner::{Runner, RunnerObserver};
 
 #[derive(new)]
@@ -119,7 +119,7 @@ impl<T: io::Write> SerialLogger<T> {
         indent: usize,
         report: &ExampleReport,
     ) -> io::Result<()> {
-        if let &ExampleReport::Failure(Some(ref reason)) = report {
+        if let &ExampleResult::Failure(Some(ref reason)) = report.get_result() {
             let padding = Self::padding(indent);
             writeln!(buffer, "{}{}", padding, reason)?;
         }
@@ -133,8 +133,8 @@ impl<T: io::Write> SerialLogger<T> {
     }
 
     fn write_suite_suffix(&self, buffer: &mut T, report: &SuiteReport) -> io::Result<()> {
-        let flag = self.report_flag(report);
-        write!(buffer, "\ntest result: {}.", flag)?;
+        write!(buffer, "\ntest result: {}.", self.report_flag(report))?;
+
         writeln!(
             buffer,
             " {} passed; {} failed; {} ignored",

@@ -253,8 +253,8 @@ where
 
     fn visit(&self, example: &Example<T>, environment: &mut Self::Environment) -> Self::Output {
         self.broadcast(|handler| handler.enter_example(self, &example.header));
-        let function = &example.function;
-        let report = function(environment);
+        let result = (example.function)(environment);
+        let report = ExampleReport::new(result);
         self.broadcast(|handler| handler.exit_example(self, &example.header, &report));
         report
     }
@@ -648,7 +648,7 @@ mod tests {
             // act
             let example = Example::new(ExampleHeader::default(), |env : &Arc<AtomicBool>| {
                 env.store(true, Ordering::SeqCst);
-                ExampleReport::Success
+                ExampleResult::Success
             });
             runner.visit(&example, &mut environment);
             // assert
