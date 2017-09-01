@@ -12,7 +12,7 @@ The last stable documentation is available for consultation at
 [mackwic.github.io/rspec](https://mackwic.github.io/rspec).
 
 **All rspec releases are garanteed to compile against the latest stable rust and
-are tested on all rust versions from the 1.9**.
+are tested on all rust versions from the 1.19**.
 
 ## How to use
 
@@ -32,90 +32,130 @@ extern crate rspec;
 
 You can see complete examples in the [`examples/`](https://github.com/mackwic/rspec/tree/master/examples) directory.
 
-You can now use rspec in your unit tests, this example will use the `cargo test`
-runner:
-
-```rust
-fn add(x: u32, y: u32) -> u64 {
-    x + y
-}
-
-#[test]
-fn test_add() {
-    rdescribe("add", |ctx| {
-        ctx.describe("0 <= x + y <= u32::MAX", |ctx| {
-            ctx.it("2 + 4 = 6", || {
-                assert_eq!(6, add(2, 4))
-            });
-
-            ctx.it("4 + 4 = 8", || {
-                assert_eq!(8, add(4, 4))
-            });
-        });
-
-        ctx.it("is associative", || {
-            assert_eq!(add(2, 1), add(1, 2));
-            assert_eq!(add(4, 1), add(1, 4));
-            assert_eq!(add(4, 5), add(5, 4));
-            assert_eq!(add(12, 1), add(1, 12));
-        });
-    });
-}
-```
-
-You can also use rspec in integration tests, this example uses the rspec runner:
 
 ```rust
 extern crate rspec;
-use rspec::context::describe;
-use std::io;
 
 pub fn main() {
-    let stdout = &mut io::stdout();
-    let mut formatter = rspec::formatter::Simple::new(stdout);
-    let mut runner = describe("rspec is a classic BDD testing", |ctx| {
+    // Use a local struct to provide the test contexts with an environment.
+    // The environment will contain the subject that is to be tested
+    // along with any additional data you might need during the test run:
+    #[derive(Clone, Default, Debug)]
+    struct Environment {
+        // ...
+    }
 
-        ctx.it("can define tests", || true);
+    // `rspec::run(…)` is a convenience wrapper that takes care of setting up
+    // a runner, logger, configuration and running the test suite for you.
+    // If you want more direct control, you can manually set up those things, too.
+    rspec::run(&rspec::describe("rspec, a BDD testing framework", Environment::default(), |ctx| {
+        // `describe`, or any of its equivalents, opens the root context
+        // of your test suite. Within you can then either define test examples:
+        ctx.it("can define top-level tests", |_| true);
 
-        ctx.describe("rspec use results for tests results", |ctx| {
+        // or make use of sub-contexts to add some structure to your test suite:
+        ctx.specify("contexts give your tests structure and reduce redundancy", |ctx| {
 
-            ctx.it("passed if the return is_ok()", || Ok(()) as Result<(),()>);
+            ctx.before(|_| {
+                // Executed once, before any of the contexts/examples is entered.
+            });
 
-            ctx.it("failed if the return is_err()", || Err(()) as Result<(),()>);
+            ctx.after(|_| {
+                // Executed once, after all of the contexts/examples have been exited.
+            });
+
+            ctx.specify("rspec can handle results", |ctx| {
+                ctx.it("passes if the return is_ok()", |_| Ok(()) as Result<(),()>);
+                ctx.it("failes if the return is_err()", |_| Err(()) as Result<(),()>);
+            });
+
+            ctx.describe("rspec can handle bools", |ctx| {
+                ctx.it("should pass if true", |_| true);
+                ctx.it("should fail if false", |_| false);
+                ctx.it("is convenient for comparisons", |_| (42 % 37 + 2) > 3);
+            });
+
+            ctx.describe("rspec can handle units", |ctx| {
+                ctx.it("should pass if the return is ()", |_| {});
+            });
+
+            ctx.describe("rspec can handle panics", |ctx| {
+                ctx.it("is convenient for asserts", |_| assert_eq!(1, 1));
+            });
+
         });
-
-        ctx.describe("rspec can use bools", |ctx| {
-
-            ctx.it("should pass if true", || true);
-
-            ctx.it("should fail if false", || false);
-
-            ctx.it("is convenient for comparisons", || {
-                (42 % 37 + 2) > 3
-            })
-        });
-
-        ctx.describe("rspec can use units", |ctx| {
-
-            ctx.it("should pass if the return is ()", || {});
-
-            ctx.it("is convenient for asserts", || assert_eq!(1, 1));
-        });
-    });
-    runner.add_event_handler(&mut formatter);
-    runner.run().unwrap();
+    })); // exits the process with a failure code if one of the tests failed.
 }
-
 ```
 
-*Note:*
-- `describe` has 4 aliases: `specify`, `context`, `given`, and `when`
-- `it` has 2 aliases: `example`, and `then`
+### Suites, Contexts & Examples
+
+rspec provides three variants for each of the structural elements:
+
+|           | Variant A  | Variant B  | Variant C  |
+|-----------|------------|------------|------------|
+| Suites:   | `suite`    | `describe` | `given`    |
+| Contexts: | `context`  | `specify`  | `when`     |
+| Examples: | `example`  | `it`       | `then`     |
+
+**Note:** While the intended use is to stick to a single variant per test suite
+it is possible to freely mix structural elements across variants.
+
+#### Variant A: `suite`, `context` & `example`
+
+```rust
+runner.run(&rspec::suite("opens a suite", /* environment */, |ctx| {
+    ctx.context("opens a context", |ctx| {
+        ctx.example("opens an example", |env| /* test condition */ );
+    });
+}));
+```
+
+#### Variant B: `describe`, `specify` & `it`
+
+```rust
+runner.run(&rspec::describe("opens a suite", /* environment */, |ctx| {
+    ctx.specify("opens a context", |ctx| {
+        ctx.it("opens an example", |env| /* test condition */ );
+    });
+}));
+```
+
+#### Variant C: `given`, `when` & `then`
+
+```rust
+runner.run(&rspec::given("opens a suite", /* environment */, |ctx| {
+    ctx.when("opens a context", |ctx| {
+        ctx.then("opens an example", |env| /* test condition */ );
+    });
+}));
+```
+
+### Before & After
+
+|         | All                   | Each          |
+|---------|-----------------------|---------------|
+| Before: | `before`/`before_all` | `before_each` |
+| After:  | `after` /`after_all`  | `after_each`  |
+
+#### All
+
+The "All" variants of before and after blocks are executed once upon
+entering (or exiting, respectively) the given context.
+
+#### Each
+
+`before_each` and `after_each` blocks are executed once before each of the
+given context's sub-contexts or examples.
+
+### More Examples
 
 Again, you can see complete examples in the [`examples/`](https://github.com/mackwic/rspec/tree/master/examples) directory.
 
+## Documentation
+
 The last stable documentation is available for consultation at
-[mackwic.github.io/rspec](https://mackwic.github.io/rspec).
+[https://docs.rs/rspec](https://docs.rs/rspec).
 
 ## Contributions
 

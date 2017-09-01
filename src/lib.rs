@@ -5,28 +5,84 @@
 
 #![allow(dead_code)]
 
-pub mod example_result;
-pub mod events;
-pub mod context;
+#[macro_use]
+extern crate derive_builder;
+
+#[macro_use]
+extern crate derive_new;
+
+#[cfg(feature = "expectest_compat")]
+extern crate expectest;
+
+extern crate colored;
+extern crate rayon;
+
+pub mod block;
+pub mod header;
+pub mod report;
 pub mod runner;
-pub mod formatter;
+pub mod logger;
+
+mod visitor;
+
+pub use block::{suite, describe, given};
+pub use logger::Logger;
+pub use runner::{Configuration, ConfigurationBuilder, Runner};
+
+use block::Suite;
+
+/// A wrapper for conveniently running a test suite with
+/// the default configuration with considerebly less glue-code.
+///
+/// # Examples
+///
+/// ```
+/// # extern crate rspec;
+/// #
+/// # pub fn main() {
+/// rspec::run(&rspec::given("a scenario", (), |ctx| {
+///     ctx.when("...", |ctx| {
+///         // ...
+///     });
+///
+///     ctx.then("...", |env| { /* ... */ });
+/// }));
+/// # }
+/// ```
+pub fn run<T>(suite: &Suite<T>)
+where
+    T: Clone + Send + Sync + ::std::fmt::Debug,
+{
+    use std::io;
+    use std::sync::Arc;
+
+    use logger::Logger;
+    use runner::{ConfigurationBuilder, Runner};
+
+    let logger = Arc::new(Logger::new(io::stdout()));
+    let configuration = ConfigurationBuilder::default().build().unwrap();
+    let runner = Runner::new(configuration, vec![logger]);
+
+    runner.run(suite);
+}
 
 #[cfg(test)]
 mod tests {
+
     pub use super::*;
-    pub use context::*;
+    pub use block::*;
 
     // Test list:
     // x check that tests can call `assert_eq!`
     // x check that tests can return Err or Ok
     // x runner can count the tests
-    // x runner can count the success and failures
+    // x runner can count the success and failed
     // x check that we can use before in a describe
     // x check that we can use after in a describe
     // x check that after/before are run in all child contextes
     // x runner broadcasts run events
-    // x progress formatter is an event handler
-    // x pluggable formatters via formatter trait
+    // x progress logger is an event handler
+    // x pluggable loggers via logger trait
     // - stats time events is an event handler
     // - detect slow tests via treshold
     // - time the total running time
