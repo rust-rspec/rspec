@@ -2,6 +2,8 @@ use std::io;
 use std::sync::Mutex;
 use std::ops::DerefMut;
 
+use time::Duration;
+
 use colored::*;
 
 use header::{SuiteHeader, ContextHeader, ExampleHeader};
@@ -133,6 +135,8 @@ impl<T: io::Write> SerialLogger<T> {
     }
 
     fn write_suite_suffix(&self, buffer: &mut T, report: &SuiteReport) -> io::Result<()> {
+        self.write_duration(buffer, report.get_duration())?;
+
         write!(buffer, "\ntest result: {}.", self.report_flag(report))?;
 
         writeln!(
@@ -148,6 +152,19 @@ impl<T: io::Write> SerialLogger<T> {
         }
 
         Ok(())
+    }
+
+    fn write_duration(&self, buffer: &mut T, duration: Duration) -> io::Result<()> {
+        let seconds = duration.num_seconds();
+        let hours = seconds / (60 * 60);
+        let remainder = seconds % (60 * 60);
+        let minutes = remainder / 60;
+        let seconds = remainder % 60;
+        match (hours, minutes, seconds) {
+            (0, 0, s) => writeln!(buffer, "\nduration: {}s.", s),
+            (0, m, s) => writeln!(buffer, "\nduration: {}m {}s.", m, s),
+            (h, m, s) => writeln!(buffer, "\nduration: {}h {}m {}s.", h, m, s),
+        }
     }
 
     fn report_flag<R>(&self, report: &R) -> ColoredString

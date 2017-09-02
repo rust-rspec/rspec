@@ -27,6 +27,7 @@ colored = "1.4.0"
 derive-new = "0.5.0"
 derive_builder = "0.5.0"
 rayon = "0.8.2"
+time = "0.1.38"
 
 [dependencies.expectest]
 optional = true

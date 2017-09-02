@@ -1,5 +1,7 @@
 use std::convert::From;
 
+use time::Duration;
+
 use report::Report;
 
 #[cfg(feature = "expectest_compat")]
@@ -105,6 +107,7 @@ impl From<ExpectestResult> for ExampleResult {
 #[derive(Clone, PartialEq, Eq, Debug, new)]
 pub struct ExampleReport {
     result: ExampleResult,
+    duration: Duration,
 }
 
 impl ExampleReport {
@@ -132,6 +135,10 @@ impl Report for ExampleReport {
 
     fn get_ignored(&self) -> u32 {
         self.result.get_ignored()
+    }
+
+    fn get_duration(&self) -> Duration {
+        self.duration
     }
 }
 

@@ -13,6 +13,7 @@ extern crate derive_new;
 
 #[cfg(feature = "expectest_compat")]
 extern crate expectest;
+extern crate time;
 extern crate colored;
 extern crate rayon;
 
