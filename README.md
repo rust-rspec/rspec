@@ -9,7 +9,7 @@ If you don't know what is Rust, are confused by the terms BDD, TDD, or just want
 a gently beginner introduction, [please go to the Beginner Section](#beginners).
 
 The last stable documentation is available for consultation at
-[mackwic.github.io/rspec](https://mackwic.github.io/rspec).
+[docs.rs/rspec](https://docs.rs/rspec).
 
 **All rspec releases are garanteed to compile against the latest stable rust and
 are tested on all rust versions from the 1.19**.
