@@ -1,6 +1,6 @@
 # rspec - a BDD test harness that works with stable Rust
 
-[![Build Status](https://travis-ci.org/mackwic/rspec.svg?branch=master)](https://travis-ci.org/mackwic/rspec) [![Coverage Status](https://coveralls.io/repos/github/mackwic/rspec/badge.svg)](https://coveralls.io/github/mackwic/rspec) [![Crates.io](https://img.shields.io/crates/v/rspec.svg?maxAge=2592000)](https://crates.io/crates/rspec) [![Crates.io](https://img.shields.io/crates/l/rspec.svg?maxAge=2592000)](https://github.com/mackwic/rspec/blob/master/LICENSE)
+[![Build Status](https://travis-ci.org/mackwic/rspec.svg?branch=master)](https://travis-ci.org/mackwic/rspec) [![Coverage Status](https://coveralls.io/repos/github/mackwic/rspec/badge.svg)](https://coveralls.io/github/mackwic/rspec) [![Crates.io](https://img.shields.io/crates/v/rspec.svg?maxAge=2592000)](https://crates.io/crates/rspec) [![Crates.io](https://img.shields.io/crates/l/rspec.svg?maxAge=2592000)](https://github.com/rust-rspec/rspec/blob/master/LICENSE)
 
 When you like BDD, and all the nested `describe/context/it` way of testing, but
 you also like when your code compiles every day 👌.
@@ -9,7 +9,7 @@ If you don't know what is Rust, are confused by the terms BDD, TDD, or just want
 a gently beginner introduction, [please go to the Beginner Section](#beginners).
 
 The last stable documentation is available for consultation at
-[mackwic.github.io/rspec](https://mackwic.github.io/rspec).
+[docs.rs/rspec](https://docs.rs/rspec).
 
 **All rspec releases are garanteed to compile against the latest stable rust and
 are tested on all rust versions from the 1.19**.
@@ -30,7 +30,7 @@ and add this to your `src/lib.rs` or `src/main.rs`:
 extern crate rspec;
 ```
 
-You can see complete examples in the [`examples/`](https://github.com/mackwic/rspec/tree/master/examples) directory.
+You can see complete examples in the [`examples/`](https://github.com/rust-rspec/rspec/tree/master/examples) directory.
 
 
 ```rust
@@ -150,7 +150,7 @@ given context's sub-contexts or examples.
 
 ### More Examples
 
-Again, you can see complete examples in the [`examples/`](https://github.com/mackwic/rspec/tree/master/examples) directory.
+Again, you can see complete examples in the [`examples/`](https://github.com/rust-rspec/rspec/tree/master/examples) directory.
 
 ## Documentation
 
@@ -174,7 +174,7 @@ which is:
    have the privilege to merge your PR and become a mighty Contributor.
    Congrats.
 
-Take a look at [the issues](https://github.com/mackwic/rspec/issues) if you want
+Take a look at [the issues](https://github.com/rust-rspec/rspec/issues) if you want
 to help without knowing how. Some issues are mentored!
 
 ## Contributors
