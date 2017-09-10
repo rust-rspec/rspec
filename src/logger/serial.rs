@@ -173,10 +173,9 @@ impl<T: io::Write> SerialLogger<T> {
 
     	let milliseconds = remainder / millisecond;
         match (hours, minutes, seconds, milliseconds) {
-            (0, 0, 0, ms) => writeln!(buffer, "\nduration: {}ms.", ms),
-            (0, 0, s, ms) => writeln!(buffer, "\nduration: {}s {}ms.", s, ms),
-            (0, m, s, ms) => writeln!(buffer, "\nduration: {}m {}s {}ms.", m, s, ms),
-            (h, m, s, ms) => writeln!(buffer, "\nduration: {}h {}m {}s {}ms.", h, m, s, ms),
+            (0, 0, s, ms) => writeln!(buffer, "\nduration: {}.{:03}s.", s, ms),
+            (0, m, s, ms) => writeln!(buffer, "\nduration: {}m {}.{:03}s.", m, s, ms),
+            (h, m, s, ms) => writeln!(buffer, "\nduration: {}h {}m {}.{:03}s.", h, m, s, ms),
         }
     }
 
