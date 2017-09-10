@@ -281,8 +281,8 @@ mod tests {
             let expected = vec![
                 ("", 0),
                 ("  ", 1),
-                ("     ", 2),
-                ("       ", 3)
+                ("    ", 2),
+                ("      ", 3)
             ];
             for (expected_res, given_depth) in expected {
                 // act
