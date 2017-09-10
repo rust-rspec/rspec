@@ -155,15 +155,28 @@ impl<T: io::Write> SerialLogger<T> {
     }
 
     fn write_duration(&self, buffer: &mut T, duration: Duration) -> io::Result<()> {
-        let seconds = duration.num_seconds();
-        let hours = seconds / (60 * 60);
-        let remainder = seconds % (60 * 60);
-        let minutes = remainder / 60;
-        let seconds = remainder % 60;
-        match (hours, minutes, seconds) {
-            (0, 0, s) => writeln!(buffer, "\nduration: {}s.", s),
-            (0, m, s) => writeln!(buffer, "\nduration: {}m {}s.", m, s),
-            (h, m, s) => writeln!(buffer, "\nduration: {}h {}m {}s.", h, m, s),
+        let millisecond = 1;
+    	let second = 1000 * millisecond;
+    	let minute = 60 * second;
+    	let hour   = 60 * minute;
+
+    	let remainder = duration.num_milliseconds();
+
+    	let hours = remainder / hour;
+    	let remainder = remainder % hour;
+
+    	let minutes = remainder / minute;
+    	let remainder = remainder % minute;
+
+    	let seconds = remainder / second;
+    	let remainder = remainder % second;
+
+    	let milliseconds = remainder / millisecond;
+        match (hours, minutes, seconds, milliseconds) {
+            (0, 0, 0, ms) => writeln!(buffer, "\nduration: {}ms.", ms),
+            (0, 0, s, ms) => writeln!(buffer, "\nduration: {}s {}ms.", s, ms),
+            (0, m, s, ms) => writeln!(buffer, "\nduration: {}m {}s {}ms.", m, s, ms),
+            (h, m, s, ms) => writeln!(buffer, "\nduration: {}h {}m {}s {}ms.", h, m, s, ms),
         }
     }
 
@@ -279,7 +292,4 @@ mod tests {
             }
         }
     }
-
-
 }
-
