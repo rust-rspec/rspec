@@ -1,9 +1,11 @@
+use time::Duration;
 use report::{Report, BlockReport};
 
 /// `ContextReport` holds the results of a context's test execution.
-#[derive(PartialEq, Eq, Clone, Default, Debug, new)]
+#[derive(PartialEq, Eq, Clone, Debug, new)]
 pub struct ContextReport {
     sub_reports: Vec<BlockReport>,
+    duration: Duration,
 }
 
 impl ContextReport {
@@ -41,6 +43,10 @@ impl Report for ContextReport {
         self.sub_reports.iter().fold(0, |count, report| {
             count + report.get_ignored()
         })
+    }
+
+    fn get_duration(&self) -> Duration {
+        self.duration
     }
 }
 

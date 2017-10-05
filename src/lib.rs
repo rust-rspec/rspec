@@ -13,7 +13,7 @@ extern crate derive_new;
 
 #[cfg(feature = "expectest_compat")]
 extern crate expectest;
-
+extern crate time;
 extern crate colored;
 extern crate rayon;
 
@@ -85,7 +85,7 @@ mod tests {
     // x pluggable loggers via logger trait
     // - stats time events is an event handler
     // - detect slow tests via treshold
-    // - time the total running time
+    // x time the total running time
     // - failure-only via a tmp file
     // - filter tests
     // - coloration
@@ -93,8 +93,8 @@ mod tests {
     // - fail-fast fail at the first failed test
     // x beforeAll
     // x afterAll
-    // - beforeEach ?
-    // - afterEach ?
+    // x beforeEach
+    // x afterEach
     // - use Any to return anything that can be Ok-ed or () or None or panic-ed
     // - bench ? --> see what's the protocol
     //

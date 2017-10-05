@@ -1,29 +1,38 @@
 use std::convert::From;
 
+use time::Duration;
+
 use report::Report;
 
 #[cfg(feature = "expectest_compat")]
 use expectest::core::TestResult as ExpectestResult;
 
-/// `ExampleReport` holds the results of a context example's test execution.
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum ExampleReport {
+pub enum ExampleResult {
     Success,
     Failure(Option<String>),
     Ignored,
 }
 
-impl Report for ExampleReport {
+impl ExampleResult {
     fn is_success(&self) -> bool {
-        self == &ExampleReport::Success
+        if &ExampleResult::Success == self {
+            true
+        } else {
+            false
+        }
     }
 
     fn is_failure(&self) -> bool {
-        self != &ExampleReport::Success
+        if let &ExampleResult::Failure(_) = self {
+            true
+        } else {
+            false
+        }
     }
 
     fn get_passed(&self) -> u32 {
-        if &ExampleReport::Success == self {
+        if &ExampleResult::Success == self {
             1
         } else {
             0
@@ -31,7 +40,7 @@ impl Report for ExampleReport {
     }
 
     fn get_failed(&self) -> u32 {
-        if let &ExampleReport::Failure(_) = self {
+        if let &ExampleResult::Failure(_) = self {
             1
         } else {
             0
@@ -39,7 +48,7 @@ impl Report for ExampleReport {
     }
 
     fn get_ignored(&self) -> u32 {
-        if &ExampleReport::Ignored == self {
+        if &ExampleResult::Ignored == self {
             1
         } else {
             0
@@ -48,19 +57,19 @@ impl Report for ExampleReport {
 }
 
 /// rspec considers examples returning `()` a success.
-impl From<()> for ExampleReport {
-    fn from(_other: ()) -> ExampleReport {
-        ExampleReport::Success
+impl From<()> for ExampleResult {
+    fn from(_other: ()) -> ExampleResult {
+        ExampleResult::Success
     }
 }
 
 /// rspec considers examples returning `true` a success, `false` a failure.
-impl From<bool> for ExampleReport {
-    fn from(other: bool) -> ExampleReport {
+impl From<bool> for ExampleResult {
+    fn from(other: bool) -> ExampleResult {
         if other {
-            ExampleReport::Success
+            ExampleResult::Success
         } else {
-            ExampleReport::Failure(Some(
+            ExampleResult::Failure(Some(
                 "assertion failed: `expected condition to be true`"
                     .to_owned(),
             ))
@@ -69,28 +78,67 @@ impl From<bool> for ExampleReport {
 }
 
 /// rspec considers examples returning `Result::Ok(…)` a success, `Result::Err(…)` a failure.
-impl<T1, T2> From<Result<T1, T2>> for ExampleReport
+impl<T1, T2> From<Result<T1, T2>> for ExampleResult
 where
     T2: ::std::fmt::Debug,
 {
-    fn from(other: Result<T1, T2>) -> ExampleReport {
+    fn from(other: Result<T1, T2>) -> ExampleResult {
         match other {
-            Ok(_) => ExampleReport::Success,
-            Err(error) => ExampleReport::Failure(Some(format!("{:?}", error))),
+            Ok(_) => ExampleResult::Success,
+            Err(error) => ExampleResult::Failure(Some(format!("{:?}", error))),
         }
     }
 }
 
 /// rspec considers examples returning `ExpectestResult::Ok(…)` a success, `ExpectestResult::Err(…)` a failure.
 #[cfg(feature = "expectest_compat")]
-impl From<ExpectestResult> for ExampleReport {
-    fn from(other: ExpectestResult) -> ExampleReport {
+impl From<ExpectestResult> for ExampleResult {
+    fn from(other: ExpectestResult) -> ExampleResult {
         match other {
-            ExpectestResult::Success => ExampleReport::Success,
+            ExpectestResult::Success => ExampleResult::Success,
             ExpectestResult::Failure(failure) => {
-                ExampleReport::Failure(Some(format!("{:?}", failure)))
+                ExampleResult::Failure(Some(format!("{:?}", failure)))
             }
         }
+    }
+}
+
+/// `ExampleReport` holds the results of a context example's test execution.
+#[derive(Clone, PartialEq, Eq, Debug, new)]
+pub struct ExampleReport {
+    result: ExampleResult,
+    duration: Duration,
+}
+
+impl ExampleReport {
+    pub fn get_result(&self) -> &ExampleResult {
+        &self.result
+    }
+}
+
+impl Report for ExampleReport {
+    fn is_success(&self) -> bool {
+        self.result.is_success()
+    }
+
+    fn is_failure(&self) -> bool {
+        self.result.is_failure()
+    }
+
+    fn get_passed(&self) -> u32 {
+        self.result.get_passed()
+    }
+
+    fn get_failed(&self) -> u32 {
+        self.result.get_failed()
+    }
+
+    fn get_ignored(&self) -> u32 {
+        self.result.get_ignored()
+    }
+
+    fn get_duration(&self) -> Duration {
+        self.duration
     }
 }
 
@@ -100,21 +148,21 @@ mod tests {
 
     #[test]
     fn from_void() {
-        assert!(ExampleReport::from(()).is_success());
+        assert!(ExampleResult::from(()).is_success());
     }
 
     #[test]
     fn from_bool() {
-        assert!(ExampleReport::from(true).is_success());
-        assert!(ExampleReport::from(false).is_failure());
+        assert!(ExampleResult::from(true).is_success());
+        assert!(ExampleResult::from(false).is_failure());
     }
 
     #[test]
     fn from_result() {
         let ok_result: Result<(), ()> = Ok(());
         let err_result: Result<(), ()> = Err(());
-        assert!(ExampleReport::from(ok_result).is_success());
-        assert!(ExampleReport::from(err_result).is_failure());
+        assert!(ExampleResult::from(ok_result).is_success());
+        assert!(ExampleResult::from(err_result).is_failure());
     }
 
     #[cfg(feature = "expectest_compat")]
@@ -124,7 +172,7 @@ mod tests {
         let ok_result = ExpectestResult::new_success();
         // A failure ExpectestResult panics on drop, hence the `#[should_panic]`.
         let err_result = ExpectestResult::new_failure("dummy".to_owned(), None);
-        assert!(ExampleReport::from(ok_result).is_success());
-        assert!(ExampleReport::from(err_result).is_failure());
+        assert!(ExampleResult::from(ok_result).is_success());
+        assert!(ExampleResult::from(err_result).is_failure());
     }
 }

@@ -4,6 +4,8 @@ mod suite;
 mod context;
 mod example;
 
+pub use time::Duration;
+
 pub use report::suite::*;
 pub use report::context::*;
 pub use report::example::*;
@@ -19,6 +21,8 @@ pub trait Report {
     fn get_passed(&self) -> u32;
     fn get_failed(&self) -> u32;
     fn get_ignored(&self) -> u32;
+
+    fn get_duration(&self) -> Duration;
 }
 
 /// `BlockReport` holds the results of a context block's test execution.
@@ -70,6 +74,13 @@ impl Report for BlockReport {
         match self {
             &BlockReport::Context(_, ref report) => report.get_ignored(),
             &BlockReport::Example(_, ref report) => report.get_ignored(),
+        }
+    }
+
+    fn get_duration(&self) -> Duration {
+        match self {
+            &BlockReport::Context(_, ref report) => report.get_duration(),
+            &BlockReport::Example(_, ref report) => report.get_duration(),
         }
     }
 }

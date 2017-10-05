@@ -1,3 +1,5 @@
+use time::Duration;
+
 use header::SuiteHeader;
 use report::{Report, ContextReport};
 
@@ -37,6 +39,10 @@ impl Report for SuiteReport {
 
     fn get_ignored(&self) -> u32 {
         self.context.get_ignored()
+    }
+
+    fn get_duration(&self) -> Duration {
+        self.context.get_duration()
     }
 }
 

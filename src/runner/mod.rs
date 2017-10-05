@@ -14,6 +14,8 @@ use std::panic;
 use std::process;
 use std::sync::{Arc, Mutex};
 
+use time::PreciseTime;
+
 use rayon::prelude::*;
 
 use block::Block;
@@ -228,6 +230,7 @@ where
         if let Some(ref header) = context.header {
             self.broadcast(|handler| handler.enter_context(self, &header));
         }
+        let start_time = PreciseTime::now();
         let reports: Vec<_> =
             self.wrap_all(context, environment, |environment| if self.configuration
                 .parallel
@@ -236,7 +239,8 @@ where
             } else {
                 self.evaluate_blocks_serial(context, environment)
             });
-        let report = ContextReport::new(reports);
+        let end_time = PreciseTime::now();
+        let report = ContextReport::new(reports, start_time.to(end_time));
         if let Some(ref header) = context.header {
             self.broadcast(|handler| handler.exit_context(self, &header, &report));
         }
@@ -253,8 +257,10 @@ where
 
     fn visit(&self, example: &Example<T>, environment: &mut Self::Environment) -> Self::Output {
         self.broadcast(|handler| handler.enter_example(self, &example.header));
-        let function = &example.function;
-        let report = function(environment);
+        let start_time = PreciseTime::now();
+        let result = (example.function)(environment);
+        let end_time = PreciseTime::now();
+        let report = ExampleReport::new(result, start_time.to(end_time));
         self.broadcast(|handler| handler.exit_example(self, &example.header, &report));
         report
     }
@@ -648,7 +654,7 @@ mod tests {
             // act
             let example = Example::new(ExampleHeader::default(), |env : &Arc<AtomicBool>| {
                 env.store(true, Ordering::SeqCst);
-                ExampleReport::Success
+                ExampleResult::Success
             });
             runner.visit(&example, &mut environment);
             // assert
