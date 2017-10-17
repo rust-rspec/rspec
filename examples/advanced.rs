@@ -29,7 +29,7 @@ pub fn main() {
                 assert!(!env.set.is_empty());
             });
 
-            ctx.then("its len increases by 1", move |env| {
+            ctx.then("its len increases by 1", |env| {
                 assert_eq!(env.set.len(), env.len_before + 1);
             });
 
@@ -39,7 +39,7 @@ pub fn main() {
                     env.set.insert(42);
                 });
 
-                ctx.then("its len remains the same", move |env| {
+                ctx.then("its len remains the same", |env| {
                     assert_eq!(env.set.len(), env.len_before);
                 });
             });
@@ -49,7 +49,7 @@ pub fn main() {
             ctx.then("it is still empty", |env| assert!(env.set.is_empty()));
         });
 
-        ctx.then("panic!(…) fails", move |_env| {
+        ctx.then("panic!(…) fails", |_env| {
             panic!("Some reason for failure.")
         });
     }));
