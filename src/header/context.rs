@@ -3,20 +3,16 @@ use std::fmt;
 /// How the [`Context`](../block/struct.Context.html) will be printed by the [`Logger`](../logger/index.html).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ContextLabel {
-    Describe,
     Context,
     Specify,
-    Given,
     When,
 }
 
 impl fmt::Display for ContextLabel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &ContextLabel::Describe => write!(f, "Describe"),
             &ContextLabel::Context => write!(f, "Context"),
             &ContextLabel::Specify => write!(f, "Specify"),
-            &ContextLabel::Given => write!(f, "Given"),
             &ContextLabel::When => write!(f, "When"),
         }
     }
