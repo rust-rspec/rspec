@@ -15,7 +15,7 @@ keywords = [
 license = "MPL-2.0"
 name = "rspec"
 readme = "README.md"
-repository = "https://github.com/mackwic/rspec"
+repository = "https://github.com/rust-rspec/rspec"
 version = "1.0.0-beta.4"
 
 [build-dependencies.clippy]
