@@ -1,6 +1,6 @@
 # rspec - a BDD test harness that works with stable Rust
 
-[![Build Status](https://travis-ci.org/mackwic/rspec.svg?branch=master)](https://travis-ci.org/mackwic/rspec) [![Coverage Status](https://coveralls.io/repos/github/mackwic/rspec/badge.svg)](https://coveralls.io/github/mackwic/rspec) [![Crates.io](https://img.shields.io/crates/v/rspec.svg?maxAge=2592000)](https://crates.io/crates/rspec) [![Crates.io](https://img.shields.io/crates/l/rspec.svg?maxAge=2592000)](https://github.com/rust-rspec/rspec/blob/master/LICENSE)
+[![Build Status](https://travis-ci.org/rust-rspec/rspec.svg?branch=master)](https://travis-ci.org/rust-rspec/rspec) [![Coverage Status](https://coveralls.io/repos/github/rust-rspec/rspec/badge.svg)](https://coveralls.io/github/rust-rspec/rspec) [![Crates.io](https://img.shields.io/crates/v/rspec.svg?maxAge=2592000)](https://crates.io/crates/rspec) [![Crates.io](https://img.shields.io/crates/l/rspec.svg?maxAge=2592000)](https://github.com/rust-rspec/rspec/blob/master/LICENSE)
 
 When you like BDD, and all the nested `describe/context/it` way of testing, but
 you also like when your code compiles every day 👌.
