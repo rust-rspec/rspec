@@ -270,4 +270,4 @@ In non legal terms it means that:
   for details.
 
 This section DOES NOT REPLACE NOR COMPLETE the LICENCE files. The LICENCE file
-is the only place where the licence of tis project is defined.
+is the only place where the licence of this project is defined.
