@@ -1,8 +1,6 @@
 // derive_builder emits warnings otherwise:
 #![allow(unused_mut)]
 
-use std::default::Default;
-
 /// A Runner's configuration.
 #[derive(Builder)]
 pub struct Configuration {

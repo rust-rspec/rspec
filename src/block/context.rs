@@ -11,7 +11,6 @@
 use block::{Block, Example};
 use header::{ContextLabel, ContextHeader, ExampleLabel, ExampleHeader};
 use report::ExampleResult;
-use std::default::Default;
 
 /// Test contexts are a convenient tool for adding structure and code sharing to a test suite.
 pub struct Context<T> {
@@ -541,7 +540,9 @@ where
     }
 }
 
+#[cfg(test)]
 impl<T> Default for Context<T> {
+    /// Used for testing
     fn default() -> Self {
         Context::new(None)
     }
