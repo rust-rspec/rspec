@@ -1,4 +1,3 @@
-use std::default::Default;
 use std::fmt;
 
 /// How the [`Example`](../block/struct.Example.html) will be printed by the [`Logger`](../logger/index.html).
@@ -26,6 +25,7 @@ pub struct ExampleHeader {
     pub name: &'static str,
 }
 
+#[cfg(test)]
 impl Default for ExampleHeader {
     /// Used for testing
     fn default() -> Self {

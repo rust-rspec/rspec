@@ -146,8 +146,9 @@ impl Runner {
     }
 }
 
+#[cfg(test)]
 impl Default for Runner {
-    /// Default Runner to help testing
+    /// Used for testing
     fn default() -> Self {
         Runner::new(Configuration::default(), vec!())
     }
