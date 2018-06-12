@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Logger","Preferred logger for test suite execution."]]});

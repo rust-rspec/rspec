@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `derive_new` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, derive_new">
+
+    <title>derive_new - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css"
+          id="mainThemeStyle">
+    
+    <link rel="stylesheet" type="text/css" href="../dark.css">
+    <link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle">
+    <script src="../storage.js"></script>
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Crate derive_new</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#functions">Functions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'derive_new', ty: 'mod', relpath: '../'};</script></div>
+    </nav>
+
+    <div class="theme-picker">
+        <button id="theme-picker" aria-label="Pick another theme!">
+            <img src="../brush.svg" width="18" alt="Pick another theme!">
+        </button>
+        <div id="theme-choices"></div>
+    </div>
+    <script src="../theme.js"></script>
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Crate <a class="mod" href=''>derive_new</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../src/derive_new/lib.rs.html#1-432' title='goto source code'>[src]</a></span></h1><div class='docblock'><h1 id="a-custom-derive-implementation-for-derivenew" class="section-header"><a href="#a-custom-derive-implementation-for-derivenew">A custom derive implementation for <code>#[derive(new)]</code></a></h1>
+<p>A <code>derive(new)</code> attribute creates a <code>new</code> constructor function for the annotated
+type. That function takes an argument for each field in the type giving a
+trivial constructor. This is useful since as your type evolves you can make the
+constructor non-trivial (and add or remove fields) without changing client code
+(i.e., without breaking backwards compatibility). It is also the most succinct
+way to initialise a struct or an enum.</p>
+<p>Implementation uses macros 1.1 custom derive (which works in stable Rust from
+1.15 onwards).</p>
+<h2 id="examples" class="section-header"><a href="#examples">Examples</a></h2>
+<p>Cargo.toml:</p>
+<pre><code class="language-toml">[dependencies]
+derive-new = &quot;0.5&quot;
+</code></pre>
+<p>Include the macro:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="attribute">#[<span class="ident">macro_use</span>]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">derive_new</span>;
+<span class="kw">fn</span> <span class="ident">main</span>() {}</pre>
+<p>Generating constructor for a simple struct:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="attribute">#[<span class="ident">macro_use</span>]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">derive_new</span>;
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">new</span>)]</span>
+<span class="kw">struct</span> <span class="ident">Bar</span> {
+    <span class="ident">a</span>: <span class="ident">i32</span>,
+    <span class="ident">b</span>: <span class="ident">String</span>,
+}
+
+<span class="kw">fn</span> <span class="ident">main</span>() {
+  <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">Bar</span>::<span class="ident">new</span>(<span class="number">42</span>, <span class="string">&quot;Hello&quot;</span>.<span class="ident">to_owned</span>());
+}</pre>
+<p>Default values can be specified either via <code>#[new(default)]</code> attribute which removes
+the argument from the constructor and populates the field with <code>Default::default()</code>,
+or via <code>#[new(value = &quot;..&quot;)]</code> which initializes the field with a given expression:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="attribute">#[<span class="ident">macro_use</span>]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">derive_new</span>;
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">new</span>)]</span>
+<span class="kw">struct</span> <span class="ident">Foo</span> {
+    <span class="ident">x</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[<span class="ident">new</span>(<span class="ident">value</span> <span class="op">=</span> <span class="string">&quot;42&quot;</span>)]</span>
+    <span class="ident">y</span>: <span class="ident">i32</span>,
+    <span class="attribute">#[<span class="ident">new</span>(<span class="ident">default</span>)]</span>
+    <span class="ident">z</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">fn</span> <span class="ident">main</span>() {
+  <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">Foo</span>::<span class="ident">new</span>(<span class="bool-val">true</span>);
+}</pre>
+<p>Generic types are supported; in particular, <code>PhantomData&lt;T&gt;</code> fields will be not
+included in the argument list and will be intialized automatically:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="attribute">#[<span class="ident">macro_use</span>]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">derive_new</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span>;
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">new</span>)]</span>
+<span class="kw">struct</span> <span class="ident">Generic</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">Default</span>, <span class="ident">P</span><span class="op">&gt;</span> {
+    <span class="ident">x</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>,
+    <span class="ident">y</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">new</span>(<span class="ident">default</span>)]</span>
+    <span class="ident">z</span>: <span class="ident">T</span>,
+}
+
+<span class="kw">fn</span> <span class="ident">main</span>() {
+  <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">Generic</span>::<span class="op">&lt;</span><span class="ident">i32</span>, <span class="ident">u8</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="string">&quot;Hello&quot;</span>);
+}</pre>
+<p>For enums, one constructor method is generated for each variant, with the type
+name being converted to snake case; otherwise, all features supported for
+structs work for enum variants as well:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="attribute">#[<span class="ident">macro_use</span>]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">derive_new</span>;
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">new</span>)]</span>
+<span class="kw">enum</span> <span class="ident">Enum</span> {
+    <span class="ident">FirstVariant</span>,
+    <span class="ident">SecondVariant</span>(<span class="ident">bool</span>, <span class="attribute">#[<span class="ident">new</span>(<span class="ident">default</span>)]</span> <span class="ident">u8</span>),
+    <span class="ident">ThirdVariant</span> { <span class="ident">x</span>: <span class="ident">i32</span>, <span class="attribute">#[<span class="ident">new</span>(<span class="ident">value</span> <span class="op">=</span> <span class="string">&quot;vec![1]&quot;</span>)]</span> <span class="ident">y</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> }
+}
+
+<span class="kw">fn</span> <span class="ident">main</span>() {
+  <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">Enum</span>::<span class="ident">new_first_variant</span>();
+  <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">Enum</span>::<span class="ident">new_second_variant</span>(<span class="bool-val">true</span>);
+  <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">Enum</span>::<span class="ident">new_third_variant</span>(<span class="number">42</span>);
+}</pre>
+</div><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.derive.html"
+                                  title='fn derive_new::derive'>derive</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt><kbd>?</kbd></dt>
+                    <dd>Show this help dialog</dd>
+                    <dt><kbd>S</kbd></dt>
+                    <dd>Focus the search field</dd>
+                    <dt><kbd>↑</kbd></dt>
+                    <dd>Move up in search results</dd>
+                    <dt><kbd>↓</kbd></dt>
+                    <dd>Move down in search results</dd>
+                    <dt><kbd>↹</kbd></dt>
+                    <dd>Switch tab</dd>
+                    <dt><kbd>&#9166;</kbd></dt>
+                    <dd>Go to active search result</dd>
+                    <dt><kbd>+</kbd></dt>
+                    <dd>Expand all sections</dd>
+                    <dt><kbd>-</kbd></dt>
+                    <dd>Collapse all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "derive_new";
+    </script>
+    <script src="../main.js"></script>
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

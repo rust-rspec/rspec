@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Configuration","A Runner's configuration."],["ConfigurationBuilder","Builder for `Configuration`."],["Runner","Runner for executing a test suite's examples."]],"trait":[["RunnerObserver","`RunnerObserver`s can be attached to a `Runner` to observe a"]]});
