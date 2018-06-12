@@ -55,7 +55,6 @@ pub fn main() {
 
         // or make use of sub-contexts to add some structure to your test suite:
         ctx.specify("contexts give your tests structure and reduce redundancy", |ctx| {
-
             ctx.before(|_| {
                 // Executed once, before any of the contexts/examples is entered.
             });
@@ -69,20 +68,19 @@ pub fn main() {
                 ctx.it("failes if the return is_err()", |_| Err(()) as Result<(),()>);
             });
 
-            ctx.describe("rspec can handle bools", |ctx| {
+            ctx.specify("rspec can handle bools", |ctx| {
                 ctx.it("should pass if true", |_| true);
                 ctx.it("should fail if false", |_| false);
                 ctx.it("is convenient for comparisons", |_| (42 % 37 + 2) > 3);
             });
 
-            ctx.describe("rspec can handle units", |ctx| {
+            ctx.specify("rspec can handle units", |ctx| {
                 ctx.it("should pass if the return is ()", |_| {});
             });
 
-            ctx.describe("rspec can handle panics", |ctx| {
+            ctx.specify("rspec can handle panics", |ctx| {
                 ctx.it("is convenient for asserts", |_| assert_eq!(1, 1));
             });
-
         });
     })); // exits the process with a failure code if one of the tests failed.
 }
