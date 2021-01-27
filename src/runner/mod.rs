@@ -31,12 +31,12 @@ use visitor::TestSuiteVisitor;
 /// Runner for executing a test suite's examples.
 pub struct Runner {
     pub configuration: configuration::Configuration,
-    observers: Vec<Arc<RunnerObserver>>,
+    observers: Vec<Arc<dyn RunnerObserver>>,
     should_exit: Mutex<Cell<bool>>,
 }
 
 impl Runner {
-    pub fn new(configuration: Configuration, observers: Vec<Arc<RunnerObserver>>) -> Runner {
+    pub fn new(configuration: Configuration, observers: Vec<Arc<dyn RunnerObserver>>) -> Runner {
         Runner {
             configuration: configuration,
             observers: observers,
@@ -62,7 +62,7 @@ impl Runner {
 
     fn broadcast<F>(&self, mut handler: F)
     where
-        F: FnMut(&RunnerObserver),
+        F: FnMut(&dyn RunnerObserver),
     {
         for observer in &self.observers {
             handler(observer.borrow());

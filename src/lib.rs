@@ -56,8 +56,6 @@ where
     use std::io;
     use std::sync::Arc;
 
-    use logger::Logger;
-    use runner::{ConfigurationBuilder, Runner};
 
     let logger = Arc::new(Logger::new(io::stdout()));
     let configuration = ConfigurationBuilder::default().build().unwrap();

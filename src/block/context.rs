@@ -16,10 +16,10 @@ use report::ExampleResult;
 pub struct Context<T> {
     pub(crate) header: Option<ContextHeader>,
     pub(crate) blocks: Vec<Block<T>>,
-    pub(crate) before_all: Vec<Box<Fn(&mut T)>>,
-    pub(crate) before_each: Vec<Box<Fn(&mut T)>>,
-    pub(crate) after_all: Vec<Box<Fn(&mut T)>>,
-    pub(crate) after_each: Vec<Box<Fn(&mut T)>>,
+    pub(crate) before_all: Vec<Box<dyn Fn(&mut T)>>,
+    pub(crate) before_each: Vec<Box<dyn Fn(&mut T)>>,
+    pub(crate) after_all: Vec<Box<dyn Fn(&mut T)>>,
+    pub(crate) after_each: Vec<Box<dyn Fn(&mut T)>>,
 }
 
 impl<T> Context<T> {
