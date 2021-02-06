@@ -29,15 +29,15 @@ optional = true
 version = "0.0.153"
 
 [dependencies]
-colored = "1.4.0"
-derive-new = "0.5.0"
-derive_builder = "0.5.0"
-rayon = "0.8.2"
-time = "0.1.38"
+colored = "2.0"
+derive-new = "0.5"
+derive_builder = "0.9"
+rayon = "1.5"
+time = "0.2"
 
 [dependencies.expectest]
 optional = true
-version = "0.9.1"
+version = "0.12"
 
 [features]
 default = []
