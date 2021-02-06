@@ -1,8 +1,8 @@
 //! Blocks are used to build a tree structure of named tests and contextes.
 
-mod context;
-mod example;
-mod suite;
+pub mod context;
+pub mod example;
+pub mod suite;
 
 pub use block::context::*;
 pub use block::example::*;
