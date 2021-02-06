@@ -11,9 +11,6 @@ a gently beginner introduction, [please go to the Beginner Section](#beginners).
 The last stable documentation is available for consultation at
 [docs.rs/rspec](https://docs.rs/rspec).
 
-**All rspec releases are garanteed to compile against the latest stable rust and
-are tested on all rust versions from the 1.19**.
-
 ## How to use
 
 Add this in your `Cargo.toml`:
@@ -31,7 +28,6 @@ extern crate rspec;
 ```
 
 You can see complete examples in the [`examples/`](https://github.com/rust-rspec/rspec/tree/master/examples) directory.
-
 
 ```rust
 extern crate rspec;
@@ -90,11 +86,11 @@ pub fn main() {
 
 rspec provides three variants for each of the structural elements:
 
-|           | Variant A  | Variant B  | Variant C  |
-|-----------|------------|------------|------------|
-| Suites:   | `suite`    | `describe` | `given`    |
-| Contexts: | `context`  | `specify`  | `when`     |
-| Examples: | `example`  | `it`       | `then`     |
+|           | Variant A | Variant B  | Variant C |
+| --------- | --------- | ---------- | --------- |
+| Suites:   | `suite`   | `describe` | `given`   |
+| Contexts: | `context` | `specify`  | `when`    |
+| Examples: | `example` | `it`       | `then`    |
 
 **Note:** While the intended use is to stick to a single variant per test suite
 it is possible to freely mix structural elements across variants.
@@ -132,7 +128,7 @@ runner.run(&rspec::given("opens a suite", /* environment */, |ctx| {
 ### Before & After
 
 |         | All                   | Each          |
-|---------|-----------------------|---------------|
+| ------- | --------------------- | ------------- |
 | Before: | `before`/`before_all` | `before_each` |
 | After:  | `after` /`after_all`  | `after_each`  |
 
@@ -259,6 +255,7 @@ story...](https://msdn.microsoft.com/en-us/magazine/dd419654.aspx).
 Mozilla Public Licence 2.0. See the LICENCE file at the root of the repository.
 
 In non legal terms it means that:
+
 - if you fix a bug, you MUST give back the code of the fix (it's only fair, see
   the [Contributing Section](#contributions)).
 - if you change/extend the API, you MUST give back the code you changed in the
