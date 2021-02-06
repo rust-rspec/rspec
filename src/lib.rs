@@ -1,8 +1,6 @@
 #![doc(html_root_url = "https://mackwic.github.io/rspec")]
-
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
 #![allow(dead_code)]
 
 #[macro_use]
@@ -11,21 +9,21 @@ extern crate derive_builder;
 #[macro_use]
 extern crate derive_new;
 
+extern crate colored;
 #[cfg(feature = "expectest_compat")]
 extern crate expectest;
-extern crate time;
-extern crate colored;
 extern crate rayon;
+extern crate time;
 
 pub mod block;
 pub mod header;
+pub mod logger;
 pub mod report;
 pub mod runner;
-pub mod logger;
 
 mod visitor;
 
-pub use block::{suite, describe, given};
+pub use block::{describe, given, suite};
 pub use logger::Logger;
 pub use runner::{Configuration, ConfigurationBuilder, Runner};
 
@@ -55,9 +53,6 @@ where
 {
     use std::io;
     use std::sync::Arc;
-
-    use logger::Logger;
-    use runner::{ConfigurationBuilder, Runner};
 
     let logger = Arc::new(Logger::new(io::stdout()));
     let configuration = ConfigurationBuilder::default().build().unwrap();

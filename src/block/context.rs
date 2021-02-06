@@ -9,23 +9,23 @@
 //!
 
 use block::{Block, Example};
-use header::{ContextLabel, ContextHeader, ExampleLabel, ExampleHeader};
+use header::{ContextHeader, ContextLabel, ExampleHeader, ExampleLabel};
 use report::ExampleResult;
 
 /// Test contexts are a convenient tool for adding structure and code sharing to a test suite.
 pub struct Context<T> {
     pub(crate) header: Option<ContextHeader>,
     pub(crate) blocks: Vec<Block<T>>,
-    pub(crate) before_all: Vec<Box<Fn(&mut T)>>,
-    pub(crate) before_each: Vec<Box<Fn(&mut T)>>,
-    pub(crate) after_all: Vec<Box<Fn(&mut T)>>,
-    pub(crate) after_each: Vec<Box<Fn(&mut T)>>,
+    pub(crate) before_all: Vec<Box<dyn Fn(&mut T)>>,
+    pub(crate) before_each: Vec<Box<dyn Fn(&mut T)>>,
+    pub(crate) after_all: Vec<Box<dyn Fn(&mut T)>>,
+    pub(crate) after_each: Vec<Box<dyn Fn(&mut T)>>,
 }
 
 impl<T> Context<T> {
     pub(crate) fn new(header: Option<ContextHeader>) -> Self {
         Context {
-            header: header,
+            header,
             blocks: vec![],
             before_all: vec![],
             before_each: vec![],
@@ -48,18 +48,10 @@ impl<T> Context<T> {
 }
 
 // Both `Send` and `Sync` are necessary for parallel threaded execution.
-unsafe impl<T> Send for Context<T>
-where
-    T: Send,
-{
-}
+unsafe impl<T> Send for Context<T> where T: Send {}
 
 // Both `Send` and `Sync` are necessary for parallel threaded execution.
-unsafe impl<T> Sync for Context<T>
-where
-    T: Sync,
-{
-}
+unsafe impl<T> Sync for Context<T> where T: Sync {}
 
 impl<T> Context<T>
 where
@@ -92,7 +84,7 @@ where
     ///
     /// Corresponding console output:
     ///
-    /// ```no-run
+    /// ```text
     /// tests:
     /// Suite "a test suite":
     ///     Context "opens a sub-context":
@@ -103,14 +95,14 @@ where
     ///
     /// - [`specify`](struct.Context.html#method.specify).
     /// - [`when`](struct.Context.html#method.when).
-    pub fn context<'a, F>(&mut self, name: &'static str, body: F)
+    pub fn context<F>(&mut self, name: &'static str, body: F)
     where
-        F: FnOnce(&mut Context<T>) -> (),
+        F: FnOnce(&mut Context<T>),
         T: ::std::fmt::Debug,
     {
         let header = ContextHeader {
             label: ContextLabel::Context,
-            name: name,
+            name,
         };
         self.context_internal(Some(header), body)
     }
@@ -120,14 +112,14 @@ where
     /// Available further aliases:
     ///
     /// - [`when`](struct.Context.html#method.when).
-    pub fn specify<'a, F>(&mut self, name: &'static str, body: F)
+    pub fn specify<F>(&mut self, name: &'static str, body: F)
     where
-        F: FnOnce(&mut Context<T>) -> (),
+        F: FnOnce(&mut Context<T>),
         T: ::std::fmt::Debug,
     {
         let header = ContextHeader {
             label: ContextLabel::Specify,
-            name: name,
+            name,
         };
         self.context_internal(Some(header), body)
     }
@@ -137,14 +129,14 @@ where
     /// Available further aliases:
     ///
     /// - [`specify`](struct.Context.html#method.specify).
-    pub fn when<'b, F>(&mut self, name: &'static str, body: F)
+    pub fn when<F>(&mut self, name: &'static str, body: F)
     where
-        F: FnOnce(&mut Context<T>) -> (),
+        F: FnOnce(&mut Context<T>),
         T: ::std::fmt::Debug,
     {
         let header = ContextHeader {
             label: ContextLabel::When,
-            name: name,
+            name,
         };
         self.context_internal(Some(header), body)
     }
@@ -183,7 +175,7 @@ where
     ///
     /// Corresponding console output:
     ///
-    /// ```no-run
+    /// ```text
     /// tests:
     /// Suite "a suite":
     ///     Context "a context":
@@ -194,7 +186,7 @@ where
     /// but not before `'It "tests c"'`.
     pub fn scope<F>(&mut self, body: F)
     where
-        F: FnOnce(&mut Context<T>) -> (),
+        F: FnOnce(&mut Context<T>),
         T: ::std::fmt::Debug,
     {
         self.context_internal(None, body)
@@ -202,7 +194,7 @@ where
 
     fn context_internal<F>(&mut self, header: Option<ContextHeader>, body: F)
     where
-        F: FnOnce(&mut Context<T>) -> (),
+        F: FnOnce(&mut Context<T>),
         T: ::std::fmt::Debug,
     {
         let mut child = Context::new(header);
@@ -237,7 +229,7 @@ where
     ///
     /// Corresponding console output:
     ///
-    /// ```no-run
+    /// ```text
     /// tests:
     /// Suite "a test suite":
     ///     Example "an example":
@@ -301,9 +293,9 @@ where
                     let error_as_str = error.downcast_ref::<&str>().map(|s| Cow::from(*s));
                     let error_as_string =
                         error.downcast_ref::<String>().map(|s| Cow::from(s.clone()));
-                    let message = error_as_str.or(error_as_string).map(|cow| {
-                        format!("thread panicked at '{:?}'.", cow.to_string())
-                    });
+                    let message = error_as_str
+                        .or(error_as_string)
+                        .map(|cow| format!("thread panicked at '{:?}'.", cow.to_string()));
                     ExampleResult::Failure(message)
                 }
             }
@@ -347,7 +339,7 @@ where
     ///
     /// Corresponding console output:
     ///
-    /// ```no-run
+    /// ```text
     /// tests:
     /// Suite "a test suite":
     ///     Example "an example":
@@ -410,7 +402,7 @@ where
     ///
     /// Corresponding console output:
     ///
-    /// ```no-run
+    /// ```text
     /// tests:
     /// Suite "a test suite":
     ///     Example "an example":
@@ -461,7 +453,7 @@ where
     ///
     /// Corresponding console output:
     ///
-    /// ```no-run
+    /// ```text
     /// tests:
     /// Suite "a test suite":
     ///     Example "an example":
@@ -524,7 +516,7 @@ where
     ///
     /// Corresponding console output:
     ///
-    /// ```no-run
+    /// ```text
     /// tests:
     /// Suite "a test suite":
     ///     Example "an example":
@@ -550,12 +542,12 @@ impl<T> Default for Context<T> {
 
 #[cfg(test)]
 mod tests {
-    use block::{suite, describe, given};
+    use block::{describe, given, suite};
 
     macro_rules! test_suite_alias {
         ($suite: ident) => {
             $suite("suite (or alias)", (), |_| {});
-        }
+        };
     }
 
     #[test]
@@ -570,7 +562,7 @@ mod tests {
             $suite("suite (or alias)", (), |ctx| {
                 ctx.$context("context (or alias)", |_| {})
             });
-        }
+        };
     }
 
     #[test]
@@ -598,12 +590,10 @@ mod tests {
         ($suite: ident, $context: ident, $example: ident) => {
             $suite("suite (or alias)", (), |ctx| {
                 ctx.$context("context (or alias)", |ctx| {
-                    ctx.$example("example (or alias)", |_| {
-
-                    });
+                    ctx.$example("example (or alias)", |_| {});
                 });
             });
-        }
+        };
     }
 
     #[test]

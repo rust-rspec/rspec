@@ -1,13 +1,13 @@
 use std::io;
-use std::sync::Mutex;
 use std::ops::DerefMut;
+use std::sync::Mutex;
 
 use time::Duration;
 
 use colored::*;
 
-use header::{SuiteHeader, ContextHeader, ExampleHeader};
-use report::{Report, BlockReport, SuiteReport, ContextReport, ExampleReport, ExampleResult};
+use header::{ContextHeader, ExampleHeader, SuiteHeader};
+use report::{BlockReport, ContextReport, ExampleReport, ExampleResult, Report, SuiteReport};
 use runner::{Runner, RunnerObserver};
 
 #[derive(new)]
@@ -32,7 +32,9 @@ impl Default for SerialLogger<io::Stdout> {
 impl<T: io::Write> SerialLogger<T> {
     pub fn new(buffer: T) -> Self {
         let state = SerialLoggerState::new(buffer);
-        SerialLogger { state: Mutex::new(state) }
+        SerialLogger {
+            state: Mutex::new(state),
+        }
     }
 
     fn padding(depth: usize) -> String {
@@ -84,13 +86,13 @@ impl<T: io::Write> SerialLogger<T> {
     ) -> io::Result<()> {
         if report.is_failure() {
             match report {
-                &BlockReport::Context(ref header, ref report) => {
+                BlockReport::Context(ref header, ref report) => {
                     if let Some(header) = header.as_ref() {
                         write!(buffer, "{}{}", Self::padding(indent), header)?;
                     }
                     self.write_context_failures(buffer, indent + 1, report)?;
                 }
-                &BlockReport::Example(ref header, ref report) => {
+                BlockReport::Example(ref header, ref report) => {
                     writeln!(buffer, "{}{}", Self::padding(indent), header)?;
                     self.write_example_failure(buffer, indent + 1, report)?;
                 }
@@ -121,7 +123,7 @@ impl<T: io::Write> SerialLogger<T> {
         indent: usize,
         report: &ExampleReport,
     ) -> io::Result<()> {
-        if let &ExampleResult::Failure(Some(ref reason)) = report.get_result() {
+        if let ExampleResult::Failure(Some(ref reason)) = report.get_result() {
             let padding = Self::padding(indent);
             writeln!(buffer, "{}{}", padding, reason)?;
         }
@@ -156,22 +158,22 @@ impl<T: io::Write> SerialLogger<T> {
 
     fn write_duration(&self, buffer: &mut T, duration: Duration) -> io::Result<()> {
         let millisecond = 1;
-    	let second = 1000 * millisecond;
-    	let minute = 60 * second;
-    	let hour   = 60 * minute;
+        let second = 1000 * millisecond;
+        let minute = 60 * second;
+        let hour = 60 * minute;
 
-    	let remainder = duration.num_milliseconds();
+        let remainder = duration.whole_milliseconds();
 
-    	let hours = remainder / hour;
-    	let remainder = remainder % hour;
+        let hours = remainder / hour;
+        let remainder = remainder % hour;
 
-    	let minutes = remainder / minute;
-    	let remainder = remainder % minute;
+        let minutes = remainder / minute;
+        let remainder = remainder % minute;
 
-    	let seconds = remainder / second;
-    	let remainder = remainder % second;
+        let seconds = remainder / second;
+        let remainder = remainder % second;
 
-    	let milliseconds = remainder / millisecond;
+        let milliseconds = remainder / millisecond;
         match (hours, minutes, seconds, milliseconds) {
             (0, 0, s, ms) => writeln!(buffer, "\nduration: {}.{:03}s.", s, ms),
             (0, m, s, ms) => writeln!(buffer, "\nduration: {}m {}.{:03}s.", m, s, ms),
@@ -199,12 +201,7 @@ where
         self.access_state(|state| {
             state.level += 1;
             self.write_suite_prefix(&mut state.buffer)?;
-            writeln!(
-                state.buffer,
-                "{}{}",
-                Self::padding(state.level - 1),
-                header
-            )?;
+            writeln!(state.buffer, "{}{}", Self::padding(state.level - 1), header)?;
 
             Ok(())
         });
@@ -224,12 +221,7 @@ where
     fn enter_context(&self, _runner: &Runner, header: &ContextHeader) {
         self.access_state(|state| {
             state.level += 1;
-            writeln!(
-                state.buffer,
-                "{}{}",
-                Self::padding(state.level - 1),
-                header
-            )?;
+            writeln!(state.buffer, "{}{}", Self::padding(state.level - 1), header)?;
 
             Ok(())
         });
@@ -277,12 +269,7 @@ mod tests {
         #[test]
         fn it_padds() {
             // arrange
-            let expected = vec![
-                ("", 0),
-                ("  ", 1),
-                ("    ", 2),
-                ("      ", 3)
-            ];
+            let expected = vec![("", 0), ("  ", 1), ("    ", 2), ("      ", 3)];
             for (expected_res, given_depth) in expected {
                 // act
                 let res = SerialLogger::<Vec<u8>>::padding(given_depth);

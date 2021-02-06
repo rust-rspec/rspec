@@ -11,9 +11,9 @@ pub enum ExampleLabel {
 impl fmt::Display for ExampleLabel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &ExampleLabel::It => write!(f, "It"),
-            &ExampleLabel::Example => write!(f, "Example"),
-            &ExampleLabel::Then => write!(f, "Then"),
+            ExampleLabel::It => write!(f, "It"),
+            ExampleLabel::Example => write!(f, "Example"),
+            ExampleLabel::Then => write!(f, "Then"),
         }
     }
 }

@@ -1,7 +1,7 @@
 use time::Duration;
 
 use header::SuiteHeader;
-use report::{Report, ContextReport};
+use report::{ContextReport, Report};
 
 /// `SuiteReport` holds the results of a context suite's test execution.
 #[derive(PartialEq, Eq, Clone, Debug, new)]

@@ -1,10 +1,10 @@
-use report::ExampleResult;
 use header::ExampleHeader;
+use report::ExampleResult;
 
 /// Test examples are the smallest unit of a testing framework, wrapping one or more assertions.
 pub struct Example<T> {
     pub(crate) header: ExampleHeader,
-    pub(crate) function: Box<Fn(&T) -> ExampleResult>,
+    pub(crate) function: Box<dyn Fn(&T) -> ExampleResult>,
 }
 
 impl<T> Example<T> {
@@ -13,7 +13,7 @@ impl<T> Example<T> {
         F: 'static + Fn(&T) -> ExampleResult,
     {
         Example {
-            header: header,
+            header,
             function: Box::new(assertion),
         }
     }
@@ -37,13 +37,5 @@ impl<T> Example<T> {
     }
 }
 
-unsafe impl<T> Send for Example<T>
-where
-    T: Send,
-{
-}
-unsafe impl<T> Sync for Example<T>
-where
-    T: Sync,
-{
-}
+unsafe impl<T> Send for Example<T> where T: Send {}
+unsafe impl<T> Sync for Example<T> where T: Sync {}

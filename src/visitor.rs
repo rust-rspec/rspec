@@ -1,4 +1,3 @@
-
 pub(crate) trait TestSuiteVisitor<T> {
     type Environment;
     type Output;

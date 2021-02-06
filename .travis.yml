@@ -3,33 +3,32 @@ language: rust
 addons:
   apt:
     packages:
-    - libcurl4-openssl-dev
-    - libelf-dev
-    - libdw-dev
-    - binutils-dev
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - binutils-dev
 rust:
-- nightly
-- beta
-- stable
-- 1.19.0
+  - nightly
+  - beta
+  - stable
 matrix:
   allow_failures:
-  - rust: nightly
-  - rust: beta
+    - rust: nightly
+    - rust: beta
 before_script:
-- |
-  pip install 'travis-cargo<0.2' --user &&
-  export PATH=$HOME/.local/bin:$PATH
+  - |
+    pip install 'travis-cargo<0.2' --user &&
+    export PATH=$HOME/.local/bin:$PATH
 script:
-- |
-  travis-cargo build &&
-  travis-cargo test &&
-  travis-cargo bench &&
-  travis-cargo --only stable doc
+  - |
+    travis-cargo build &&
+    travis-cargo test &&
+    travis-cargo bench &&
+    travis-cargo --only stable doc
 after_success:
-- travis-cargo --only stable doc-upload
-- travis-cargo coveralls --no-sudo --verify
+  - travis-cargo --only stable doc-upload
+  - travis-cargo coveralls --no-sudo --verify
 env:
   global:
-  - TRAVIS_CARGO_NIGHTLY_FEATURE=clippy
-  - secure: y5nerEobHN6w+QKBfP+ks5PsqDMGWFacxk3+HN/iPwqN7tcg0j72iq7/TaYEQUYtsmTuX6ifFuxpMZNsI6mNmjF0Cb8XQdUsS+mocAadjje+tavzKY2eGPmozRisCEJeybIJEnSUC4jwwdJS+pwXgIbri2bWGssi4Nc+9ojdeA15tL6Zyy079wv978Ucp+oj6XSRXq1PXqZ+CRP+kU2AGBWCPbhW03TFn4y1Sn4RvSQEXHtcHBef1F6Z+MIyn7gLK1rX0R+FgJe+XqO08rwefaIgXJP99hDESxQS1BqJD2fW9oLed0ITyA1pE6k5qTpLhiF73alVDSIaxLNiIXINg62pmZEFJ7yy+A8nwiEW2Qc0oq3TZwLW94GifADVgBRgRjbYidGz8UvTaYxfdJapvuMD0GmOEZuXFPA3E0jTmjBlClgtQircVbl9XgOVbBCrjmyihJ/wkjCVLRuoSj/+2T1zsZmLqRkhKj0dDPZSPVcmaWSzJkevEYXyi5aglnRC2nssf5kgZ3ctUh4/APFRvt2QnVVowIYi9fLEW/bUxxD5BGzMsP9yrM1KECbdFPob3g1LOZN4VwPJIDp1vbdW0/Wim/akR2Mujxm0L9+oSaB6taWUq5NYTl2vfFmOa6xJonpsgZpFanxSxyiBjXlBVeVC6hiHnjD12nAXONFmLJE=
+    - TRAVIS_CARGO_NIGHTLY_FEATURE=clippy
+    - secure: y5nerEobHN6w+QKBfP+ks5PsqDMGWFacxk3+HN/iPwqN7tcg0j72iq7/TaYEQUYtsmTuX6ifFuxpMZNsI6mNmjF0Cb8XQdUsS+mocAadjje+tavzKY2eGPmozRisCEJeybIJEnSUC4jwwdJS+pwXgIbri2bWGssi4Nc+9ojdeA15tL6Zyy079wv978Ucp+oj6XSRXq1PXqZ+CRP+kU2AGBWCPbhW03TFn4y1Sn4RvSQEXHtcHBef1F6Z+MIyn7gLK1rX0R+FgJe+XqO08rwefaIgXJP99hDESxQS1BqJD2fW9oLed0ITyA1pE6k5qTpLhiF73alVDSIaxLNiIXINg62pmZEFJ7yy+A8nwiEW2Qc0oq3TZwLW94GifADVgBRgRjbYidGz8UvTaYxfdJapvuMD0GmOEZuXFPA3E0jTmjBlClgtQircVbl9XgOVbBCrjmyihJ/wkjCVLRuoSj/+2T1zsZmLqRkhKj0dDPZSPVcmaWSzJkevEYXyi5aglnRC2nssf5kgZ3ctUh4/APFRvt2QnVVowIYi9fLEW/bUxxD5BGzMsP9yrM1KECbdFPob3g1LOZN4VwPJIDp1vbdW0/Wim/akR2Mujxm0L9+oSaB6taWUq5NYTl2vfFmOa6xJonpsgZpFanxSxyiBjXlBVeVC6hiHnjD12nAXONFmLJE=
