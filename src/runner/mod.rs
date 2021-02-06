@@ -14,32 +14,32 @@ use std::panic;
 use std::process;
 use std::sync::{Arc, Mutex};
 
-use time::PreciseTime;
+use time::Instant;
 
 use rayon::prelude::*;
 
 use block::Block;
-use block::Suite;
 use block::Context;
 use block::Example;
-use report::{Report, BlockReport};
+use block::Suite;
 use report::ContextReport;
-use report::SuiteReport;
 use report::ExampleReport;
+use report::SuiteReport;
+use report::{BlockReport, Report};
 use visitor::TestSuiteVisitor;
 
 /// Runner for executing a test suite's examples.
 pub struct Runner {
     pub configuration: configuration::Configuration,
-    observers: Vec<Arc<RunnerObserver>>,
+    observers: Vec<Arc<dyn RunnerObserver>>,
     should_exit: Mutex<Cell<bool>>,
 }
 
 impl Runner {
-    pub fn new(configuration: Configuration, observers: Vec<Arc<RunnerObserver>>) -> Runner {
+    pub fn new(configuration: Configuration, observers: Vec<Arc<dyn RunnerObserver>>) -> Runner {
         Runner {
-            configuration: configuration,
-            observers: observers,
+            configuration,
+            observers,
             should_exit: Mutex::new(Cell::new(false)),
         }
     }
@@ -62,7 +62,7 @@ impl Runner {
 
     fn broadcast<F>(&self, mut handler: F)
     where
-        F: FnMut(&RunnerObserver),
+        F: FnMut(&dyn RunnerObserver),
     {
         for observer in &self.observers {
             handler(observer.borrow());
@@ -150,7 +150,7 @@ impl Runner {
 impl Default for Runner {
     /// Used for testing
     fn default() -> Self {
-        Runner::new(Configuration::default(), vec!())
+        Runner::new(Configuration::default(), vec![])
     }
 }
 
@@ -177,7 +177,6 @@ impl Drop for Runner {
         }
     }
 }
-
 
 impl<T> TestSuiteVisitor<Suite<T>> for Runner
 where
@@ -206,12 +205,12 @@ where
 
     fn visit(&self, member: &Block<T>, environment: &mut Self::Environment) -> Self::Output {
         match member {
-            &Block::Example(ref example) => {
+            Block::Example(ref example) => {
                 let header = example.header.clone();
                 let report = self.visit(example, environment);
                 BlockReport::Example(header, report)
             }
-            &Block::Context(ref context) => {
+            Block::Context(ref context) => {
                 let header = context.header.clone();
                 let report = self.visit(context, &mut environment.clone());
                 BlockReport::Context(header, report)
@@ -231,17 +230,17 @@ where
         if let Some(ref header) = context.header {
             self.broadcast(|handler| handler.enter_context(self, &header));
         }
-        let start_time = PreciseTime::now();
-        let reports: Vec<_> =
-            self.wrap_all(context, environment, |environment| if self.configuration
-                .parallel
-            {
+        let start_time = Instant::now();
+        let reports: Vec<_> = self.wrap_all(context, environment, |environment| {
+            if self.configuration.parallel {
                 self.evaluate_blocks_parallel(context, environment)
             } else {
                 self.evaluate_blocks_serial(context, environment)
-            });
-        let end_time = PreciseTime::now();
-        let report = ContextReport::new(reports, start_time.to(end_time));
+            }
+        });
+        let end_time = Instant::now();
+        let elapsed_time = end_time - start_time;
+        let report = ContextReport::new(reports, elapsed_time);
         if let Some(ref header) = context.header {
             self.broadcast(|handler| handler.exit_context(self, &header, &report));
         }
@@ -258,10 +257,11 @@ where
 
     fn visit(&self, example: &Example<T>, environment: &mut Self::Environment) -> Self::Output {
         self.broadcast(|handler| handler.enter_example(self, &example.header));
-        let start_time = PreciseTime::now();
+        let start_time = Instant::now();
         let result = (example.function)(environment);
-        let end_time = PreciseTime::now();
-        let report = ExampleReport::new(result, start_time.to(end_time));
+        let end_time = Instant::now();
+        let elapsed_time = end_time - start_time;
+        let report = ExampleReport::new(result, elapsed_time);
         self.broadcast(|handler| handler.exit_example(self, &example.header, &report));
         report
     }
@@ -277,7 +277,7 @@ mod tests {
         #[test]
         fn it_can_be_instanciated() {
             // arrange
-            let _ = Runner::new(Configuration::default(), vec!());
+            let _ = Runner::new(Configuration::default(), vec![]);
             // act
             // assert
         }
@@ -295,7 +295,7 @@ mod tests {
             fn it_calls_the_closure() {
                 // arrange
                 let spy = Arc::new(());
-                let runner = Runner::new(Configuration::default(), vec!(spy));
+                let runner = Runner::new(Configuration::default(), vec![spy]);
                 let has_been_called = AtomicBool::new(false);
                 // act
                 runner.broadcast(|_| has_been_called.store(true, Ordering::SeqCst));
@@ -311,7 +311,9 @@ mod tests {
                 let runner = Runner::new(Configuration::default(), vec![spy1, spy2]);
                 let call_times = AtomicUsize::new(0);
                 // act
-                runner.broadcast(|_| { call_times.fetch_add(1, Ordering::SeqCst); });
+                runner.broadcast(|_| {
+                    call_times.fetch_add(1, Ordering::SeqCst);
+                });
                 // assert
                 assert_eq!(2, call_times.load(Ordering::SeqCst))
             }
@@ -321,7 +323,9 @@ mod tests {
             }
             impl ObserverStub {
                 fn new() -> Self {
-                    ObserverStub { events: Mutex::new(vec!()) }
+                    ObserverStub {
+                        events: Mutex::new(vec![]),
+                    }
                 }
             }
 
@@ -368,7 +372,9 @@ mod tests {
                 let runner = Runner::default();
                 let has_been_called = AtomicBool::new(false);
                 // act
-                runner.wrap_each(&Context::default(), &mut (), |_| has_been_called.store(true, Ordering::SeqCst));
+                runner.wrap_each(&Context::default(), &mut (), |_| {
+                    has_been_called.store(true, Ordering::SeqCst)
+                });
                 // assert
                 assert_eq!(true, has_been_called.load(Ordering::SeqCst));
             }
@@ -410,8 +416,12 @@ mod tests {
                 let closure_counter_handler2 = call_counter.clone();
                 let mut context = Context::default();
                 // act
-                context.before_each(move |_| { closure_counter_handler1.fetch_add(1, Ordering::SeqCst); });
-                context.before_each(move |_| { closure_counter_handler2.fetch_add(1, Ordering::SeqCst); });
+                context.before_each(move |_| {
+                    closure_counter_handler1.fetch_add(1, Ordering::SeqCst);
+                });
+                context.before_each(move |_| {
+                    closure_counter_handler2.fetch_add(1, Ordering::SeqCst);
+                });
                 runner.wrap_each(&context, &mut (), |_| ());
                 // assert
                 assert_eq!(2, call_counter.load(Ordering::SeqCst));
@@ -426,8 +436,12 @@ mod tests {
                 let closure_counter_handler2 = call_counter.clone();
                 let mut context = Context::default();
                 // act
-                context.after_each(move |_| { closure_counter_handler1.fetch_add(1, Ordering::SeqCst); });
-                context.after_each(move |_| { closure_counter_handler2.fetch_add(1, Ordering::SeqCst); });
+                context.after_each(move |_| {
+                    closure_counter_handler1.fetch_add(1, Ordering::SeqCst);
+                });
+                context.after_each(move |_| {
+                    closure_counter_handler2.fetch_add(1, Ordering::SeqCst);
+                });
                 runner.wrap_each(&context, &mut (), |_| ());
                 // assert
                 assert_eq!(2, call_counter.load(Ordering::SeqCst));
@@ -442,8 +456,12 @@ mod tests {
                 let last_caller_handler2 = last_caller_id.clone();
                 let mut context = Context::default();
                 // act
-                context.before_each(move |_| { last_caller_handler1.store(1, Ordering::SeqCst); });
-                runner.wrap_each(&context, &mut (), |_| { last_caller_handler2.store(2, Ordering::SeqCst); });
+                context.before_each(move |_| {
+                    last_caller_handler1.store(1, Ordering::SeqCst);
+                });
+                runner.wrap_each(&context, &mut (), |_| {
+                    last_caller_handler2.store(2, Ordering::SeqCst);
+                });
                 // assert
                 assert_eq!(2, last_caller_id.load(Ordering::SeqCst));
             }
@@ -457,8 +475,12 @@ mod tests {
                 let last_caller_handler2 = last_caller_id.clone();
                 let mut context = Context::default();
                 // act
-                context.after_each(move |_| { last_caller_handler1.store(1, Ordering::SeqCst); });
-                runner.wrap_each(&context, &mut (), |_| { last_caller_handler2.store(2, Ordering::SeqCst); });
+                context.after_each(move |_| {
+                    last_caller_handler1.store(1, Ordering::SeqCst);
+                });
+                runner.wrap_each(&context, &mut (), |_| {
+                    last_caller_handler2.store(2, Ordering::SeqCst);
+                });
                 // assert
                 assert_eq!(1, last_caller_id.load(Ordering::SeqCst));
             }
@@ -484,7 +506,9 @@ mod tests {
                 let runner = Runner::default();
                 let has_been_called = AtomicBool::new(false);
                 // act
-                runner.wrap_all(&Context::default(), &mut (), |_| has_been_called.store(true, Ordering::SeqCst));
+                runner.wrap_all(&Context::default(), &mut (), |_| {
+                    has_been_called.store(true, Ordering::SeqCst)
+                });
                 // assert
                 assert_eq!(true, has_been_called.load(Ordering::SeqCst));
             }
@@ -526,8 +550,12 @@ mod tests {
                 let closure_counter_handler2 = call_counter.clone();
                 let mut context = Context::default();
                 // act
-                context.before_all(move |_| { closure_counter_handler1.fetch_add(1, Ordering::SeqCst); });
-                context.before_all(move |_| { closure_counter_handler2.fetch_add(1, Ordering::SeqCst); });
+                context.before_all(move |_| {
+                    closure_counter_handler1.fetch_add(1, Ordering::SeqCst);
+                });
+                context.before_all(move |_| {
+                    closure_counter_handler2.fetch_add(1, Ordering::SeqCst);
+                });
                 runner.wrap_all(&context, &mut (), |_| ());
                 // assert
                 assert_eq!(2, call_counter.load(Ordering::SeqCst));
@@ -542,8 +570,12 @@ mod tests {
                 let closure_counter_handler2 = call_counter.clone();
                 let mut context = Context::default();
                 // act
-                context.after_all(move |_| { closure_counter_handler1.fetch_add(1, Ordering::SeqCst); });
-                context.after_all(move |_| { closure_counter_handler2.fetch_add(1, Ordering::SeqCst); });
+                context.after_all(move |_| {
+                    closure_counter_handler1.fetch_add(1, Ordering::SeqCst);
+                });
+                context.after_all(move |_| {
+                    closure_counter_handler2.fetch_add(1, Ordering::SeqCst);
+                });
                 runner.wrap_all(&context, &mut (), |_| ());
                 // assert
                 assert_eq!(2, call_counter.load(Ordering::SeqCst));
@@ -558,8 +590,12 @@ mod tests {
                 let last_caller_handler2 = last_caller_id.clone();
                 let mut context = Context::default();
                 // act
-                context.before_all(move |_| { last_caller_handler1.store(1, Ordering::SeqCst); });
-                runner.wrap_all(&context, &mut (), |_| { last_caller_handler2.store(2, Ordering::SeqCst); });
+                context.before_all(move |_| {
+                    last_caller_handler1.store(1, Ordering::SeqCst);
+                });
+                runner.wrap_all(&context, &mut (), |_| {
+                    last_caller_handler2.store(2, Ordering::SeqCst);
+                });
                 // assert
                 assert_eq!(2, last_caller_id.load(Ordering::SeqCst));
             }
@@ -573,8 +609,12 @@ mod tests {
                 let last_caller_handler2 = last_caller_id.clone();
                 let mut context = Context::default();
                 // act
-                context.after_all(move |_| { last_caller_handler1.store(1, Ordering::SeqCst); });
-                runner.wrap_all(&context, &mut (), |_| { last_caller_handler2.store(2, Ordering::SeqCst); });
+                context.after_all(move |_| {
+                    last_caller_handler1.store(1, Ordering::SeqCst);
+                });
+                runner.wrap_all(&context, &mut (), |_| {
+                    last_caller_handler2.store(2, Ordering::SeqCst);
+                });
                 // assert
                 assert_eq!(1, last_caller_id.load(Ordering::SeqCst));
             }
@@ -594,7 +634,7 @@ mod tests {
                 .unwrap();
             // act
             {
-                let runner = Runner::new(config, vec!());
+                let runner = Runner::new(config, vec![]);
                 (*runner.should_exit.lock().unwrap()).set(true);
             }
             // assert
@@ -616,10 +656,15 @@ mod tests {
         }
         impl RunnerObserver for SpyObserver {
             fn enter_example(&self, _runner: &Runner, _header: &ExampleHeader) {
-               self.enter_example.store(true, Ordering::SeqCst)
+                self.enter_example.store(true, Ordering::SeqCst)
             }
 
-            fn exit_example(&self, _runner: &Runner, _header: &ExampleHeader, _report: &ExampleReport) {
+            fn exit_example(
+                &self,
+                _runner: &Runner,
+                _header: &ExampleHeader,
+                _report: &ExampleReport,
+            ) {
                 self.exit_example.store(true, Ordering::SeqCst)
             }
         }
@@ -643,8 +688,8 @@ mod tests {
             // act
             runner.visit(&example, &mut ());
             // assert
-            assert!(true == spy.enter_example.load(Ordering::SeqCst));
-            assert!(true == spy.exit_example.load(Ordering::SeqCst))
+            assert_eq!(true, spy.enter_example.load(Ordering::SeqCst));
+            assert_eq!(true, spy.exit_example.load(Ordering::SeqCst))
         }
 
         #[test]
@@ -653,7 +698,7 @@ mod tests {
             let runner = Runner::default();
             let mut environment = Arc::new(AtomicBool::new(false));
             // act
-            let example = Example::new(ExampleHeader::default(), |env : &Arc<AtomicBool>| {
+            let example = Example::new(ExampleHeader::default(), |env: &Arc<AtomicBool>| {
                 env.store(true, Ordering::SeqCst);
                 ExampleResult::Success
             });
@@ -676,5 +721,4 @@ mod tests {
             runner.visit(&block, &mut ());
         }
     }
-
 }

@@ -1,14 +1,14 @@
 //! Reports provide information about an evaluated test unit.
 
-mod suite;
 mod context;
 mod example;
+mod suite;
 
 pub use time::Duration;
 
-pub use report::suite::*;
 pub use report::context::*;
 pub use report::example::*;
+pub use report::suite::*;
 
 use header::ContextHeader;
 use header::ExampleHeader;
@@ -35,8 +35,8 @@ pub enum BlockReport {
 impl BlockReport {
     pub fn get_blocks(&self) -> Option<&[BlockReport]> {
         match self {
-            &BlockReport::Context(_, ref report) => Some(report.get_blocks()),
-            &BlockReport::Example(_, _) => None,
+            BlockReport::Context(_, ref report) => Some(report.get_blocks()),
+            BlockReport::Example(_, _) => None,
         }
     }
 }
@@ -44,43 +44,43 @@ impl BlockReport {
 impl Report for BlockReport {
     fn is_success(&self) -> bool {
         match self {
-            &BlockReport::Context(_, ref report) => report.is_success(),
-            &BlockReport::Example(_, ref report) => report.is_success(),
+            BlockReport::Context(_, ref report) => report.is_success(),
+            BlockReport::Example(_, ref report) => report.is_success(),
         }
     }
 
     fn is_failure(&self) -> bool {
         match self {
-            &BlockReport::Context(_, ref report) => report.is_failure(),
-            &BlockReport::Example(_, ref report) => report.is_failure(),
+            BlockReport::Context(_, ref report) => report.is_failure(),
+            BlockReport::Example(_, ref report) => report.is_failure(),
         }
     }
 
     fn get_passed(&self) -> u32 {
         match self {
-            &BlockReport::Context(_, ref report) => report.get_passed(),
-            &BlockReport::Example(_, ref report) => report.get_passed(),
+            BlockReport::Context(_, ref report) => report.get_passed(),
+            BlockReport::Example(_, ref report) => report.get_passed(),
         }
     }
 
     fn get_failed(&self) -> u32 {
         match self {
-            &BlockReport::Context(_, ref report) => report.get_failed(),
-            &BlockReport::Example(_, ref report) => report.get_failed(),
+            BlockReport::Context(_, ref report) => report.get_failed(),
+            BlockReport::Example(_, ref report) => report.get_failed(),
         }
     }
 
     fn get_ignored(&self) -> u32 {
         match self {
-            &BlockReport::Context(_, ref report) => report.get_ignored(),
-            &BlockReport::Example(_, ref report) => report.get_ignored(),
+            BlockReport::Context(_, ref report) => report.get_ignored(),
+            BlockReport::Example(_, ref report) => report.get_ignored(),
         }
     }
 
     fn get_duration(&self) -> Duration {
         match self {
-            &BlockReport::Context(_, ref report) => report.get_duration(),
-            &BlockReport::Example(_, ref report) => report.get_duration(),
+            BlockReport::Context(_, ref report) => report.get_duration(),
+            BlockReport::Example(_, ref report) => report.get_duration(),
         }
     }
 }

@@ -19,10 +19,10 @@ mod serial;
 
 use std::io;
 
-use header::{SuiteHeader, ContextHeader, ExampleHeader};
-use report::{BlockReport, SuiteReport, ContextReport, ExampleReport};
-use runner::{Runner, RunnerObserver};
+use header::{ContextHeader, ExampleHeader, SuiteHeader};
 use logger::serial::SerialLogger;
+use report::{BlockReport, ContextReport, ExampleReport, SuiteReport};
+use runner::{Runner, RunnerObserver};
 
 /// Preferred logger for test suite execution.
 pub struct Logger<T: io::Write> {
@@ -34,7 +34,9 @@ where
     T: Send + Sync,
 {
     pub fn new(buffer: T) -> Logger<T> {
-        Logger { serial: SerialLogger::new(buffer) }
+        Logger {
+            serial: SerialLogger::new(buffer),
+        }
     }
 
     fn replay_suite(&self, runner: &Runner, suite: &SuiteHeader, report: &SuiteReport) {
@@ -45,16 +47,21 @@ where
 
     fn replay_block(&self, runner: &Runner, report: &BlockReport) {
         match report {
-            &BlockReport::Context(ref header, ref report) => {
+            BlockReport::Context(ref header, ref report) => {
                 self.replay_context(runner, header.as_ref(), report);
             }
-            &BlockReport::Example(ref header, ref report) => {
+            BlockReport::Example(ref header, ref report) => {
                 self.replay_example(runner, header, report);
             }
         }
     }
 
-    fn replay_context(&self, runner: &Runner, context: Option<&ContextHeader>, report: &ContextReport) {
+    fn replay_context(
+        &self,
+        runner: &Runner,
+        context: Option<&ContextHeader>,
+        report: &ContextReport,
+    ) {
         if let Some(header) = context {
             self.serial.enter_context(runner, header);
         }

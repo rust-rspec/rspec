@@ -16,19 +16,11 @@ pub enum ExampleResult {
 
 impl ExampleResult {
     fn is_success(&self) -> bool {
-        if &ExampleResult::Success == self {
-            true
-        } else {
-            false
-        }
+        &ExampleResult::Success == self
     }
 
     fn is_failure(&self) -> bool {
-        if let &ExampleResult::Failure(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, &ExampleResult::Failure(_))
     }
 
     fn get_passed(&self) -> u32 {
@@ -40,7 +32,7 @@ impl ExampleResult {
     }
 
     fn get_failed(&self) -> u32 {
-        if let &ExampleResult::Failure(_) = self {
+        if let ExampleResult::Failure(_) = self {
             1
         } else {
             0
@@ -70,8 +62,7 @@ impl From<bool> for ExampleResult {
             ExampleResult::Success
         } else {
             ExampleResult::Failure(Some(
-                "assertion failed: `expected condition to be true`"
-                    .to_owned(),
+                "assertion failed: `expected condition to be true`".to_owned(),
             ))
         }
     }

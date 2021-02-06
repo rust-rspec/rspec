@@ -11,9 +11,9 @@ pub enum SuiteLabel {
 impl fmt::Display for SuiteLabel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &SuiteLabel::Suite => write!(f, "Suite"),
-            &SuiteLabel::Describe => write!(f, "Describe"),
-            &SuiteLabel::Given => write!(f, "Given"),
+            SuiteLabel::Suite => write!(f, "Suite"),
+            SuiteLabel::Describe => write!(f, "Describe"),
+            SuiteLabel::Given => write!(f, "Given"),
         }
     }
 }

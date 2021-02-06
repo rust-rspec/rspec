@@ -1,5 +1,5 @@
-use header::{SuiteLabel, SuiteHeader};
 use block::Context;
+use header::{SuiteHeader, SuiteLabel};
 
 /// Test suites bundle a set of closely related test examples into a logical execution group.
 #[derive(new)]
@@ -23,16 +23,8 @@ impl<T> Suite<T> {
     }
 }
 
-unsafe impl<T> Send for Suite<T>
-where
-    T: Send,
-{
-}
-unsafe impl<T> Sync for Suite<T>
-where
-    T: Sync,
-{
-}
+unsafe impl<T> Send for Suite<T> where T: Send {}
+unsafe impl<T> Sync for Suite<T> where T: Sync {}
 
 /// Creates a test suite from a given root context.
 ///
@@ -57,7 +49,7 @@ where
 ///
 /// Corresponding console output:
 ///
-/// ```no-run
+/// ```text
 /// tests
 /// Suite "a test suite":
 ///     …
@@ -69,12 +61,12 @@ where
 /// - [`given`](fn.given.html).
 pub fn suite<F, T>(name: &'static str, environment: T, body: F) -> Suite<T>
 where
-    F: FnOnce(&mut Context<T>) -> (),
+    F: FnOnce(&mut Context<T>),
     T: Clone + ::std::fmt::Debug,
 {
     let header = SuiteHeader {
         label: SuiteLabel::Suite,
-        name: name,
+        name,
     };
     suite_internal(header, environment, body)
 }
@@ -86,12 +78,12 @@ where
 /// - [`given`](fn.describe.html).
 pub fn describe<F, T>(name: &'static str, environment: T, body: F) -> Suite<T>
 where
-    F: FnOnce(&mut Context<T>) -> (),
+    F: FnOnce(&mut Context<T>),
     T: Clone + ::std::fmt::Debug,
 {
     let header = SuiteHeader {
         label: SuiteLabel::Describe,
-        name: name,
+        name,
     };
     suite_internal(header, environment, body)
 }
@@ -103,19 +95,19 @@ where
 /// - [`describe`](fn.describe.html).
 pub fn given<F, T>(name: &'static str, environment: T, body: F) -> Suite<T>
 where
-    F: FnOnce(&mut Context<T>) -> (),
+    F: FnOnce(&mut Context<T>),
     T: Clone + ::std::fmt::Debug,
 {
     let header = SuiteHeader {
         label: SuiteLabel::Given,
-        name: name,
+        name,
     };
     suite_internal(header, environment, body)
 }
 
-fn suite_internal<'a, F, T>(header: SuiteHeader, environment: T, body: F) -> Suite<T>
+fn suite_internal<F, T>(header: SuiteHeader, environment: T, body: F) -> Suite<T>
 where
-    F: FnOnce(&mut Context<T>) -> (),
+    F: FnOnce(&mut Context<T>),
     T: Clone + ::std::fmt::Debug,
 {
     let mut ctx = Context::new(None);

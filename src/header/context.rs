@@ -11,9 +11,9 @@ pub enum ContextLabel {
 impl fmt::Display for ContextLabel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &ContextLabel::Context => write!(f, "Context"),
-            &ContextLabel::Specify => write!(f, "Specify"),
-            &ContextLabel::When => write!(f, "When"),
+            ContextLabel::Context => write!(f, "Context"),
+            ContextLabel::Specify => write!(f, "Specify"),
+            ContextLabel::When => write!(f, "When"),
         }
     }
 }
