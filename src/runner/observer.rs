@@ -1,7 +1,7 @@
 //! Events are sent by the Runner to signal the progression in the test suite, with the results
 
-use header::{SuiteHeader, ContextHeader, ExampleHeader};
-use report::{SuiteReport, ContextReport, ExampleReport};
+use header::{ContextHeader, ExampleHeader, SuiteHeader};
+use report::{ContextReport, ExampleReport, SuiteReport};
 use runner::Runner;
 
 /// `RunnerObserver`s can be attached to a [`Runner`](../runner/struct.Runner.html) to observe a
