@@ -1,10 +1,16 @@
 [package]
+name = "rspec"
+description = "Write Rspec-like tests with stable rust"
+version = "1.0.0"
+
+readme = "README.md"
+repository = "https://github.com/rust-rspec/rspec"
+homepage = "https://mackwic.github.io/rspec"
+license = "MPL-2.0"
 authors = [
     "Thomas Wickham <mackwic@gmail.com>",
     "Vincent Esche <regexident@gmail.com>",
 ]
-description = "Write Rspec-like tests with stable rust"
-homepage = "https://mackwic.github.io/rspec"
 keywords = [
     "rspec",
     "test",
@@ -12,11 +18,11 @@ keywords = [
     "tdd",
     "bdd",
 ]
-license = "MPL-2.0"
-name = "rspec"
-readme = "README.md"
-repository = "https://github.com/rust-rspec/rspec"
-version = "1.0.0-beta.4"
+categories = [
+    "development-tools",
+    "development-tools::testing"
+]
+
 
 [build-dependencies.clippy]
 optional = true
@@ -36,3 +42,6 @@ version = "0.9.1"
 [features]
 default = []
 expectest_compat = ["expectest"]
+
+[badges]
+maintenance = { status = "passively-maintained" }
