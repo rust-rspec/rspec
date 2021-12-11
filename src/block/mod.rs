@@ -22,6 +22,3 @@ impl<T> Block<T> {
         }
     }
 }
-
-unsafe impl<T> Send for Block<T> where T: Send {}
-unsafe impl<T> Sync for Block<T> where T: Sync {}

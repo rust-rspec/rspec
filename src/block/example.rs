@@ -36,6 +36,3 @@ impl<T> Example<T> {
         Example::new(ExampleHeader::default(), |_| ExampleResult::Failure(None))
     }
 }
-
-unsafe impl<T> Send for Example<T> where T: Send {}
-unsafe impl<T> Sync for Example<T> where T: Sync {}

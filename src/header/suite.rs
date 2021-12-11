@@ -39,7 +39,7 @@ mod tests {
     fn label_fmt() {
         fn subject(label: SuiteLabel) -> String {
             format!("{}", label)
-        };
+        }
         assert_eq!(subject(SuiteLabel::Suite), "Suite".to_owned());
         assert_eq!(subject(SuiteLabel::Describe), "Describe".to_owned());
         assert_eq!(subject(SuiteLabel::Given), "Given".to_owned());
@@ -49,7 +49,7 @@ mod tests {
     fn header_fmt() {
         fn subject(label: SuiteLabel) -> String {
             format!("{}", SuiteHeader::new(label, "Test"))
-        };
+        }
         assert_eq!(subject(SuiteLabel::Suite), "Suite \"Test\"".to_owned());
         assert_eq!(
             subject(SuiteLabel::Describe),

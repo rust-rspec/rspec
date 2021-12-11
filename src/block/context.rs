@@ -47,12 +47,6 @@ impl<T> Context<T> {
     }
 }
 
-// Both `Send` and `Sync` are necessary for parallel threaded execution.
-unsafe impl<T> Send for Context<T> where T: Send {}
-
-// Both `Send` and `Sync` are necessary for parallel threaded execution.
-unsafe impl<T> Sync for Context<T> where T: Sync {}
-
 impl<T> Context<T>
 where
     T: Clone,
@@ -98,7 +92,6 @@ where
     pub fn context<F>(&mut self, name: &'static str, body: F)
     where
         F: FnOnce(&mut Context<T>),
-        T: ::std::fmt::Debug,
     {
         let header = ContextHeader {
             label: ContextLabel::Context,
@@ -115,7 +108,6 @@ where
     pub fn specify<F>(&mut self, name: &'static str, body: F)
     where
         F: FnOnce(&mut Context<T>),
-        T: ::std::fmt::Debug,
     {
         let header = ContextHeader {
             label: ContextLabel::Specify,
@@ -132,7 +124,6 @@ where
     pub fn when<F>(&mut self, name: &'static str, body: F)
     where
         F: FnOnce(&mut Context<T>),
-        T: ::std::fmt::Debug,
     {
         let header = ContextHeader {
             label: ContextLabel::When,
@@ -187,7 +178,6 @@ where
     pub fn scope<F>(&mut self, body: F)
     where
         F: FnOnce(&mut Context<T>),
-        T: ::std::fmt::Debug,
     {
         self.context_internal(None, body)
     }
@@ -195,7 +185,6 @@ where
     fn context_internal<F>(&mut self, header: Option<ContextHeader>, body: F)
     where
         F: FnOnce(&mut Context<T>),
-        T: ::std::fmt::Debug,
     {
         let mut child = Context::new(header);
         body(&mut child);

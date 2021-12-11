@@ -12,7 +12,6 @@ extern crate derive_new;
 extern crate colored;
 #[cfg(feature = "expectest_compat")]
 extern crate expectest;
-extern crate rayon;
 extern crate time;
 
 pub mod block;
@@ -49,7 +48,7 @@ use block::Suite;
 /// ```
 pub fn run<T>(suite: &Suite<T>)
 where
-    T: Clone + Send + Sync + ::std::fmt::Debug,
+    T: Clone,
 {
     use std::io;
     use std::sync::Arc;
