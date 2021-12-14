@@ -19,10 +19,10 @@ mod serial;
 
 use std::io;
 
-use header::{ContextHeader, ExampleHeader, SuiteHeader};
-use logger::serial::SerialLogger;
-use report::{BlockReport, ContextReport, ExampleReport, SuiteReport};
-use runner::{Runner, RunnerObserver};
+use crate::header::{ContextHeader, ExampleHeader, SuiteHeader};
+use crate::logger::serial::SerialLogger;
+use crate::report::{BlockReport, ContextReport, ExampleReport, SuiteReport};
+use crate::runner::{Runner, RunnerObserver};
 
 /// Preferred logger for test suite execution.
 pub struct Logger<T: io::Write> {

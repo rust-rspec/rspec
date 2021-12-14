@@ -3,8 +3,8 @@
 mod configuration;
 mod observer;
 
-pub use runner::configuration::*;
-pub use runner::observer::*;
+pub use crate::runner::configuration::*;
+pub use crate::runner::observer::*;
 
 use std::borrow::Borrow;
 use std::cell::Cell;
@@ -16,15 +16,15 @@ use std::sync::{Arc, Mutex};
 
 use time::Instant;
 
-use block::Block;
-use block::Context;
-use block::Example;
-use block::Suite;
-use report::ContextReport;
-use report::ExampleReport;
-use report::SuiteReport;
-use report::{BlockReport, Report};
-use visitor::TestSuiteVisitor;
+use crate::block::Block;
+use crate::block::Context;
+use crate::block::Example;
+use crate::block::Suite;
+use crate::report::ContextReport;
+use crate::report::ExampleReport;
+use crate::report::SuiteReport;
+use crate::report::{BlockReport, Report};
+use crate::visitor::TestSuiteVisitor;
 
 /// Runner for executing a test suite's examples.
 pub struct Runner {
@@ -268,7 +268,7 @@ mod tests {
         mod broadcast {
             use super::*;
 
-            use header::*;
+            use crate::header::*;
             use std::sync::atomic::*;
 
             // XXX blank impl for stubbing
@@ -628,8 +628,8 @@ mod tests {
     mod impl_visitor_example_for_runner {
         use super::*;
 
-        use header::*;
-        use report::*;
+        use crate::header::*;
+        use crate::report::*;
         use std::sync::atomic::*;
 
         #[derive(Default, Debug, Clone)]

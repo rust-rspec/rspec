@@ -1,4 +1,4 @@
-use report::{BlockReport, Report};
+use crate::report::{BlockReport, Report};
 use time::Duration;
 
 /// `ContextReport` holds the results of a context's test execution.

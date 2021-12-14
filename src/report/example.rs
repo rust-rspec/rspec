@@ -2,7 +2,7 @@ use std::convert::From;
 
 use time::Duration;
 
-use report::Report;
+use crate::report::Report;
 
 #[cfg(feature = "expectest_compat")]
 use expectest::core::TestResult as ExpectestResult;

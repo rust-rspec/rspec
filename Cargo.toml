@@ -2,6 +2,7 @@
 name = "rspec"
 description = "Write Rspec-like tests with stable rust"
 version = "1.0.0"
+edition = "2018"
 
 readme = "README.md"
 repository = "https://github.com/rust-rspec/rspec"

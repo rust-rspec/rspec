@@ -1,5 +1,5 @@
-use header::ExampleHeader;
-use report::ExampleResult;
+use crate::header::ExampleHeader;
+use crate::report::ExampleResult;
 
 /// Test examples are the smallest unit of a testing framework, wrapping one or more assertions.
 pub struct Example<T> {

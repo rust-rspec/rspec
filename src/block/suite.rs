@@ -1,5 +1,5 @@
-use block::Context;
-use header::{SuiteHeader, SuiteLabel};
+use crate::block::Context;
+use crate::header::{SuiteHeader, SuiteLabel};
 
 /// Test suites bundle a set of closely related test examples into a logical execution group.
 #[derive(new)]

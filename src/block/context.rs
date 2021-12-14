@@ -8,9 +8,9 @@
 //! Running these tests and doing asserts is not the job of the Context, but the Runner.
 //!
 
-use block::{Block, Example};
-use header::{ContextHeader, ContextLabel, ExampleHeader, ExampleLabel};
-use report::ExampleResult;
+use crate::block::{Block, Example};
+use crate::header::{ContextHeader, ContextLabel, ExampleHeader, ExampleLabel};
+use crate::report::ExampleResult;
 
 /// Test contexts are a convenient tool for adding structure and code sharing to a test suite.
 pub struct Context<T> {
@@ -531,7 +531,7 @@ impl<T> Default for Context<T> {
 
 #[cfg(test)]
 mod tests {
-    use block::{describe, given, suite};
+    use crate::block::{describe, given, suite};
 
     macro_rules! test_suite_alias {
         ($suite: ident) => {

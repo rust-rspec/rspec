@@ -22,11 +22,11 @@ pub mod runner;
 
 mod visitor;
 
-pub use block::{describe, given, suite};
-pub use logger::Logger;
-pub use runner::{Configuration, ConfigurationBuilder, Runner};
+pub use crate::block::{describe, given, suite};
+pub use crate::logger::Logger;
+pub use crate::runner::{Configuration, ConfigurationBuilder, Runner};
 
-use block::Suite;
+use crate::block::Suite;
 
 /// A wrapper for conveniently running a test suite with
 /// the default configuration with considerebly less glue-code.
@@ -64,7 +64,7 @@ where
 mod tests {
 
     pub use super::*;
-    pub use block::*;
+    pub use crate::block::*;
 
     // Test list:
     // x check that tests can call `assert_eq!`
