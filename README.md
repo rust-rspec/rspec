@@ -240,7 +240,7 @@ described. Thinking in term of behavior has two benefits:
   high-level behavior of your units. The Gherkin formalism is often employed for
   this, it use a _Given X, When Y, Then Z_ structure.
   This project does not aim to help on high-level BDD, see [the cucumber for
-  Rust port](https://github.com/acmcarther/cucumbe://github.com/acmcarther/cucumber)
+  Rust port](https://github.com/acmcarther/cucumber)
   for that.
 
 The foundation of BDD [is well explained here](https://dannorth.net/introducing-bdd/)
