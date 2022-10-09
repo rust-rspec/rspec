@@ -39,7 +39,7 @@ mod tests {
     fn label_fmt() {
         fn subject(label: ContextLabel) -> String {
             format!("{}", label)
-        };
+        }
         assert_eq!(subject(ContextLabel::Context), "Context".to_owned());
         assert_eq!(subject(ContextLabel::Specify), "Specify".to_owned());
         assert_eq!(subject(ContextLabel::When), "When".to_owned());
@@ -49,7 +49,7 @@ mod tests {
     fn header_fmt() {
         fn subject(label: ContextLabel) -> String {
             format!("{}", ContextHeader::new(label, "Test"))
-        };
+        }
         assert_eq!(
             subject(ContextLabel::Context),
             "Context \"Test\"".to_owned()

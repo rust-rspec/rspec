@@ -1,8 +1,8 @@
 //! Events are sent by the Runner to signal the progression in the test suite, with the results
 
-use header::{ContextHeader, ExampleHeader, SuiteHeader};
-use report::{ContextReport, ExampleReport, SuiteReport};
-use runner::Runner;
+use crate::header::{ContextHeader, ExampleHeader, SuiteHeader};
+use crate::report::{ContextReport, ExampleReport, SuiteReport};
+use crate::runner::Runner;
 
 /// `RunnerObserver`s can be attached to a [`Runner`](../runner/struct.Runner.html) to observe a
 #[allow(unused_variables)]

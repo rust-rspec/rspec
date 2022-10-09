@@ -8,9 +8,9 @@
 //! Running these tests and doing asserts is not the job of the Context, but the Runner.
 //!
 
-use block::{Block, Example};
-use header::{ContextHeader, ContextLabel, ExampleHeader, ExampleLabel};
-use report::ExampleResult;
+use crate::block::{Block, Example};
+use crate::header::{ContextHeader, ContextLabel, ExampleHeader, ExampleLabel};
+use crate::report::ExampleResult;
 
 /// Test contexts are a convenient tool for adding structure and code sharing to a test suite.
 pub struct Context<T> {
@@ -46,12 +46,6 @@ impl<T> Context<T> {
         self.blocks.is_empty()
     }
 }
-
-// Both `Send` and `Sync` are necessary for parallel threaded execution.
-unsafe impl<T> Send for Context<T> where T: Send {}
-
-// Both `Send` and `Sync` are necessary for parallel threaded execution.
-unsafe impl<T> Sync for Context<T> where T: Sync {}
 
 impl<T> Context<T>
 where
@@ -98,7 +92,6 @@ where
     pub fn context<F>(&mut self, name: &'static str, body: F)
     where
         F: FnOnce(&mut Context<T>),
-        T: ::std::fmt::Debug,
     {
         let header = ContextHeader {
             label: ContextLabel::Context,
@@ -115,7 +108,6 @@ where
     pub fn specify<F>(&mut self, name: &'static str, body: F)
     where
         F: FnOnce(&mut Context<T>),
-        T: ::std::fmt::Debug,
     {
         let header = ContextHeader {
             label: ContextLabel::Specify,
@@ -132,7 +124,6 @@ where
     pub fn when<F>(&mut self, name: &'static str, body: F)
     where
         F: FnOnce(&mut Context<T>),
-        T: ::std::fmt::Debug,
     {
         let header = ContextHeader {
             label: ContextLabel::When,
@@ -187,7 +178,6 @@ where
     pub fn scope<F>(&mut self, body: F)
     where
         F: FnOnce(&mut Context<T>),
-        T: ::std::fmt::Debug,
     {
         self.context_internal(None, body)
     }
@@ -195,7 +185,6 @@ where
     fn context_internal<F>(&mut self, header: Option<ContextHeader>, body: F)
     where
         F: FnOnce(&mut Context<T>),
-        T: ::std::fmt::Debug,
     {
         let mut child = Context::new(header);
         body(&mut child);
@@ -542,7 +531,7 @@ impl<T> Default for Context<T> {
 
 #[cfg(test)]
 mod tests {
-    use block::{describe, given, suite};
+    use crate::block::{describe, given, suite};
 
     macro_rules! test_suite_alias {
         ($suite: ident) => {

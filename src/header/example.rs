@@ -47,7 +47,7 @@ mod tests {
     fn label_fmt() {
         fn subject(label: ExampleLabel) -> String {
             format!("{}", label)
-        };
+        }
         assert_eq!(subject(ExampleLabel::Example), "Example".to_owned());
         assert_eq!(subject(ExampleLabel::It), "It".to_owned());
         assert_eq!(subject(ExampleLabel::Then), "Then".to_owned());
@@ -57,7 +57,7 @@ mod tests {
     fn header_fmt() {
         fn subject(label: ExampleLabel) -> String {
             format!("{}", ExampleHeader::new(label, "Test"))
-        };
+        }
         assert_eq!(
             subject(ExampleLabel::Example),
             "Example \"Test\"".to_owned()

@@ -6,9 +6,11 @@ use time::Duration;
 
 use colored::*;
 
-use header::{ContextHeader, ExampleHeader, SuiteHeader};
-use report::{BlockReport, ContextReport, ExampleReport, ExampleResult, Report, SuiteReport};
-use runner::{Runner, RunnerObserver};
+use crate::header::{ContextHeader, ExampleHeader, SuiteHeader};
+use crate::report::{
+    BlockReport, ContextReport, ExampleReport, ExampleResult, Report, SuiteReport,
+};
+use crate::runner::{Runner, RunnerObserver};
 
 #[derive(new)]
 struct SerialLoggerState<T: io::Write = io::Stdout> {

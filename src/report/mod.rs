@@ -6,12 +6,12 @@ mod suite;
 
 pub use time::Duration;
 
-pub use report::context::*;
-pub use report::example::*;
-pub use report::suite::*;
+pub use crate::report::context::*;
+pub use crate::report::example::*;
+pub use crate::report::suite::*;
 
-use header::ContextHeader;
-use header::ExampleHeader;
+use crate::header::ContextHeader;
+use crate::header::ExampleHeader;
 
 /// `Report` holds the results of a structural group's test execution.
 pub trait Report {

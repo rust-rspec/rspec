@@ -4,9 +4,9 @@ pub mod context;
 pub mod example;
 pub mod suite;
 
-pub use block::context::*;
-pub use block::example::*;
-pub use block::suite::*;
+pub use crate::block::context::*;
+pub use crate::block::example::*;
+pub use crate::block::suite::*;
 
 /// Blocks are used to build a tree structure of named tests and contextes.
 pub enum Block<T> {
@@ -22,6 +22,3 @@ impl<T> Block<T> {
         }
     }
 }
-
-unsafe impl<T> Send for Block<T> where T: Send {}
-unsafe impl<T> Sync for Block<T> where T: Sync {}

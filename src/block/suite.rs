@@ -1,5 +1,5 @@
-use block::Context;
-use header::{SuiteHeader, SuiteLabel};
+use crate::block::Context;
+use crate::header::{SuiteHeader, SuiteLabel};
 
 /// Test suites bundle a set of closely related test examples into a logical execution group.
 #[derive(new)]
@@ -22,9 +22,6 @@ impl<T> Suite<T> {
         self.context.is_empty()
     }
 }
-
-unsafe impl<T> Send for Suite<T> where T: Send {}
-unsafe impl<T> Sync for Suite<T> where T: Sync {}
 
 /// Creates a test suite from a given root context.
 ///
@@ -62,7 +59,7 @@ unsafe impl<T> Sync for Suite<T> where T: Sync {}
 pub fn suite<F, T>(name: &'static str, environment: T, body: F) -> Suite<T>
 where
     F: FnOnce(&mut Context<T>),
-    T: Clone + ::std::fmt::Debug,
+    T: Clone,
 {
     let header = SuiteHeader {
         label: SuiteLabel::Suite,
@@ -79,7 +76,7 @@ where
 pub fn describe<F, T>(name: &'static str, environment: T, body: F) -> Suite<T>
 where
     F: FnOnce(&mut Context<T>),
-    T: Clone + ::std::fmt::Debug,
+    T: Clone,
 {
     let header = SuiteHeader {
         label: SuiteLabel::Describe,
@@ -96,7 +93,7 @@ where
 pub fn given<F, T>(name: &'static str, environment: T, body: F) -> Suite<T>
 where
     F: FnOnce(&mut Context<T>),
-    T: Clone + ::std::fmt::Debug,
+    T: Clone,
 {
     let header = SuiteHeader {
         label: SuiteLabel::Given,
@@ -108,7 +105,7 @@ where
 fn suite_internal<F, T>(header: SuiteHeader, environment: T, body: F) -> Suite<T>
 where
     F: FnOnce(&mut Context<T>),
-    T: Clone + ::std::fmt::Debug,
+    T: Clone,
 {
     let mut ctx = Context::new(None);
     body(&mut ctx);

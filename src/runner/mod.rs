@@ -3,8 +3,8 @@
 mod configuration;
 mod observer;
 
-pub use runner::configuration::*;
-pub use runner::observer::*;
+pub use crate::runner::configuration::*;
+pub use crate::runner::observer::*;
 
 use std::borrow::Borrow;
 use std::cell::Cell;
@@ -16,17 +16,15 @@ use std::sync::{Arc, Mutex};
 
 use time::Instant;
 
-use rayon::prelude::*;
-
-use block::Block;
-use block::Context;
-use block::Example;
-use block::Suite;
-use report::ContextReport;
-use report::ExampleReport;
-use report::SuiteReport;
-use report::{BlockReport, Report};
-use visitor::TestSuiteVisitor;
+use crate::block::Block;
+use crate::block::Context;
+use crate::block::Example;
+use crate::block::Suite;
+use crate::report::ContextReport;
+use crate::report::ExampleReport;
+use crate::report::SuiteReport;
+use crate::report::{BlockReport, Report};
+use crate::visitor::TestSuiteVisitor;
 
 /// Runner for executing a test suite's examples.
 pub struct Runner {
@@ -48,7 +46,7 @@ impl Runner {
 impl Runner {
     pub fn run<T>(&self, suite: &Suite<T>) -> SuiteReport
     where
-        T: Clone + Send + Sync + ::std::fmt::Debug,
+        T: Clone,
     {
         let mut environment = suite.environment.clone();
         self.prepare_before_run();
@@ -97,20 +95,9 @@ impl Runner {
         result
     }
 
-    fn evaluate_blocks_parallel<T>(&self, context: &Context<T>, environment: &T) -> Vec<BlockReport>
-    where
-        T: Clone + Send + Sync + ::std::fmt::Debug,
-    {
-        context
-            .blocks
-            .par_iter()
-            .map(|block| self.evaluate_block(block, context, environment))
-            .collect()
-    }
-
     fn evaluate_blocks_serial<T>(&self, context: &Context<T>, environment: &T) -> Vec<BlockReport>
     where
-        T: Clone + Send + Sync + ::std::fmt::Debug,
+        T: Clone,
     {
         context
             .blocks
@@ -126,7 +113,7 @@ impl Runner {
         environment: &T,
     ) -> BlockReport
     where
-        T: Clone + Send + Sync + ::std::fmt::Debug,
+        T: Clone,
     {
         let mut environment = environment.clone();
         self.wrap_each(context, &mut environment, |environment| {
@@ -180,7 +167,7 @@ impl Drop for Runner {
 
 impl<T> TestSuiteVisitor<Suite<T>> for Runner
 where
-    T: Clone + Send + Sync + ::std::fmt::Debug,
+    T: Clone,
 {
     type Environment = T;
     type Output = SuiteReport;
@@ -198,7 +185,7 @@ where
 
 impl<T> TestSuiteVisitor<Block<T>> for Runner
 where
-    T: Clone + Send + Sync + ::std::fmt::Debug,
+    T: Clone,
 {
     type Environment = T;
     type Output = BlockReport;
@@ -221,7 +208,7 @@ where
 
 impl<T> TestSuiteVisitor<Context<T>> for Runner
 where
-    T: Clone + Send + Sync + ::std::fmt::Debug,
+    T: Clone,
 {
     type Environment = T;
     type Output = ContextReport;
@@ -232,11 +219,7 @@ where
         }
         let start_time = Instant::now();
         let reports: Vec<_> = self.wrap_all(context, environment, |environment| {
-            if self.configuration.parallel {
-                self.evaluate_blocks_parallel(context, environment)
-            } else {
-                self.evaluate_blocks_serial(context, environment)
-            }
+            self.evaluate_blocks_serial(context, environment)
         });
         let end_time = Instant::now();
         let elapsed_time = end_time - start_time;
@@ -250,7 +233,7 @@ where
 
 impl<T> TestSuiteVisitor<Example<T>> for Runner
 where
-    T: Clone + Send + Sync + ::std::fmt::Debug,
+    T: Clone,
 {
     type Environment = T;
     type Output = ExampleReport;
@@ -285,7 +268,7 @@ mod tests {
         mod broadcast {
             use super::*;
 
-            use header::*;
+            use crate::header::*;
             use std::sync::atomic::*;
 
             // XXX blank impl for stubbing
@@ -645,8 +628,8 @@ mod tests {
     mod impl_visitor_example_for_runner {
         use super::*;
 
-        use header::*;
-        use report::*;
+        use crate::header::*;
+        use crate::report::*;
         use std::sync::atomic::*;
 
         #[derive(Default, Debug, Clone)]

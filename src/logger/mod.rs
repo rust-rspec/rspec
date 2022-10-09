@@ -19,10 +19,10 @@ mod serial;
 
 use std::io;
 
-use header::{ContextHeader, ExampleHeader, SuiteHeader};
-use logger::serial::SerialLogger;
-use report::{BlockReport, ContextReport, ExampleReport, SuiteReport};
-use runner::{Runner, RunnerObserver};
+use crate::header::{ContextHeader, ExampleHeader, SuiteHeader};
+use crate::logger::serial::SerialLogger;
+use crate::report::{BlockReport, ContextReport, ExampleReport, SuiteReport};
+use crate::runner::{Runner, RunnerObserver};
 
 /// Preferred logger for test suite execution.
 pub struct Logger<T: io::Write> {
@@ -84,52 +84,26 @@ where
     T: Send + Sync,
 {
     fn enter_suite(&self, runner: &Runner, header: &SuiteHeader) {
-        if runner.configuration.parallel {
-            // If the suite is being evaluated in parallel we basically wait for `exit_suite`.
-        } else {
-            self.serial.enter_suite(runner, header);
-        }
+        self.serial.enter_suite(runner, header);
     }
 
     fn exit_suite(&self, runner: &Runner, header: &SuiteHeader, report: &SuiteReport) {
-        if runner.configuration.parallel {
-            // If the suite is being evaluated in parallel and we have reached the end of it,
-            // then it is time to forward a replay of the events to the inner serial logger:
-            self.replay_suite(runner, header, report);
-        } else {
-            self.serial.exit_suite(runner, header, report);
-        }
+        self.serial.exit_suite(runner, header, report);
     }
 
     fn enter_context(&self, runner: &Runner, header: &ContextHeader) {
-        if runner.configuration.parallel {
-            // If the suite is being evaluated in parallel we basically wait for `exit_suite`.
-        } else {
-            self.serial.enter_context(runner, header);
-        }
+        self.serial.enter_context(runner, header);
     }
 
     fn exit_context(&self, runner: &Runner, header: &ContextHeader, report: &ContextReport) {
-        if runner.configuration.parallel {
-            // If the suite is being evaluated in parallel we basically wait for `exit_suite`.
-        } else {
-            self.serial.exit_context(runner, header, report);
-        }
+        self.serial.exit_context(runner, header, report);
     }
 
     fn enter_example(&self, runner: &Runner, header: &ExampleHeader) {
-        if runner.configuration.parallel {
-            // If the suite is being evaluated in parallel we basically wait for `exit_suite`.
-        } else {
-            self.serial.enter_example(runner, header);
-        }
+        self.serial.enter_example(runner, header);
     }
 
     fn exit_example(&self, runner: &Runner, header: &ExampleHeader, report: &ExampleReport) {
-        if runner.configuration.parallel {
-            // If the suite is being evaluated in parallel we basically wait for `exit_suite`.
-        } else {
-            self.serial.exit_example(runner, header, report);
-        }
+        self.serial.exit_example(runner, header, report);
     }
 }

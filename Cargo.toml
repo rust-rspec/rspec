@@ -2,6 +2,7 @@
 name = "rspec"
 description = "Write Rspec-like tests with stable rust"
 version = "1.0.0"
+edition = "2018"
 
 readme = "README.md"
 repository = "https://github.com/rust-rspec/rspec"
@@ -32,7 +33,6 @@ version = "0.0.153"
 colored = "2.0"
 derive-new = "0.5"
 derive_builder = "0.9"
-rayon = "1.5"
 time = "0.2"
 
 [dependencies.expectest]
